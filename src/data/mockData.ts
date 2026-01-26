@@ -1,0 +1,187 @@
+import { Metric, RevenueDataPoint, ActivityLog, Automation, Template } from '../types';
+
+export const metrics: Metric[] = [
+  {
+    id: '1',
+    title: 'Recovered Revenue',
+    value: '$47,582',
+    change: '+12.5%',
+    trend: 'up',
+    icon: 'DollarSign',
+  },
+  {
+    id: '2',
+    title: 'Messages Sent',
+    value: '2,847',
+    change: '+8.2%',
+    trend: 'up',
+    icon: 'Send',
+  },
+  {
+    id: '3',
+    title: 'Conversion Rate',
+    value: '32.8%',
+    change: '+4.3%',
+    trend: 'up',
+    icon: 'TrendingUp',
+  },
+  {
+    id: '4',
+    title: 'Abandoned Carts',
+    value: '184',
+    change: '-15.7%',
+    trend: 'down',
+    icon: 'ShoppingCart',
+  },
+];
+
+export const revenueData: RevenueDataPoint[] = [
+  { date: 'Jan 1', revenue: 4200 },
+  { date: 'Jan 8', revenue: 5100 },
+  { date: 'Jan 15', revenue: 4800 },
+  { date: 'Jan 22', revenue: 6300 },
+  { date: 'Jan 29', revenue: 7200 },
+  { date: 'Feb 5', revenue: 6800 },
+  { date: 'Feb 12', revenue: 8100 },
+  { date: 'Feb 19', revenue: 9400 },
+  { date: 'Feb 26', revenue: 8900 },
+  { date: 'Mar 5', revenue: 10200 },
+  { date: 'Mar 12', revenue: 11500 },
+  { date: 'Mar 19', revenue: 10800 },
+];
+
+export const activityLogs: ActivityLog[] = [
+  {
+    id: '1',
+    customer: 'Sarah Johnson',
+    product: 'Premium Wireless Headphones',
+    messageStatus: 'Converted',
+    revenue: 299.99,
+    timestamp: '2 hours ago',
+  },
+  {
+    id: '2',
+    customer: 'Michael Chen',
+    product: 'Smart Fitness Watch',
+    messageStatus: 'Sent',
+    revenue: 0,
+    timestamp: '3 hours ago',
+  },
+  {
+    id: '3',
+    customer: 'Emma Williams',
+    product: 'Leather Laptop Bag',
+    messageStatus: 'Converted',
+    revenue: 129.99,
+    timestamp: '5 hours ago',
+  },
+  {
+    id: '4',
+    customer: 'James Rodriguez',
+    product: 'Mechanical Keyboard',
+    messageStatus: 'Pending',
+    revenue: 0,
+    timestamp: '6 hours ago',
+  },
+  {
+    id: '5',
+    customer: 'Lisa Anderson',
+    product: 'Bluetooth Speaker',
+    messageStatus: 'Converted',
+    revenue: 89.99,
+    timestamp: '8 hours ago',
+  },
+  {
+    id: '6',
+    customer: 'David Kim',
+    product: 'USB-C Dock Station',
+    messageStatus: 'Failed',
+    revenue: 0,
+    timestamp: '10 hours ago',
+  },
+  {
+    id: '7',
+    customer: 'Sophie Martinez',
+    product: 'Wireless Mouse',
+    messageStatus: 'Converted',
+    revenue: 49.99,
+    timestamp: '12 hours ago',
+  },
+];
+
+export const automations: Automation[] = [
+  {
+    id: '1',
+    name: 'Welcome Series',
+    description: 'Send automated welcome messages to new customers',
+    enabled: true,
+    trigger: 'New customer signup',
+    lastRun: '2 hours ago',
+  },
+  {
+    id: '2',
+    name: 'Cart Abandonment - 1 Hour',
+    description: 'Follow up on abandoned carts after 1 hour',
+    enabled: true,
+    trigger: 'Cart abandoned',
+    lastRun: '15 minutes ago',
+  },
+  {
+    id: '3',
+    name: 'Cart Abandonment - 24 Hours',
+    description: 'Second follow-up on abandoned carts',
+    enabled: true,
+    trigger: 'Cart abandoned 24h',
+    lastRun: '3 hours ago',
+  },
+  {
+    id: '4',
+    name: 'Post-Purchase Thank You',
+    description: 'Thank customers after purchase',
+    enabled: false,
+    trigger: 'Order completed',
+  },
+  {
+    id: '5',
+    name: 'Review Request',
+    description: 'Request product reviews 7 days after delivery',
+    enabled: true,
+    trigger: 'Order delivered',
+    lastRun: '1 day ago',
+  },
+];
+
+export const templates: Template[] = [
+  {
+    id: '1',
+    name: 'Cart Reminder - Friendly',
+    subject: 'You left something behind! 🛒',
+    content: 'Hi {{customer_name}},\n\nWe noticed you left {{product_name}} in your cart. Complete your order now and get free shipping!',
+    type: 'whatsapp',
+    usageCount: 1247,
+  },
+  {
+    id: '2',
+    name: 'Cart Reminder - Discount',
+    subject: 'Special 10% off just for you!',
+    content: 'Hey {{customer_name}}! 👋\n\nYour {{product_name}} is waiting. Use code SAVE10 for 10% off your order.',
+    type: 'whatsapp',
+    usageCount: 892,
+  },
+  {
+    id: '3',
+    name: 'Welcome Message',
+    subject: 'Welcome to our store!',
+    content: 'Welcome {{customer_name}}!\n\nThanks for signing up. Here\'s a 15% discount code: WELCOME15',
+    type: 'sms',
+    usageCount: 2103,
+  },
+  {
+    id: '4',
+    name: 'Order Confirmation',
+    subject: 'Your order is confirmed! 📦',
+    content: 'Hi {{customer_name}},\n\nYour order #{{order_number}} has been confirmed. Track your shipment here: {{tracking_url}}',
+    type: 'email',
+    usageCount: 3456,
+  },
+];
