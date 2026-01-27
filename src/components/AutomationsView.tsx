@@ -1,12 +1,37 @@
-import { useState } from 'react';
-import { automations as initialAutomations } from '../data/mockData';
+import { useEffect, useState } from 'react';
 import { Automation } from '../types';
 import { Play, Pause, Settings } from 'lucide-react';
+import { projectId, publicAnonKey } from '../utils/supabase/info';
+import { toast } from "sonner@2.0.3";
 
 export function AutomationsView() {
-  const [automations, setAutomations] = useState<Automation[]>(initialAutomations);
+  const [automations, setAutomations] = useState<Automation[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const toggleAutomation = (id: string) => {
+  useEffect(() => {
+    fetchAutomations();
+  }, []);
+
+  const fetchAutomations = async () => {
+    try {
+      const response = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-c8eef56a/dashboard/automations`, {
+        headers: {
+          'Authorization': `Bearer ${publicAnonKey}`,
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setAutomations(data.automations);
+      }
+    } catch (error) {
+      console.error('Failed to fetch automations', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const toggleAutomation = async (id: string) => {
+    // Optimistic update
     setAutomations(
       automations.map((automation) =>
         automation.id === id
@@ -14,7 +39,34 @@ export function AutomationsView() {
           : automation
       )
     );
+
+    try {
+      const response = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-c8eef56a/dashboard/automations/${id}/toggle`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${publicAnonKey}`,
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to toggle');
+      }
+      
+      toast.success('Automation updated');
+    } catch (error) {
+      toast.error('Failed to update automation');
+      // Revert on failure
+      fetchAutomations();
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#25D366]"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-10">

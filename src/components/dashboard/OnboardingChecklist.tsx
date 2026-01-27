@@ -1,0 +1,231 @@
+import { CheckCircle2, Circle, Lock, ArrowRight, Loader2, PlayCircle } from 'lucide-react';
+import { Button } from '../ui/button';
+import { Link, useNavigate } from 'react-router';
+import { useState } from 'react';
+import { toast } from "sonner@2.0.3";
+import { projectId, publicAnonKey } from '../../utils/supabase/info';
+
+interface ReadinessData {
+  templates: {
+    total: number;
+    has_enabled: boolean;
+  };
+  ai_usage: {
+    used: number;
+    limit: number;
+  };
+  integrations: {
+    shopify_connected: boolean;
+    whatsapp_connected: boolean;
+  };
+  automation: {
+    status: 'active' | 'paused';
+    reason: string;
+  };
+}
+
+interface OnboardingChecklistProps {
+  data: ReadinessData;
+  onRefresh: () => void;
+}
+
+export function OnboardingChecklist({ data, onRefresh }: OnboardingChecklistProps) {
+  const navigate = useNavigate();
+  const [connecting, setConnecting] = useState<string | null>(null);
+
+  // Helper to update integration status (Simulating the OAuth callback)
+  const connectIntegration = async (type: 'shopify' | 'whatsapp') => {
+    try {
+      setConnecting(type);
+      
+      // Get current status to preserve the other one
+      const currentStatus = {
+        shopify_connected: data.integrations.shopify_connected,
+        whatsapp_connected: data.integrations.whatsapp_connected
+      };
+      
+      const newStatus = {
+        ...currentStatus,
+        [type === 'shopify' ? 'shopify_connected' : 'whatsapp_connected']: true
+      };
+
+      const res = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-c8eef56a/api/integrations/status`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${publicAnonKey}`
+        },
+        body: JSON.stringify(newStatus)
+      });
+
+      if (!res.ok) throw new Error("Connection failed");
+
+      toast.success(`${type === 'shopify' ? 'Shopify' : 'WhatsApp'} connected successfully`);
+      onRefresh(); // Refresh dashboard data
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to connect integration");
+    } finally {
+      setConnecting(null);
+    }
+  };
+
+  // Step Logic
+  const steps = [
+    {
+      id: 1,
+      title: "Create a message template",
+      description: "Write your recovery message or generate one with AI.",
+      isCompleted: data.templates.total > 0,
+      isBlocked: false, // Always available
+      action: {
+        label: "Go to Templates",
+        onClick: () => navigate('/templates')
+      }
+    },
+    {
+      id: 2,
+      title: "Enable a template",
+      description: "Select a template to be sent to customers.",
+      isCompleted: data.templates.has_enabled,
+      isBlocked: data.templates.total === 0,
+      blockedReason: "Create a template first.",
+      action: {
+        label: "Manage Templates",
+        onClick: () => navigate('/templates')
+      }
+    },
+    {
+      id: 3,
+      title: "Connect WhatsApp",
+      description: "Link your Meta Business account to send messages.",
+      isCompleted: data.integrations.whatsapp_connected,
+      isBlocked: !data.templates.has_enabled,
+      blockedReason: "Complete previous steps to proceed.",
+      action: {
+        label: "Connect WhatsApp",
+        onClick: () => connectIntegration('whatsapp'),
+        loading: connecting === 'whatsapp'
+      }
+    },
+    {
+      id: 4,
+      title: "Connect Shopify",
+      description: "Sync your store to detect abandoned carts.",
+      isCompleted: data.integrations.shopify_connected,
+      isBlocked: !data.integrations.whatsapp_connected,
+      blockedReason: "Connect WhatsApp first.",
+      action: {
+        label: "Connect Shopify",
+        onClick: () => connectIntegration('shopify'),
+        loading: connecting === 'shopify'
+      }
+    },
+    {
+      id: 5,
+      title: "Activate Automation",
+      description: "System will automatically start recovering carts.",
+      isCompleted: data.automation.status === 'active',
+      isBlocked: !data.integrations.shopify_connected,
+      blockedReason: "Connect all integrations to activate.",
+      action: null // Auto-completes
+    }
+  ];
+
+  // Find the first non-completed step to highlight it
+  const currentStepIndex = steps.findIndex(s => !s.isCompleted);
+  const activeStepId = currentStepIndex === -1 ? 6 : steps[currentStepIndex].id;
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+      <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900">Getting Started</h2>
+          <p className="text-sm text-gray-500">Complete these steps to go live</p>
+        </div>
+        <span className="text-xs font-semibold bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+          {steps.filter(s => s.isCompleted).length} / {steps.length} Completed
+        </span>
+      </div>
+
+      <div className="divide-y divide-gray-100">
+        {steps.map((step, index) => {
+          const isCurrent = step.id === activeStepId;
+          const isPast = step.isCompleted;
+          
+          return (
+            <div 
+              key={step.id} 
+              className={`p-6 transition-colors ${isCurrent ? 'bg-blue-50/30' : 'bg-white'} ${step.isBlocked ? 'opacity-60' : ''}`}
+            >
+              <div className="flex items-start gap-4">
+                {/* Icon Status */}
+                <div className="flex-shrink-0 mt-1">
+                  {step.isCompleted ? (
+                    <CheckCircle2 className="w-6 h-6 text-green-500" />
+                  ) : step.isBlocked ? (
+                    <Lock className="w-6 h-6 text-gray-300" />
+                  ) : (
+                    <div className="relative">
+                      <Circle className="w-6 h-6 text-blue-600" />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Content */}
+                <div className="flex-1">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className={`font-medium ${step.isCompleted ? 'text-gray-900' : isCurrent ? 'text-blue-700' : 'text-gray-500'}`}>
+                        {step.title}
+                      </h3>
+                      <p className="text-sm text-gray-500 mt-1 max-w-lg">
+                        {step.description}
+                      </p>
+                      
+                      {/* Blocked Reason */}
+                      {step.isBlocked && (
+                        <p className="text-xs text-amber-600 mt-2 font-medium flex items-center gap-1">
+                          <Lock className="w-3 h-3" />
+                          {step.blockedReason}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Action Button */}
+                    {!step.isCompleted && !step.isBlocked && step.action && (
+                      <Button 
+                        size="sm" 
+                        onClick={step.action.onClick}
+                        disabled={step.action.loading}
+                        className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+                      >
+                        {step.action.loading && <Loader2 className="w-3 h-3 animate-spin mr-2" />}
+                        {step.action.label}
+                        {!step.action.loading && <ArrowRight className="w-3 h-3 ml-2" />}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+        
+        {/* Success State */}
+        {data.automation.status === 'active' && (
+          <div className="p-8 bg-green-50 text-center">
+            <div className="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-3">
+              <PlayCircle className="w-6 h-6" />
+            </div>
+            <h3 className="text-lg font-bold text-green-900">System Active</h3>
+            <p className="text-green-700 text-sm">Whapflow is running in production mode.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

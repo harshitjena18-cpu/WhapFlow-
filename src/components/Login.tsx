@@ -5,7 +5,8 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Link, useNavigate } from 'react-router';
 import { WhapflowLogo } from './WhapflowLogo';
-import logo from 'figma:asset/9ad57f78ffcb8b81f228eb1f033e9199d9c738a7.png';
+import { supabase } from '../utils/supabase/client';
+import { toast } from "sonner@2.0.3";
 
 export function Login() {
   const navigate = useNavigate();
@@ -43,12 +44,27 @@ export function Login() {
     }
 
     setIsLoading(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setIsLoading(false);
     
-    // Navigate to dashboard
-    navigate('/dashboard');
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      // Navigate to dashboard
+      toast.success('Successfully logged in!');
+      navigate('/dashboard');
+    } catch (error: any) {
+      console.error('Login error:', error);
+      toast.error(error.message || 'Failed to login');
+      setErrors(prev => ({ ...prev, form: error.message }));
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -60,9 +76,27 @@ export function Login() {
     }
   };
 
-  const handleSocialLogin = (provider: string) => {
-    // Mock social login
-    navigate('/dashboard');
+  const handleSocialLogin = async (provider: 'google' | 'shopify') => {
+    if (provider === 'shopify') {
+      toast.info('Shopify login coming soon');
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin + '/dashboard',
+        }
+      });
+
+      if (error) throw error;
+      
+      // Note: This will redirect the user away from the page
+    } catch (error: any) {
+      console.error('Social login error:', error);
+      toast.error(error.message || 'Failed to initiate social login');
+    }
   };
 
   return (
@@ -75,6 +109,10 @@ export function Login() {
           </Link>
           <h2 className="text-3xl font-bold text-gray-900 mb-3 tracking-tight">Welcome back</h2>
           <p className="text-gray-600 text-lg">Sign in to your account to continue</p>
+          <div className="mt-4 inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-full border border-blue-100">
+            <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></span>
+            Supabase Auth integration pending
+          </div>
         </div>
 
         {/* Login Card */}
@@ -124,6 +162,13 @@ export function Login() {
                 <p className="text-sm text-red-600 animate-slide-up">{errors.password}</p>
               )}
             </div>
+
+            {/* Global Error */}
+            {errors.form && (
+              <div className="p-3 rounded-lg bg-red-50 border border-red-100 text-red-600 text-sm">
+                {errors.form}
+              </div>
+            )}
 
             {/* Submit Button */}
             <Button 

@@ -5,7 +5,9 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Link, useNavigate } from 'react-router';
 import { WhapflowLogo } from './WhapflowLogo';
-import logo from 'figma:asset/9ad57f78ffcb8b81f228eb1f033e9199d9c738a7.png';
+import { projectId, publicAnonKey } from '../utils/supabase/info';
+import { supabase } from '../utils/supabase/client';
+import { toast } from "sonner@2.0.3";
 
 export function Signup() {
   const navigate = useNavigate();
@@ -63,12 +65,53 @@ export function Signup() {
     }
 
     setIsLoading(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setIsLoading(false);
     
-    // Navigate to dashboard
-    navigate('/dashboard');
+    try {
+      // Use our server endpoint for signup to allow immediate confirmation (as per system instructions)
+      // or we can use the client-side auth if that's preferred. The system instructions specifically
+      // mentioned creating a /signup route for this purpose.
+      
+      const response = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-c8eef56a/signup`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${publicAnonKey}`
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+          user_metadata: {
+            shopify_store_url: formData.shopifyStoreUrl
+          }
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create account');
+      }
+
+      // Automatically log them in after signup since email is auto-confirmed
+      const { error: loginError } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password,
+      });
+
+      if (loginError) {
+        throw loginError;
+      }
+      
+      toast.success('Account created successfully!');
+      navigate('/dashboard');
+      
+    } catch (error: any) {
+      console.error('Signup error:', error);
+      toast.error(error.message || 'Failed to sign up');
+      setErrors(prev => ({ ...prev, form: error.message }));
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -80,9 +123,26 @@ export function Signup() {
     }
   };
 
-  const handleSocialSignup = (provider: string) => {
-    // Mock social signup
-    navigate('/dashboard');
+  const handleSocialSignup = async (provider: 'google' | 'shopify') => {
+    if (provider === 'shopify') {
+      toast.info('Shopify signup coming soon');
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin + '/dashboard',
+        }
+      });
+
+      if (error) throw error;
+      
+    } catch (error: any) {
+      console.error('Social signup error:', error);
+      toast.error(error.message || 'Failed to initiate social signup');
+    }
   };
 
   return (
@@ -179,6 +239,13 @@ export function Signup() {
                 <p className="text-sm text-red-600 animate-slide-up">{errors.confirmPassword}</p>
               )}
             </div>
+            
+            {/* Global Error */}
+            {errors.form && (
+              <div className="p-3 rounded-lg bg-red-50 border border-red-100 text-red-600 text-sm">
+                {errors.form}
+              </div>
+            )}
 
             {/* Terms */}
             <p className="text-xs text-gray-500 leading-relaxed">

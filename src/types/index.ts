@@ -44,3 +44,37 @@ export interface NavItem {
   path: string;
   icon: string;
 }
+
+export interface ShopifyCartPayload {
+  id: string;
+  token: string;
+  line_items: Array<{
+    id: number;
+    title: string;
+    quantity: number;
+    price: string;
+  }>;
+  currency: string;
+  customer: {
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone?: string;
+  };
+  abandoned_checkout_url: string;
+  created_at: string;
+}
+
+export interface WhatsAppMessageRequest {
+  phoneNumber: string;
+  templateId: string;
+  parameters?: Record<string, string>;
+}
+
+export interface DashboardMetrics {
+  activeCarts: number;
+  messagesSent: number;
+  revenueRecovered: number;
+  recentActivity: ActivityLog[];
+  dailyRevenue: RevenueDataPoint[];
+}
