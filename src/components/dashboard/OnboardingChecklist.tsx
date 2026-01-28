@@ -151,18 +151,18 @@ export function OnboardingChecklist({ data, onRefresh }: OnboardingChecklistProp
   const activeStepId = currentStepIndex === -1 ? 6 : steps[currentStepIndex].id;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-      <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+    <div className="bg-white/90 backdrop-blur-sm border border-gray-200/60 rounded-xl overflow-hidden shadow-sm card-glow light-reflection">
+      <div className="bg-gradient-to-br from-gray-50 to-gray-100/50 px-6 py-4 border-b border-gray-100/80 flex justify-between items-center relative z-10">
         <div>
           <h2 className="text-lg font-semibold text-gray-900">Getting Started</h2>
           <p className="text-sm text-gray-500">Complete these steps to go live</p>
         </div>
-        <span className="text-xs font-semibold bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+        <span className="text-xs font-semibold bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-700 px-2 py-1 rounded-full shadow-sm">
           {steps.filter(s => s.isCompleted).length} / {steps.length} Completed
         </span>
       </div>
 
-      <div className="divide-y divide-gray-100">
+      <div className="divide-y divide-gray-100/80">
         {steps.map((step, index) => {
           const isCurrent = step.id === activeStepId;
           const isPast = step.isCompleted;
@@ -170,7 +170,7 @@ export function OnboardingChecklist({ data, onRefresh }: OnboardingChecklistProp
           return (
             <div 
               key={step.id} 
-              className={`p-6 transition-colors ${isCurrent ? 'bg-blue-50/30' : 'bg-white'} ${step.isBlocked ? 'opacity-60' : ''}`}
+              className={`p-6 transition-all duration-300 ${isCurrent ? 'bg-gradient-to-r from-blue-50/40 to-indigo-50/20' : 'bg-white/50'} ${step.isBlocked ? 'opacity-60' : ''} relative z-10`}
             >
               <div className="flex items-start gap-4">
                 {/* Icon Status */}
@@ -215,7 +215,7 @@ export function OnboardingChecklist({ data, onRefresh }: OnboardingChecklistProp
                         size="sm" 
                         onClick={step.action.onClick}
                         disabled={step.action.loading}
-                        className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+                        className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md hover:shadow-lg transition-all duration-300"
                       >
                         {step.action.loading && <Loader2 className="w-3 h-3 animate-spin mr-2" />}
                         {step.action.label}
@@ -231,8 +231,8 @@ export function OnboardingChecklist({ data, onRefresh }: OnboardingChecklistProp
         
         {/* Success State */}
         {data.automation.status === 'active' && (
-          <div className="p-8 bg-green-50 text-center">
-            <div className="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-3">
+          <div className="p-8 bg-gradient-to-r from-green-50 to-emerald-50/50 text-center relative z-10">
+            <div className="w-12 h-12 bg-gradient-to-br from-green-100 to-emerald-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-3 shadow-sm">
               <PlayCircle className="w-6 h-6" />
             </div>
             <h3 className="text-lg font-bold text-green-900">System Active</h3>

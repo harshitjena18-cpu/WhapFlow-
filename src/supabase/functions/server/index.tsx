@@ -714,19 +714,9 @@ app.post("/make-server-c8eef56a/api/webhooks/whatsapp", async (c) => {
 // GET /api/dashboard/metrics
 app.get("/make-server-c8eef56a/api/dashboard/metrics", async (c) => {
   try {
-    const shop = c.req.query("shop");
-    if (!shop) return c.json({ error: "Shop parameter required" }, 400);
+    const shop = c.req.query("shop") || "global"; // Default to "global" if no shop provided
 
     // 1. Fetch Integrations Status
-    // NOTE: Integration config is currently global in my previous code!
-    // I should fix config access too, but billing is the priority.
-    // Let's assume for this step I only fix billing.
-    // However, I previously edited billing.ts to be tenant-aware.
-    // I should check if kv_store calls for config need updating. 
-    // In shopify_auth.tsx I used "config:shopify".
-    // I should probably make config tenant-aware too in a future step or now.
-    // But sticking to billing for now.
-
     const shopifyConfig = await kv.get("config:shopify");
     const whatsappConfig = await kv.get("config:whatsapp");
     const status = {
@@ -778,7 +768,8 @@ app.get("/make-server-c8eef56a/api/dashboard/metrics", async (c) => {
             used: billingConfig.whatsapp_conversations_used,
             limit: limits.whatsapp_conversations
           },
-          automation_enabled: limits.automation_enabled
+          automation_enabled: limits.automation_enabled,
+          billing_cycle_reset_at: billingConfig.billing_cycle_reset_at
         },
         // Legacy support for frontend that expects 'ai_usage' at root
         ai_usage: {

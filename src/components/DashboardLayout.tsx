@@ -4,7 +4,7 @@ import { Header } from './Header';
 
 export function DashboardLayout() {
   return (
-    <div className="min-h-screen bg-gray-50 font-sans">
+    <div className="min-h-screen premium-gradient-bg grain-texture font-sans relative">
       <Sidebar />
       <Header />
       

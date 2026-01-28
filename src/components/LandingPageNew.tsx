@@ -249,21 +249,25 @@ export function LandingPageNew() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {/* Starter Plan */}
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto">
+            {/* Free Plan */}
             <div className="bg-white p-8 rounded-2xl border border-gray-200 hover:shadow-lg transition-all duration-300">
               <div className="mb-8">
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">Starter</h3>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">Free</h3>
                 <div className="flex items-baseline gap-2 mb-4">
-                  <span className="text-5xl font-bold text-gray-900">$29</span>
+                  <span className="text-5xl font-bold text-gray-900">$0</span>
                   <span className="text-gray-600">/month</span>
                 </div>
-                <p className="text-gray-600">Perfect for small stores testing cart recovery</p>
+                <p className="text-gray-600">Try before you commit</p>
               </div>
               <ul className="space-y-4 mb-8">
                 <li className="flex items-start gap-3">
                   <Check className="w-5 h-5 text-[#25D366] flex-shrink-0 mt-0.5" />
-                  <span className="text-gray-700">Up to 500 messages/month</span>
+                  <span className="text-gray-700">5 AI generations</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-[#25D366] flex-shrink-0 mt-0.5" />
+                  <span className="text-gray-700">0 WhatsApp conversations</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="w-5 h-5 text-[#25D366] flex-shrink-0 mt-0.5" />
@@ -271,11 +275,42 @@ export function LandingPageNew() {
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="w-5 h-5 text-[#25D366] flex-shrink-0 mt-0.5" />
-                  <span className="text-gray-700">Email support</span>
+                  <span className="text-gray-700">No automation</span>
+                </li>
+              </ul>
+              <Link to="/signup" className="block">
+                <button className="w-full py-3 px-6 bg-white border-2 border-gray-900 text-gray-900 font-semibold rounded-xl hover:bg-gray-50 transition-colors">
+                  Get Started Free
+                </button>
+              </Link>
+            </div>
+
+            {/* Starter Plan */}
+            <div className="bg-white p-8 rounded-2xl border border-gray-200 hover:shadow-lg transition-all duration-300">
+              <div className="mb-8">
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">Starter</h3>
+                <div className="flex items-baseline gap-2 mb-4">
+                  <span className="text-5xl font-bold text-gray-900">$19</span>
+                  <span className="text-gray-600">/month</span>
+                </div>
+                <p className="text-gray-600">Perfect for small stores testing cart recovery</p>
+              </div>
+              <ul className="space-y-4 mb-8">
+                <li className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-[#25D366] flex-shrink-0 mt-0.5" />
+                  <span className="text-gray-700">30 AI generations/month</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="w-5 h-5 text-[#25D366] flex-shrink-0 mt-0.5" />
-                  <span className="text-gray-700">2 team members</span>
+                  <span className="text-gray-700">300 WhatsApp conversations</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-[#25D366] flex-shrink-0 mt-0.5" />
+                  <span className="text-gray-700">Automation enabled</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-[#25D366] flex-shrink-0 mt-0.5" />
+                  <span className="text-gray-700">Email support</span>
                 </li>
               </ul>
               <Link to="/signup" className="block">
@@ -295,7 +330,7 @@ export function LandingPageNew() {
               <div className="mb-8">
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">Growth</h3>
                 <div className="flex items-baseline gap-2 mb-4">
-                  <span className="text-5xl font-bold text-gray-900">$79</span>
+                  <span className="text-5xl font-bold text-gray-900">$49</span>
                   <span className="text-gray-600">/month</span>
                 </div>
                 <p className="text-gray-600">For growing stores scaling their recovery</p>
@@ -303,11 +338,15 @@ export function LandingPageNew() {
               <ul className="space-y-4 mb-8">
                 <li className="flex items-start gap-3">
                   <Check className="w-5 h-5 text-[#25D366] flex-shrink-0 mt-0.5" />
-                  <span className="text-gray-700">Up to 2,500 messages/month</span>
+                  <span className="text-gray-700">100 AI generations/month</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="w-5 h-5 text-[#25D366] flex-shrink-0 mt-0.5" />
-                  <span className="text-gray-700">Advanced analytics</span>
+                  <span className="text-gray-700">1,000 WhatsApp conversations</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-[#25D366] flex-shrink-0 mt-0.5" />
+                  <span className="text-gray-700">Automation enabled</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="w-5 h-5 text-[#25D366] flex-shrink-0 mt-0.5" />
@@ -315,11 +354,7 @@ export function LandingPageNew() {
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="w-5 h-5 text-[#25D366] flex-shrink-0 mt-0.5" />
-                  <span className="text-gray-700">10 team members</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <Check className="w-5 h-5 text-[#25D366] flex-shrink-0 mt-0.5" />
-                  <span className="text-gray-700">Custom templates</span>
+                  <span className="text-gray-700">Advanced analytics</span>
                 </li>
               </ul>
               <Link to="/signup" className="block">
@@ -334,7 +369,7 @@ export function LandingPageNew() {
               <div className="mb-8">
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">Pro</h3>
                 <div className="flex items-baseline gap-2 mb-4">
-                  <span className="text-5xl font-bold text-gray-900">$199</span>
+                  <span className="text-5xl font-bold text-gray-900">$99</span>
                   <span className="text-gray-600">/month</span>
                 </div>
                 <p className="text-gray-600">For enterprise stores with high volume</p>
@@ -342,19 +377,19 @@ export function LandingPageNew() {
               <ul className="space-y-4 mb-8">
                 <li className="flex items-start gap-3">
                   <Check className="w-5 h-5 text-[#25D366] flex-shrink-0 mt-0.5" />
-                  <span className="text-gray-700">Unlimited messages</span>
+                  <span className="text-gray-700">Unlimited AI generations</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="w-5 h-5 text-[#25D366] flex-shrink-0 mt-0.5" />
-                  <span className="text-gray-700">Custom analytics</span>
+                  <span className="text-gray-700">3,000 WhatsApp conversations</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="w-5 h-5 text-[#25D366] flex-shrink-0 mt-0.5" />
-                  <span className="text-gray-700">24/7 support</span>
+                  <span className="text-gray-700">Automation enabled</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="w-5 h-5 text-[#25D366] flex-shrink-0 mt-0.5" />
-                  <span className="text-gray-700">Unlimited team members</span>
+                  <span className="text-gray-700">24/7 priority support</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="w-5 h-5 text-[#25D366] flex-shrink-0 mt-0.5" />
