@@ -1,0 +1,240 @@
+import { Hono } from "npm:hono";
+import { setCookie, getCookie } from "npm:hono/cookie";
+import * as kv from "./kv_store.tsx";
+
+const app = new Hono();
+
+// Configuration
+const SHOPIFY_SCOPES = "read_checkouts,read_orders";
+// Note: In production, strictly use the environment variable. 
+// For this environment, we default to the provided callback URL structure if not set, 
+// but the user MUST set SHOPIFY_CLIENT_ID and SHOPIFY_CLIENT_SECRET.
+const REDIRECT_URI = Deno.env.get("SHOPIFY_REDIRECT_URI") || "https://api.whapflow.com/auth/shopify/callback";
+
+/**
+ * STEP 2: OAUTH START ROUTE
+ * GET /auth/shopify
+ */
+app.get("/", async (c) => {
+  const shop = c.req.query("shop");
+  const clientId = Deno.env.get("SHOPIFY_CLIENT_ID");
+
+  if (!clientId) {
+    return c.text("Error: SHOPIFY_CLIENT_ID not configured", 500);
+  }
+
+  // 1. Validate shop parameter
+  if (!shop || !shop.endsWith(".myshopify.com")) {
+    return c.text("Error: Invalid or missing 'shop' parameter. Expected format: my-store.myshopify.com", 400);
+  }
+
+  // 2. Generate secure state
+  const state = crypto.randomUUID();
+
+  // 3. Store state in cookie (httpOnly, secure)
+  setCookie(c, "shopify_oauth_state", state, {
+    path: "/",
+    secure: true,
+    httpOnly: true,
+    maxAge: 60 * 10, // 10 minutes
+    sameSite: "Lax",
+  });
+
+  // 4. Redirect to Shopify
+  const authorizationUrl = new URL(`https://${shop}/admin/oauth/authorize`);
+  authorizationUrl.searchParams.append("client_id", clientId);
+  authorizationUrl.searchParams.append("scope", SHOPIFY_SCOPES);
+  authorizationUrl.searchParams.append("redirect_uri", REDIRECT_URI);
+  authorizationUrl.searchParams.append("state", state);
+
+  console.log(`[OAuth] Initiating flow for ${shop}`);
+  return c.redirect(authorizationUrl.toString());
+});
+
+/**
+ * STEP 3: OAUTH CALLBACK ROUTE
+ * GET /auth/shopify/callback
+ */
+app.get("/callback", async (c) => {
+  const { shop, code, state, hmac } = c.req.query();
+  const clientId = Deno.env.get("SHOPIFY_CLIENT_ID");
+  const clientSecret = Deno.env.get("SHOPIFY_CLIENT_SECRET");
+
+  // 1. Basic Validation
+  if (!shop || !code || !state || !hmac) {
+    return c.text("Error: Missing required parameters", 400);
+  }
+
+  if (!clientId || !clientSecret) {
+    return c.text("Error: Server misconfiguration (Missing Credentials)", 500);
+  }
+
+  // 2. Verify State
+  const savedState = getCookie(c, "shopify_oauth_state");
+  if (state !== savedState) {
+    console.error(`[OAuth] State mismatch. Received: ${state}, Expected: ${savedState}`);
+    return c.text("Error: Request origin cannot be verified (State Mismatch)", 403);
+  }
+
+  // 3. Verify HMAC
+  const success = await verifyHmac(c.req.query(), clientSecret);
+  if (!success) {
+    console.error(`[OAuth] HMAC verification failed for ${shop}`);
+    return c.text("Error: HMAC verification failed", 400);
+  }
+
+  try {
+    // 4. Exchange Access Token
+    console.log(`[OAuth] Exchanging code for token with ${shop}...`);
+    const tokenResponse = await fetch(`https://${shop}/admin/oauth/access_token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        client_id: clientId,
+        client_secret: clientSecret,
+        code: code,
+      }),
+    });
+
+    const tokenData = await tokenResponse.json();
+
+    if (!tokenResponse.ok) {
+      console.error("[OAuth] Token exchange failed:", tokenData);
+      return c.text("Error: Failed to exchange access token", 500);
+    }
+
+    const accessToken = tokenData.access_token;
+    console.log(`[OAuth] Token acquired for ${shop}`);
+
+    // STEP 4: MERCHANT REGISTRATION
+    // Update global config for MVP (Dashboard compatibility)
+    // In a real multi-tenant app, this would be scoped to the user session.
+    
+    // 1. Update Singleton Config (for Dashboard UI)
+    const shopifyConfig = (await kv.get("config:shopify")) || {};
+    shopifyConfig.connected_at = new Date().toISOString();
+    shopifyConfig.connection_status = "connected";
+    shopifyConfig.shop_domain = shop; // Metadata
+    await kv.set("config:shopify", shopifyConfig);
+
+    // 2. Securely Store Credentials (keyed by shop)
+    const merchantRecord = {
+      shop: shop,
+      access_token: accessToken, // In production, encrypt this!
+      scopes: tokenData.scope,
+      plan: "free",
+      shopify_connected: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    await kv.set(`merchant:${shop}`, merchantRecord);
+    
+    // Also set a mapping if needed, or just rely on the global config for the MVP demo.
+
+    // STEP 5: REGISTER WEBHOOKS
+    await registerWebhooks(shop, accessToken);
+
+    // STEP 6: FINAL REDIRECT
+    console.log(`[OAuth] Flow complete. Redirecting to Dashboard.`);
+    return c.redirect("https://app.whapflow.com/dashboard");
+
+  } catch (error) {
+    console.error("[OAuth] Unexpected error:", error);
+    return c.text("Internal Server Error", 500);
+  }
+});
+
+/**
+ * Helper: HMAC Verification
+ */
+async function verifyHmac(query: Record<string, string>, secret: string) {
+  const { hmac, ...rest } = query;
+  
+  // Sort keys alphabetically
+  const keys = Object.keys(rest).sort();
+  const message = keys.map(key => `${key}=${rest[key]}`).join("&");
+
+  const encoder = new TextEncoder();
+  const keyData = encoder.encode(secret);
+  const msgData = encoder.encode(message);
+
+  const cryptoKey = await crypto.subtle.importKey(
+    "raw",
+    keyData,
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+
+  const signature = await crypto.subtle.sign("HMAC", cryptoKey, msgData);
+  
+  // Convert buffer to hex string
+  const hashArray = Array.from(new Uint8Array(signature));
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+  return hashHex === hmac;
+}
+
+/**
+ * Helper: Register Webhooks
+ */
+async function registerWebhooks(shop: string, accessToken: string) {
+  // Define webhooks with their specific endpoints
+  const WEBHOOKS = [
+    { 
+      topic: "checkouts/create", 
+      address: "https://api.whapflow.com/make-server-c8eef56a/api/webhooks/shopify" 
+    },
+    { 
+      topic: "checkouts/update", 
+      address: "https://api.whapflow.com/make-server-c8eef56a/api/webhooks/shopify" 
+    },
+    { 
+      topic: "app/uninstalled", 
+      address: "https://api.whapflow.com/make-server-c8eef56a/api/webhooks/app/uninstalled" 
+    },
+    {
+      topic: "app_subscriptions/update",
+      address: "https://api.whapflow.com/make-server-c8eef56a/api/billing/webhooks/billing/update"
+    }
+  ];
+
+
+  console.log(`[Webhooks] Registering topics for ${shop}...`);
+
+  for (const hook of WEBHOOKS) {
+    try {
+      const response = await fetch(`https://${shop}/admin/api/2023-10/webhooks.json`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Shopify-Access-Token": accessToken,
+        },
+        body: JSON.stringify({
+          webhook: {
+            topic: hook.topic,
+            address: hook.address,
+            format: "json",
+          },
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        // Ignore "address for this topic has already been taken" errors
+        if (JSON.stringify(data).includes("taken")) {
+             console.log(`[Webhooks] Topic ${hook.topic} already registered.`);
+        } else {
+             console.error(`[Webhooks] Failed to register ${hook.topic}:`, data);
+        }
+      } else {
+        console.log(`[Webhooks] Successfully registered ${hook.topic}`);
+      }
+    } catch (err) {
+      console.error(`[Webhooks] Network error registering ${hook.topic}:`, err);
+    }
+  }
+}
+
+export default app;

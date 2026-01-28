@@ -1,15 +1,31 @@
 import { useEffect, useState } from 'react';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { toast } from "sonner@2.0.3";
-import { CheckCircle2, XCircle, AlertCircle, FileText, Zap, ShoppingBag, MessageSquare, ArrowRight } from 'lucide-react';
-import { Link } from 'react-router';
+import { CheckCircle2, XCircle, AlertCircle, FileText, Zap, ShoppingBag, MessageSquare, ArrowRight, CreditCard, Sparkles } from 'lucide-react';
+import { Link, useNavigate } from 'react-router';
 import { Progress } from '../ui/progress';
+import { Button } from '../ui/button';
+import { Badge } from '../ui/badge';
 
 interface ReadinessData {
   templates: {
     total: number;
     has_enabled: boolean;
   };
+  billing: {
+    plan: 'free' | 'starter' | 'growth' | 'pro';
+    plan_name: string;
+    ai_usage: {
+      used: number;
+      limit: number;
+    };
+    whatsapp_usage: {
+      used: number;
+      limit: number;
+    };
+    automation_enabled: boolean;
+  };
+  // Keeping this for backward compatibility if needed, but we should switch to billing.ai_usage
   ai_usage: {
     used: number;
     limit: number;
@@ -31,6 +47,7 @@ import { OnboardingChecklist } from './OnboardingChecklist';
 export function DashboardView() {
   const [data, setData] = useState<ReadinessData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
 
   async function fetchDashboardData() {
     try {
@@ -71,11 +88,28 @@ export function DashboardView() {
   return (
     <div className="space-y-8">
       {/* Page Header */}
-      <div className="pb-2">
-        <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">Dashboard</h1>
-        <p className="text-sm text-gray-500 mt-2">
-          System Readiness & Status Overview
-        </p>
+      <div className="pb-2 flex justify-between items-end">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">Dashboard</h1>
+          <p className="text-sm text-gray-500 mt-2">
+            System Readiness & Status Overview
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Badge variant="outline" className="px-3 py-1 bg-white border-gray-200 text-gray-700">
+            {data.billing.plan_name} Plan
+          </Badge>
+          {data.billing.plan === 'free' && (
+            <Button 
+              size="sm" 
+              className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white border-0 hover:from-purple-700 hover:to-indigo-700 shadow-sm"
+              onClick={() => navigate('/billing')}
+            >
+              <Sparkles className="w-4 h-4 mr-2" />
+              Upgrade
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Status Banner */}
@@ -174,24 +208,48 @@ export function DashboardView() {
           </div>
         </div>
 
-        {/* AI Usage */}
+        {/* Usage & Billing */}
         <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm flex flex-col">
           <h3 className="text-base font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <Zap className="w-4 h-4 text-orange-500" /> AI Usage
+            <CreditCard className="w-4 h-4 text-indigo-500" /> Usage Limits
           </h3>
           
-          <div className="flex-1 flex flex-col justify-center space-y-4">
+          <div className="flex-1 flex flex-col justify-center space-y-6">
+            {/* AI Credits */}
             <div className="space-y-2">
                <div className="flex justify-between text-sm">
-                 <span className="text-gray-600">Monthly Credits</span>
-                 <span className="font-mono font-medium">{data.ai_usage.used} / {data.ai_usage.limit}</span>
+                 <span className="text-gray-600 flex items-center gap-1"><Zap className="w-3 h-3 text-orange-500" /> AI Credits</span>
+                 <span className="font-mono font-medium text-xs">
+                    {data.billing.ai_usage.limit === null || data.billing.ai_usage.limit === Infinity 
+                      ? `${data.billing.ai_usage.used} / ∞` 
+                      : `${data.billing.ai_usage.used} / ${data.billing.ai_usage.limit}`}
+                 </span>
                </div>
-               <Progress value={(data.ai_usage.used / data.ai_usage.limit) * 100} className="h-2" />
+               <Progress 
+                 value={data.billing.ai_usage.limit ? (data.billing.ai_usage.used / data.billing.ai_usage.limit) * 100 : 0} 
+                 className="h-1.5" 
+               />
+            </div>
+
+            {/* WhatsApp Limit */}
+            <div className="space-y-2">
+               <div className="flex justify-between text-sm">
+                 <span className="text-gray-600 flex items-center gap-1"><MessageSquare className="w-3 h-3 text-green-500" /> WhatsApp</span>
+                 <span className="font-mono font-medium text-xs">
+                    {data.billing.whatsapp_usage.used} / {data.billing.whatsapp_usage.limit}
+                 </span>
+               </div>
+               <Progress 
+                 value={(data.billing.whatsapp_usage.used / data.billing.whatsapp_usage.limit) * 100} 
+                 className="h-1.5" 
+               />
             </div>
             
-            <p className="text-xs text-gray-500 text-center">
-              Credits reset automatically each month.
-            </p>
+            {!data.billing.automation_enabled && (
+              <div className="bg-gray-50 p-2 rounded text-xs text-center text-gray-500">
+                Automation disabled on {data.billing.plan_name} plan
+              </div>
+            )}
           </div>
         </div>
 

@@ -10,9 +10,18 @@ interface ReadinessData {
     total: number;
     has_enabled: boolean;
   };
-  ai_usage: {
-    used: number;
-    limit: number;
+  billing: {
+    plan: 'free' | 'starter' | 'growth' | 'pro';
+    plan_name: string;
+    ai_usage: {
+      used: number;
+      limit: number;
+    };
+    whatsapp_usage: {
+      used: number;
+      limit: number;
+    };
+    automation_enabled: boolean;
   };
   integrations: {
     shopify_connected: boolean;
@@ -126,9 +135,14 @@ export function OnboardingChecklist({ data, onRefresh }: OnboardingChecklistProp
       title: "Activate Automation",
       description: "System will automatically start recovering carts.",
       isCompleted: data.automation.status === 'active',
-      isBlocked: !data.integrations.shopify_connected,
-      blockedReason: "Connect all integrations to activate.",
-      action: null // Auto-completes
+      isBlocked: !data.integrations.shopify_connected || !data.billing.automation_enabled,
+      blockedReason: !data.billing.automation_enabled 
+        ? `Upgrade from ${data.billing.plan_name} to enable` 
+        : "Connect all integrations to activate.",
+      action: !data.billing.automation_enabled ? {
+        label: "Upgrade Plan",
+        onClick: () => navigate('/billing')
+      } : null 
     }
   ];
 

@@ -1,26 +1,51 @@
-import { CreditCard, Check } from 'lucide-react';
+import { Check, CreditCard, Sparkles, Zap, MessageSquare } from 'lucide-react';
+import { Button } from './ui/button';
+import { Badge } from './ui/badge';
 
 const plans = [
   {
+    id: 'free',
+    name: 'Free',
+    price: '$0',
+    period: '/month',
+    features: ['5 AI generations/mo', 'Manual templates', 'No automation', 'Community support'],
+    limit: '0 WhatsApp messages',
+    current: true, // Default
+    cta: 'Current Plan',
+    popular: false
+  },
+  {
+    id: 'starter',
     name: 'Starter',
     price: '$29',
     period: '/month',
-    features: ['Up to 500 messages/mo', 'Basic analytics', 'Email support', '2 team members'],
+    features: ['30 AI generations/mo', '300 WhatsApp conversations', 'Automation enabled', 'Email support'],
+    limit: '300 WhatsApp messages',
     current: false,
+    cta: 'Upgrade',
+    popular: true
   },
   {
-    name: 'Professional',
+    id: 'growth',
+    name: 'Growth',
     price: '$79',
     period: '/month',
-    features: ['Up to 2,500 messages/mo', 'Advanced analytics', 'Priority support', '10 team members', 'Custom templates'],
-    current: true,
+    features: ['100 AI generations/mo', '1,000 WhatsApp conversations', 'Priority support', 'Advanced analytics'],
+    limit: '1,000 WhatsApp messages',
+    current: false,
+    cta: 'Upgrade',
+    popular: false
   },
   {
-    name: 'Enterprise',
+    id: 'pro',
+    name: 'Pro',
     price: '$199',
     period: '/month',
-    features: ['Unlimited messages', 'Custom analytics', '24/7 support', 'Unlimited team members', 'Custom integrations', 'Dedicated account manager'],
+    features: ['Unlimited AI', '3,000 WhatsApp conversations', 'Dedicated manager', 'Custom integrations'],
+    limit: '3,000 WhatsApp messages',
     current: false,
+    cta: 'Contact Sales',
+    popular: false
   },
 ];
 
@@ -29,104 +54,119 @@ export function BillingView() {
     <div className="space-y-10">
       {/* Page Header */}
       <div className="pb-2">
-        <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">Billing</h1>
+        <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">Billing & Plans</h1>
         <p className="text-sm text-gray-500 mt-2">
-          Manage your subscription and payment methods.
+          Manage your subscription and view usage limits.
         </p>
       </div>
 
-      {/* Current Plan */}
-      <div className="bg-white border border-gray-100 rounded-2xl p-8">
-        <div className="flex items-start justify-between mb-8">
+      {/* Current Usage Overview */}
+      <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-8 text-white shadow-lg">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
           <div>
-            <h2 className="text-base font-semibold text-gray-900">Current Plan</h2>
-            <p className="text-sm text-gray-500 mt-1.5">You are currently on the Professional plan</p>
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-yellow-400" /> 
+              Current Plan: Free
+            </h2>
+            <p className="text-sm text-gray-400 mt-1">
+              Your billing cycle resets on March 1, 2026.
+            </p>
           </div>
-          <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#25D366] text-white border border-[#25D366] rounded-lg text-xs font-semibold">
-            <Check className="w-3.5 h-3.5" />
-            Active
-          </span>
+          <Button className="bg-white text-gray-900 hover:bg-gray-100 font-semibold">
+            Manage Subscription
+          </Button>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Next billing date</p>
-            <p className="text-sm font-medium text-gray-900">April 1, 2026</p>
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Amount</p>
-            <p className="text-sm font-medium text-gray-900">$79.00</p>
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Payment method</p>
-            <p className="text-sm font-medium text-gray-900">•••• 4242</p>
-          </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-t border-gray-700 pt-8">
+           <div>
+             <div className="flex justify-between mb-2">
+               <span className="text-sm font-medium text-gray-300 flex items-center gap-2">
+                 <Zap className="w-4 h-4 text-orange-400" /> AI Generations
+               </span>
+               <span className="text-sm font-bold">0 / 5</span>
+             </div>
+             <div className="w-full bg-gray-700 rounded-full h-2">
+               <div className="bg-orange-500 h-2 rounded-full w-[0%]"></div>
+             </div>
+           </div>
+           
+           <div>
+             <div className="flex justify-between mb-2">
+               <span className="text-sm font-medium text-gray-300 flex items-center gap-2">
+                 <MessageSquare className="w-4 h-4 text-green-400" /> WhatsApp Conversations
+               </span>
+               <span className="text-sm font-bold">0 / 0</span>
+             </div>
+             <div className="w-full bg-gray-700 rounded-full h-2">
+               <div className="bg-green-500 h-2 rounded-full w-[0%]"></div>
+             </div>
+             <p className="text-xs text-gray-500 mt-2">Upgrade to unlock WhatsApp automation.</p>
+           </div>
         </div>
       </div>
 
       {/* Pricing Plans */}
       <div>
-        <h2 className="text-base font-semibold text-gray-900 mb-6">Available Plans</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-6">Available Plans</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {plans.map((plan) => (
             <div
-              key={plan.name}
-              className={`bg-white rounded-2xl p-8 border ${
-                plan.current
-                  ? 'border-[#25D366] shadow-sm'
-                  : 'border-gray-100'
+              key={plan.id}
+              className={`bg-white rounded-2xl p-6 border flex flex-col relative ${
+                plan.popular
+                  ? 'border-indigo-500 shadow-md ring-1 ring-indigo-500'
+                  : 'border-gray-200 shadow-sm'
               }`}
             >
-              <div className="mb-6">
-                <h3 className="text-base font-semibold text-gray-900">{plan.name}</h3>
-                {plan.current && (
-                  <span className="inline-block mt-3 px-2.5 py-1 bg-[#25D366]/10 text-[#25D366] border border-[#25D366]/20 rounded-lg text-xs font-semibold">
-                    Current Plan
-                  </span>
-                )}
+              {plan.popular && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-indigo-600 text-white px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide">
+                  Most Popular
+                </div>
+              )}
+              
+              <div className="mb-4">
+                <h3 className="text-lg font-bold text-gray-900">{plan.name}</h3>
+                <div className="flex items-baseline gap-1 mt-2">
+                  <span className="text-3xl font-bold text-gray-900">{plan.price}</span>
+                  <span className="text-sm text-gray-500">{plan.period}</span>
+                </div>
               </div>
-              <div className="mb-8">
-                <span className="text-4xl font-semibold text-gray-900">{plan.price}</span>
-                <span className="text-sm text-gray-500">{plan.period}</span>
+              
+              <div className="flex-1">
+                <ul className="space-y-3 mb-6">
+                  {plan.features.map((feature, index) => (
+                    <li key={index} className="flex items-start gap-3">
+                      <Check className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+                      <span className="text-sm text-gray-600 leading-snug">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
-              <ul className="space-y-3 mb-8">
-                {plan.features.map((feature, index) => (
-                  <li key={index} className="flex items-start gap-3">
-                    <Check className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
-                    <span className="text-sm text-gray-600">{feature}</span>
-                  </li>
-                ))}
-              </ul>
-              <button
-                className={`w-full py-3 rounded-xl font-semibold text-sm transition-colors ${
+
+              <Button
+                variant={plan.current ? "outline" : "default"}
+                className={`w-full ${
                   plan.current
-                    ? 'bg-gray-50 text-gray-400 cursor-not-allowed border border-gray-200'
-                    : 'bg-[#25D366] text-white hover:bg-[#20BD5A]'
+                    ? 'bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-50 cursor-default'
+                    : plan.id === 'pro' ? 'bg-gray-900 text-white hover:bg-gray-800' : 'bg-indigo-600 text-white hover:bg-indigo-700'
                 }`}
                 disabled={plan.current}
               >
-                {plan.current ? 'Current Plan' : 'Upgrade'}
-              </button>
+                {plan.cta}
+              </Button>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Payment Method */}
-      <div className="bg-white border border-gray-100 rounded-2xl p-8">
-        <h2 className="text-base font-semibold text-gray-900 mb-6">Payment Method</h2>
-        <div className="flex items-center justify-between p-6 border border-gray-200 rounded-xl hover:border-gray-300 transition-colors">
-          <div className="flex items-center gap-4">
-            <div className="w-11 h-11 bg-gray-100 rounded-lg flex items-center justify-center">
-              <CreditCard className="w-5 h-5 text-gray-700" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-900">Visa ending in 4242</p>
-              <p className="text-xs text-gray-500 mt-1">Expires 12/2026</p>
-            </div>
-          </div>
-          <button className="px-4 py-2 text-white bg-[#25D366] hover:bg-[#20BD5A] rounded-lg font-semibold text-sm transition-colors">
-            Update
-          </button>
+      {/* Billing History Placeholder */}
+      <div className="bg-white border border-gray-100 rounded-2xl p-8 opacity-60">
+        <div className="flex items-center justify-between mb-6">
+           <h2 className="text-base font-semibold text-gray-900">Billing History</h2>
+           <Badge variant="secondary">Coming Soon</Badge>
+        </div>
+        <div className="text-center py-8 text-sm text-gray-500">
+           Invoices will appear here once you subscribe to a paid plan.
         </div>
       </div>
     </div>

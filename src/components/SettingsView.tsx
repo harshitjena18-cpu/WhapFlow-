@@ -1,6 +1,9 @@
-import { Bell, Globe, Lock, User } from 'lucide-react';
+import { Bell, Globe, Lock, User, CreditCard } from 'lucide-react';
+import { useNavigate } from 'react-router';
 
 export function SettingsView() {
+  const navigate = useNavigate();
+
   return (
     <div className="space-y-10">
       {/* Page Header */}
@@ -13,6 +16,34 @@ export function SettingsView() {
 
       {/* Settings Sections */}
       <div className="space-y-6">
+        
+        {/* Billing & Plans (New Section) */}
+        <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden">
+          <div className="px-8 py-7 border-b border-gray-100">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 bg-purple-50 rounded-lg flex items-center justify-center">
+                <CreditCard className="w-4 h-4 text-purple-700" />
+              </div>
+              <div>
+                <h2 className="text-base font-semibold text-gray-900">Plan & Billing</h2>
+                <p className="text-sm text-gray-500 mt-0.5">Manage your subscription and usage</p>
+              </div>
+            </div>
+          </div>
+          <div className="px-8 py-8 flex flex-col sm:flex-row justify-between items-center gap-6">
+             <div>
+               <p className="text-sm font-medium text-gray-900">Current Plan: <span className="font-bold">Free</span></p>
+               <p className="text-sm text-gray-500 mt-1">Upgrade to unlock automation and higher limits.</p>
+             </div>
+             <button 
+               onClick={() => navigate('/billing')}
+               className="px-6 py-2.5 bg-purple-600 text-white rounded-xl hover:bg-purple-700 font-semibold text-sm transition-colors shadow-sm"
+             >
+               View Plans
+             </button>
+          </div>
+        </div>
+
         {/* Profile Settings */}
         <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden">
           <div className="px-8 py-7 border-b border-gray-100">
