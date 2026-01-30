@@ -1,0 +1,32 @@
+
+> SaaS Frontend for Whapflow@0.1.0 build /app
+> vite build
+
+vite v6.3.5 building for production...
+transforming...
+✓ 6 modules transformed.
+✗ Build failed in 253ms
+error during build:
+[vite:esbuild] Transform failed with 1 error:
+/app/src/routes.ts:16:29: ERROR: Expected ">" but found "/"
+file: /app/src/routes.ts:16:29
+
+Expected ">" but found "/"
+14 |    {
+15 |      path: '/',
+16 |      element: <LandingPageNew />,
+   |                               ^
+17 |    },
+18 |    {
+
+    at failureErrorWithLog (/app/node_modules/.pnpm/esbuild@0.25.12/node_modules/esbuild/lib/main.js:1467:15)
+    at /app/node_modules/.pnpm/esbuild@0.25.12/node_modules/esbuild/lib/main.js:736:50
+    at responseCallbacks.<computed> (/app/node_modules/.pnpm/esbuild@0.25.12/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/app/node_modules/.pnpm/esbuild@0.25.12/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/app/node_modules/.pnpm/esbuild@0.25.12/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:519:28)
+    at addChunk (node:internal/streams/readable:561:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)
+    at Readable.push (node:internal/streams/readable:392:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+ ELIFECYCLE  Command failed with exit code 1.
