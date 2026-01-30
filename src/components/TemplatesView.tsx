@@ -454,7 +454,13 @@ export function TemplatesView() {
                        <Button variant="outline" size="sm" onClick={() => handleOpenEdit(selectedTemplate)}>
                          Edit
                        </Button>
-                       <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => handleDelete(selectedTemplate.id)}>
+                       <Button
+                         variant="ghost"
+                         size="sm"
+                         className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                         onClick={() => handleDelete(selectedTemplate.id)}
+                         aria-label="Delete template"
+                       >
                          <Trash2 className="w-4 h-4" />
                        </Button>
                     </div>

@@ -1,0 +1,10 @@
+
+> SaaS Frontend for Whapflow@0.1.0 dev /app
+> vite
+
+
+  VITE v6.3.5  ready in 443 ms
+
+  ➜  Local:   http://localhost:3000/
+  ➜  Network: use --host to expose
+3:01:40 PM [vite] (client) hmr update /src/App.tsx
