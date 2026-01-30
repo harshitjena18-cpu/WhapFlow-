@@ -673,14 +673,15 @@ async function triggerAutomationDelay(
  */
 app.post("/make-server-c8eef56a/api/whatsapp/send", async (c) => {
   try {
-    const { phoneNumber, templateId } = await c.req.json();
+    const { phoneNumber, templateId, components } = await c.req.json();
     console.log(`[WhatsApp] Intent to send template "${templateId}" to ${phoneNumber}`);
     
     // Call the shared helper
     const result = await sendWhatsAppTemplate({
       to: phoneNumber,
       templateName: templateId || "abandoned_cart_test",
-      languageCode: "en_US"
+      languageCode: "en_US",
+      components: components
     });
     
     if (result.success) {
