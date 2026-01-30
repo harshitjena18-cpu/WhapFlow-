@@ -33,9 +33,34 @@ const shopifyCartSchema = z.object({
 });
 
 export const verifyShopifyWebhook = async (hmac: string, body: string): Promise<boolean> => {
-  // TODO: Implement HMAC SHA256 verification using process.env.SHOPIFY_SECRET
-  console.log('[Shopify] Verifying webhook signature...');
-  return true;
+  const secret = process.env.SHOPIFY_SECRET;
+  if (!secret) {
+    console.error('[Shopify] Missing SHOPIFY_SECRET environment variable');
+    return false;
+  }
+
+  try {
+    const encoder = new TextEncoder();
+    const keyData = encoder.encode(secret);
+    const msgData = encoder.encode(body);
+
+    const cryptoKey = await crypto.subtle.importKey(
+      "raw",
+      keyData,
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"]
+    );
+
+    const signature = await crypto.subtle.sign("HMAC", cryptoKey, msgData);
+    const hashArray = Array.from(new Uint8Array(signature));
+    const hashBase64 = btoa(String.fromCharCode(...hashArray));
+
+    return hashBase64 === hmac;
+  } catch (error) {
+    console.error('[Shopify] Error verifying webhook signature:', error);
+    return false;
+  }
 };
 
 export const parseShopifyCart = (payload: any): ShopifyCartPayload => {
