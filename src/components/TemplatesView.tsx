@@ -47,6 +47,14 @@ interface AIUsage {
 
 const SERVER_URL = `https://${projectId}.supabase.co/functions/v1/make-server-c8eef56a`;
 
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+interface CacheData<T> { data: T; timestamp: number; }
+const requestCache: {
+  templates: CacheData<Template[]> | null;
+  aiUsage: CacheData<AIUsage> | null;
+  integrations: CacheData<{ shopify_connected: boolean; whatsapp_connected: boolean }> | null;
+} = { templates: null, aiUsage: null, integrations: null };
+
 export function TemplatesView() {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
@@ -82,8 +90,17 @@ export function TemplatesView() {
   const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
 
   // Fetch Templates
-  const fetchTemplates = async () => {
+  const fetchTemplates = async (forceRefresh = false) => {
     try {
+      if (!forceRefresh && requestCache.templates && (Date.now() - requestCache.templates.timestamp < CACHE_DURATION)) {
+        setTemplates(requestCache.templates.data);
+        setLoading(false);
+        if (requestCache.templates.data.length > 0 && !selectedTemplate) {
+          setSelectedTemplate(requestCache.templates.data[0]);
+        }
+        return;
+      }
+
       setLoading(true);
       const res = await fetch(`${SERVER_URL}/api/templates`, {
         headers: { 'Authorization': `Bearer ${publicAnonKey}` }
@@ -91,6 +108,8 @@ export function TemplatesView() {
       if (!res.ok) throw new Error('Failed to fetch templates');
       const data = await res.json();
       setTemplates(data);
+      requestCache.templates = { data, timestamp: Date.now() };
+
       // Select the first enabled one, or the first one, or null
       if (data.length > 0 && !selectedTemplate) {
         // Keep current selection if exists and in list, else select first
@@ -104,28 +123,40 @@ export function TemplatesView() {
     }
   };
 
-  const fetchAIUsage = async () => {
+  const fetchAIUsage = async (forceRefresh = false) => {
     try {
+      if (!forceRefresh && requestCache.aiUsage && (Date.now() - requestCache.aiUsage.timestamp < CACHE_DURATION)) {
+        setAiUsage(requestCache.aiUsage.data);
+        return;
+      }
+
       const res = await fetch(`${SERVER_URL}/api/ai/usage`, {
         headers: { 'Authorization': `Bearer ${publicAnonKey}` }
       });
       if (res.ok) {
         const data = await res.json();
         setAiUsage(data);
+        requestCache.aiUsage = { data, timestamp: Date.now() };
       }
     } catch (err) {
       console.error("Failed to fetch AI usage", err);
     }
   };
 
-  const fetchIntegrations = async () => {
+  const fetchIntegrations = async (forceRefresh = false) => {
     try {
+      if (!forceRefresh && requestCache.integrations && (Date.now() - requestCache.integrations.timestamp < CACHE_DURATION)) {
+        setIntegrations(requestCache.integrations.data);
+        return;
+      }
+
       const res = await fetch(`${SERVER_URL}/api/integrations/status`, {
         headers: { 'Authorization': `Bearer ${publicAnonKey}` }
       });
       if (res.ok) {
         const data = await res.json();
         setIntegrations(data);
+        requestCache.integrations = { data, timestamp: Date.now() };
       }
     } catch (err) {
       console.error("Failed to fetch integration status", err);
@@ -242,7 +273,7 @@ export function TemplatesView() {
       const savedTemplate = await res.json();
       toast.success(isEditing ? "Template updated" : "Template created");
       setIsDialogOpen(false);
-      fetchTemplates();
+      fetchTemplates(true);
       setSelectedTemplate(savedTemplate);
     } catch (err: any) {
       console.error(err);
@@ -265,7 +296,7 @@ export function TemplatesView() {
       
       toast.success("Template deleted");
       if (selectedTemplate?.id === id) setSelectedTemplate(null);
-      fetchTemplates();
+      fetchTemplates(true);
     } catch (err) {
       console.error(err);
       toast.error("Could not delete template");
@@ -293,7 +324,7 @@ export function TemplatesView() {
       
       if (!res.ok) throw new Error('Failed to update status');
       
-      fetchTemplates();
+      fetchTemplates(true);
       toast.success(checked ? "Template enabled" : "Template disabled");
     } catch (err) {
       console.error(err);
@@ -330,6 +361,7 @@ export function TemplatesView() {
       setAiSuggestions(data.suggestions);
       if (data.usage) {
         setAiUsage(data.usage);
+        requestCache.aiUsage = { data: data.usage, timestamp: Date.now() };
       }
       toast.success("Templates generated!");
     } catch (err: any) {
@@ -363,6 +395,7 @@ export function TemplatesView() {
                     body: JSON.stringify(newStatus)
                 });
                 setIntegrations(newStatus);
+                requestCache.integrations = { data: newStatus, timestamp: Date.now() };
                 toast.success("Integrations connected (Demo Mode)");
             }}>
                 Connect Integrations (Demo)
