@@ -751,6 +751,28 @@ app.post("/make-server-c8eef56a/api/whatsapp/send", async (c) => {
 });
 
 /**
+ * WhatsApp Template Status
+ * Path: /app/api/whatsapp/templates/:id/status
+ */
+app.get("/make-server-c8eef56a/api/whatsapp/templates/:id/status", async (c) => {
+  try {
+    const templateId = c.req.param("id");
+    console.log(`[WhatsApp] Checking status for template "${templateId}"`);
+
+    const result = await getTemplateStatus(templateId);
+
+    if (result.success) {
+      return c.json({ status: result.status }, 200);
+    } else {
+      return c.json({ error: 'WhatsApp API Error', details: result.error }, 500);
+    }
+  } catch (error) {
+    console.error('[WhatsApp] Error checking template status:', error);
+    return c.json({ error: 'Internal Server Error' }, 500);
+  }
+});
+
+/**
  * WhatsApp Webhook Receiver
  * Path: /app/api/webhooks/whatsapp/route.ts (Future)
  */
