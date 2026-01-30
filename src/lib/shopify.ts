@@ -7,7 +7,30 @@
  * - Sync product details
  */
 
+import { z } from "zod";
 import { ShopifyCartPayload } from "../types";
+
+const shopifyCartSchema = z.object({
+  id: z.coerce.string(),
+  token: z.string(),
+  line_items: z.array(
+    z.object({
+      id: z.number(),
+      title: z.string(),
+      quantity: z.number(),
+      price: z.coerce.string(),
+    })
+  ),
+  currency: z.string(),
+  customer: z.object({
+    first_name: z.string(),
+    last_name: z.string(),
+    email: z.string(),
+    phone: z.string().optional(),
+  }),
+  abandoned_checkout_url: z.string(),
+  created_at: z.string(),
+});
 
 export const verifyShopifyWebhook = async (hmac: string, body: string): Promise<boolean> => {
   // TODO: Implement HMAC SHA256 verification using process.env.SHOPIFY_SECRET
@@ -16,6 +39,6 @@ export const verifyShopifyWebhook = async (hmac: string, body: string): Promise<
 };
 
 export const parseShopifyCart = (payload: any): ShopifyCartPayload => {
-  // TODO: Implement safe parsing and validation (e.g. using Zod)
-  return payload as ShopifyCartPayload;
+  // Safe parsing and validation using Zod
+  return shopifyCartSchema.parse(payload) as ShopifyCartPayload;
 };

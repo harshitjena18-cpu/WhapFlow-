@@ -344,10 +344,9 @@ Generate 3 different variations.`;
     }
 
     // Increment Usage
-    await billing.incrementUsage('ai', shop);
+    const config = await billing.incrementUsage('ai', shop);
     
     // Get updated config for response
-    const config = await billing.getBillingConfig(shop);
     const limits = billing.PLAN_LIMITS[config.plan];
     
     const content = data.choices[0].message.content;
