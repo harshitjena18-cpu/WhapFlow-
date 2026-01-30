@@ -63,3 +63,36 @@ export const sendWhatsAppTemplate = async ({
     return { success: false, error };
   }
 };
+
+export const getTemplateStatus = async (templateId: string) => {
+  const token = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
+
+  if (!token) {
+    console.error("❌ Missing WHATSAPP_ACCESS_TOKEN");
+    return { success: false, error: "Configuration missing" };
+  }
+
+  const url = `https://graph.facebook.com/v17.0/${templateId}`;
+
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error("❌ WhatsApp API Error:", JSON.stringify(data, null, 2));
+      return { success: false, error: data };
+    }
+
+    return { success: true, status: data.status };
+  } catch (error) {
+    console.error("❌ Network/Server Error fetching template status:", error);
+    return { success: false, error };
+  }
+};

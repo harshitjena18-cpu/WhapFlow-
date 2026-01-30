@@ -2,7 +2,7 @@ import { Hono } from "npm:hono";
 import { cors } from "npm:hono/cors";
 import { logger } from "npm:hono/logger";
 import * as kv from "./kv_store.tsx";
-import { sendWhatsAppTemplate } from "./whatsapp.ts";
+import { sendWhatsAppTemplate, getTemplateStatus } from "./whatsapp.ts";
 import * as billing from "./billing.ts"; // Import Billing Service
 import { checkOrderExists, getMerchantCredentials, verifyWebhookHmac } from "./shopify_client.ts";
 import authApp from "./auth.tsx";
@@ -691,6 +691,28 @@ app.post("/make-server-c8eef56a/api/whatsapp/send", async (c) => {
 
   } catch (error) {
     return c.json({ error: 'Invalid request' }, 400);
+  }
+});
+
+/**
+ * WhatsApp Template Status
+ * Path: /app/api/whatsapp/templates/:id/status
+ */
+app.get("/make-server-c8eef56a/api/whatsapp/templates/:id/status", async (c) => {
+  try {
+    const templateId = c.req.param("id");
+    console.log(`[WhatsApp] Checking status for template "${templateId}"`);
+
+    const result = await getTemplateStatus(templateId);
+
+    if (result.success) {
+      return c.json({ status: result.status }, 200);
+    } else {
+      return c.json({ error: 'WhatsApp API Error', details: result.error }, 500);
+    }
+  } catch (error) {
+    console.error('[WhatsApp] Error checking template status:', error);
+    return c.json({ error: 'Internal Server Error' }, 500);
   }
 });
 
