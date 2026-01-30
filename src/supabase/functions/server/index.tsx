@@ -2,7 +2,7 @@ import { Hono } from "npm:hono";
 import { cors } from "npm:hono/cors";
 import { logger } from "npm:hono/logger";
 import * as kv from "./kv_store.tsx";
-import { sendWhatsAppTemplate } from "./whatsapp.ts";
+import { sendWhatsAppTemplate, processWhatsAppStatus } from "./whatsapp.ts";
 import * as billing from "./billing.ts"; // Import Billing Service
 import { checkOrderExists, getMerchantCredentials, verifyWebhookHmac } from "./shopify_client.ts";
 import authApp from "./auth.tsx";
@@ -754,17 +754,30 @@ app.post("/make-server-c8eef56a/api/whatsapp/send", async (c) => {
  * WhatsApp Webhook Receiver
  * Path: /app/api/webhooks/whatsapp/route.ts (Future)
  */
+app.get("/make-server-c8eef56a/api/webhooks/whatsapp", (c) => {
+  const mode = c.req.query('hub.mode');
+  const token = c.req.query('hub.verify_token');
+  const challenge = c.req.query('hub.challenge');
+
+  const verifyToken = Deno.env.get("WHATSAPP_VERIFY_TOKEN");
+
+  if (mode === 'subscribe' && token === verifyToken) {
+    console.log("WEBHOOK_VERIFIED");
+    return c.text(challenge || "");
+  } else {
+    return c.json({ error: 'Forbidden' }, 403);
+  }
+});
+
 app.post("/make-server-c8eef56a/api/webhooks/whatsapp", async (c) => {
-  // TODO: Handle WhatsApp Webhook verification (GET challenge)
-  // if (c.req.query('hub.mode') === 'subscribe' && c.req.query('hub.verify_token') === VERIFY_TOKEN) {
-  //   return c.text(c.req.query('hub.challenge'));
-  // }
-
-  // TODO: Handle WhatsApp Delivery Status (sent, delivered, read)
-  // const payload = await c.req.json();
-  // processWhatsAppStatus(payload);
-
-  return c.json({ status: 'ok' });
+  try {
+    const payload = await c.req.json();
+    await processWhatsAppStatus(payload);
+    return c.json({ status: 'ok' });
+  } catch (e) {
+    console.error("Error in WhatsApp Webhook:", e);
+    return c.json({ status: 'error' }, 500);
+  }
 });
 
 // GET /api/dashboard/metrics
