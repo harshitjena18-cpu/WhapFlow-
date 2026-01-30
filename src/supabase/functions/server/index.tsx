@@ -783,6 +783,11 @@ app.get("/make-server-c8eef56a/api/webhooks/whatsapp", (c) => {
 
   const verifyToken = Deno.env.get("WHATSAPP_VERIFY_TOKEN");
 
+  if (!verifyToken) {
+    console.error("WHATSAPP_VERIFY_TOKEN is not set in environment variables");
+    return c.json({ error: 'Server Configuration Error' }, 500);
+  }
+
   if (mode === 'subscribe' && token === verifyToken) {
     console.log("WEBHOOK_VERIFIED");
     return c.text(challenge || "");
