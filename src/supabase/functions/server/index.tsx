@@ -457,16 +457,20 @@ app.post("/make-server-c8eef56a/api/webhooks/shopify", async (c) => {
     
     // CHECK INTEGRATIONS FIRST (Global Check)
     console.log('\n🔍 AUTOMATION CHECKS: Verifying integration status...');
+
+    const [merchant, whatsappConfig, automationCheck] = await Promise.all([
+      getMerchantCredentials(shop),
+      kv.get("config:whatsapp"),
+      billing.checkLimit('automation', shop)
+    ]);
     
     // Check if THIS shop is connected
-    const merchant = await getMerchantCredentials(shop);
     if (!merchant || !merchant.shopify_connected) {
        console.log(`⏹️ AUTOMATION PAUSED: Merchant ${shop} not connected/active.`);
        return c.json({ status: 'success', received: true, automation: 'paused_merchant_inactive' }, 200);
     }
     
     // Check WhatsApp Connection
-    const whatsappConfig = await kv.get("config:whatsapp");
     const whatsappConnected = whatsappConfig?.connection_status === 'connected';
     
     if (!whatsappConnected) {
@@ -475,7 +479,6 @@ app.post("/make-server-c8eef56a/api/webhooks/shopify", async (c) => {
     }
     
     // CHECK BILLING / PLAN
-    const automationCheck = await billing.checkLimit('automation', shop);
     if (!automationCheck.allowed) {
       console.log(`⏹️ AUTOMATION PAUSED: ${automationCheck.error}`);
       return c.json({ status: 'success', received: true, automation: 'paused_plan_limit' }, 200);
