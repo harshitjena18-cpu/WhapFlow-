@@ -202,7 +202,7 @@ async function registerWebhooks(shop: string, accessToken: string) {
 
   console.log(`[Webhooks] Registering topics for ${shop}...`);
 
-  for (const hook of WEBHOOKS) {
+  await Promise.all(WEBHOOKS.map(async (hook) => {
     try {
       const response = await fetch(`https://${shop}/admin/api/2023-10/webhooks.json`, {
         method: "POST",
@@ -220,13 +220,13 @@ async function registerWebhooks(shop: string, accessToken: string) {
       });
 
       const data = await response.json();
-      
+
       if (!response.ok) {
         // Ignore "address for this topic has already been taken" errors
         if (JSON.stringify(data).includes("taken")) {
-             console.log(`[Webhooks] Topic ${hook.topic} already registered.`);
+          console.log(`[Webhooks] Topic ${hook.topic} already registered.`);
         } else {
-             console.error(`[Webhooks] Failed to register ${hook.topic}:`, data);
+          console.error(`[Webhooks] Failed to register ${hook.topic}:`, data);
         }
       } else {
         console.log(`[Webhooks] Successfully registered ${hook.topic}`);
@@ -234,7 +234,7 @@ async function registerWebhooks(shop: string, accessToken: string) {
     } catch (err) {
       console.error(`[Webhooks] Network error registering ${hook.topic}:`, err);
     }
-  }
+  }));
 }
 
 export default app;
