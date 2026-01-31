@@ -189,9 +189,18 @@ async function processBillingWebhook(c: any, action: 'update' | 'cancel') {
   
   // Security
   const secret = Deno.env.get('SHOPIFY_CLIENT_SECRET');
-  if (secret && hmac) {
-    const isValid = await verifyWebhookHmac(rawBody, hmac, secret);
-    if (!isValid) return c.json({ error: 'Unauthorized' }, 401);
+  if (!secret) {
+    console.error("[Billing Webhook] SHOPIFY_CLIENT_SECRET not configured");
+    return c.json({ error: 'Server configuration error' }, 500);
+  }
+  if (!hmac) {
+    console.error(`[Billing Webhook] Missing HMAC header for ${shop}`);
+    return c.json({ error: 'Missing HMAC header' }, 401);
+  }
+  const isValid = await verifyWebhookHmac(rawBody, hmac, secret);
+  if (!isValid) {
+    console.error(`[Billing Webhook] HMAC verification failed for ${shop}`);
+    return c.json({ error: 'Unauthorized' }, 401);
   }
 
   if (!shop) return c.json({ error: 'Missing shop' }, 400);
