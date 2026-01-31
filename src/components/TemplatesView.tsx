@@ -49,6 +49,7 @@ const SERVER_URL = `https://${projectId}.supabase.co/functions/v1/make-server-c8
 
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 interface CacheData<T> { data: T; timestamp: number; }
+// Move cache outside component to persist across mounts
 const requestCache: {
   templates: CacheData<Template[]> | null;
   aiUsage: CacheData<AIUsage> | null;
@@ -56,9 +57,26 @@ const requestCache: {
 } = { templates: null, aiUsage: null, integrations: null };
 
 export function TemplatesView() {
-  const [templates, setTemplates] = useState<Template[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+  const [templates, setTemplates] = useState<Template[]>(() => {
+    if (requestCache.templates && (Date.now() - requestCache.templates.timestamp < CACHE_DURATION)) {
+      return requestCache.templates.data;
+    }
+    return [];
+  });
+
+  const [loading, setLoading] = useState(() => {
+    if (requestCache.templates && (Date.now() - requestCache.templates.timestamp < CACHE_DURATION)) {
+      return false;
+    }
+    return true;
+  });
+
+  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(() => {
+    if (requestCache.templates && (Date.now() - requestCache.templates.timestamp < CACHE_DURATION) && requestCache.templates.data.length > 0) {
+      return requestCache.templates.data[0];
+    }
+    return null;
+  });
   
   // Dialog State
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -80,10 +98,20 @@ export function TemplatesView() {
   const [aiDiscount, setAiDiscount] = useState("");
   const [aiGenerating, setAiGenerating] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
-  const [aiUsage, setAiUsage] = useState<AIUsage | null>(null);
+  const [aiUsage, setAiUsage] = useState<AIUsage | null>(() => {
+    if (requestCache.aiUsage && (Date.now() - requestCache.aiUsage.timestamp < CACHE_DURATION)) {
+      return requestCache.aiUsage.data;
+    }
+    return null;
+  });
 
   // Integration State
-  const [integrations, setIntegrations] = useState<{ shopify_connected: boolean; whatsapp_connected: boolean } | null>(null);
+  const [integrations, setIntegrations] = useState<{ shopify_connected: boolean; whatsapp_connected: boolean } | null>(() => {
+    if (requestCache.integrations && (Date.now() - requestCache.integrations.timestamp < CACHE_DURATION)) {
+      return requestCache.integrations.data;
+    }
+    return null;
+  });
 
   // Validation State
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
