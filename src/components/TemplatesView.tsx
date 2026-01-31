@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
-import { MessageCircle, Plus, Trash2, Save, Check, Loader2, Sparkles, Copy, AlertCircle, Bot, Zap, Info } from 'lucide-react';
-import { toast } from "sonner@2.0.3";
+import { MessageCircle, Plus, Trash2, Save, Check, Loader2, Sparkles, AlertCircle, Bot, Zap, Info } from 'lucide-react';
+import { toast } from "sonner";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -25,6 +25,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "./ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "./ui/alert-dialog";
 
 // Types
 interface Template {
@@ -80,6 +90,7 @@ export function TemplatesView() {
   
   // Dialog State
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [templateToDelete, setTemplateToDelete] = useState<Template | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<Partial<Template>>({
     template_name: '',
@@ -311,11 +322,11 @@ export function TemplatesView() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this template?")) return;
+  const confirmDelete = async () => {
+    if (!templateToDelete) return;
     
     try {
-      const res = await fetch(`${SERVER_URL}/api/templates/${id}`, {
+      const res = await fetch(`${SERVER_URL}/api/templates/${templateToDelete.id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${publicAnonKey}` }
       });
@@ -323,11 +334,13 @@ export function TemplatesView() {
       if (!res.ok) throw new Error('Failed to delete');
       
       toast.success("Template deleted");
-      if (selectedTemplate?.id === id) setSelectedTemplate(null);
+      if (selectedTemplate?.id === templateToDelete.id) setSelectedTemplate(null);
       fetchTemplates(true);
     } catch (err) {
       console.error(err);
       toast.error("Could not delete template");
+    } finally {
+      setTemplateToDelete(null);
     }
   };
 
@@ -519,7 +532,7 @@ export function TemplatesView() {
                          variant="ghost"
                          size="sm"
                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                         onClick={() => handleDelete(selectedTemplate.id)}
+                         onClick={() => setTemplateToDelete(selectedTemplate)}
                          aria-label="Delete template"
                        >
                          <Trash2 className="w-4 h-4" />
@@ -583,7 +596,9 @@ export function TemplatesView() {
                     {selectedTemplate.content && (
                       <div className="bg-white rounded-lg border border-gray-200 p-5">
                         <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center justify-between">
-                          <span>Message Content</span>
+                          <div className="flex items-center gap-2">
+                            <span>Message Content</span>
+                          </div>
                           {selectedTemplate.generated_by_ai && (
                             <span className="text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full flex items-center gap-1">
                               <Sparkles className="w-3 h-3" /> AI Generated ({selectedTemplate.ai_tone})
@@ -873,6 +888,24 @@ export function TemplatesView() {
             </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Alert */}
+      <AlertDialog open={!!templateToDelete} onOpenChange={(open) => !open && setTemplateToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the template <strong>{templateToDelete?.display_name}</strong>.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} variant="destructive">
+              Delete Template
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
