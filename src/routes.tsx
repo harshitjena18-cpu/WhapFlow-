@@ -1,9 +1,9 @@
 import { createBrowserRouter } from 'react-router';
 import { lazy, Suspense } from 'react';
-import { DashboardLayout } from './components/DashboardLayout';
-import { LandingPageNew } from './components/LandingPageNew';
 
 // Lazy load components
+const DashboardLayout = lazy(() => import('./components/DashboardLayout').then(m => ({ default: m.DashboardLayout })));
+const LandingPageNew = lazy(() => import('./components/LandingPageNew').then(m => ({ default: m.LandingPageNew })));
 const DashboardView = lazy(() => import('./components/dashboard/DashboardView').then(m => ({ default: m.DashboardView })));
 const AutomationsView = lazy(() => import('./components/AutomationsView').then(m => ({ default: m.AutomationsView })));
 const TemplatesView = lazy(() => import('./components/TemplatesView').then(m => ({ default: m.TemplatesView })));
@@ -23,7 +23,11 @@ const LoadingFallback = () => (
 export const router = createBrowserRouter([
   {
     path: '/',
-    element: <LandingPageNew />,
+    element: (
+      <Suspense fallback={<LoadingFallback />}>
+        <LandingPageNew />
+      </Suspense>
+    ),
   },
   {
     path: '/login',
@@ -43,7 +47,11 @@ export const router = createBrowserRouter([
   },
   {
     path: '/',
-    element: <DashboardLayout />,
+    element: (
+      <Suspense fallback={<LoadingFallback />}>
+        <DashboardLayout />
+      </Suspense>
+    ),
     children: [
       {
         path: 'dashboard',
