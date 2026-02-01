@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
-import { MessageCircle, Plus, Trash2, Save, Check, Loader2, Sparkles, AlertCircle, Bot, Zap, Info } from 'lucide-react';
-import { toast } from "sonner";
+import { MessageCircle, Plus, Trash2, Save, Check, Loader2, Sparkles, Copy, AlertCircle, Bot, Zap, Info } from 'lucide-react';
+import { toast } from "sonner@2.0.3";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -25,16 +25,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "./ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "./ui/alert-dialog";
 
 // Types
 interface Template {
@@ -57,40 +47,13 @@ interface AIUsage {
 
 const SERVER_URL = `https://${projectId}.supabase.co/functions/v1/make-server-c8eef56a`;
 
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-interface CacheData<T> { data: T; timestamp: number; }
-// Move cache outside component to persist across mounts
-const requestCache: {
-  templates: CacheData<Template[]> | null;
-  aiUsage: CacheData<AIUsage> | null;
-  integrations: CacheData<{ shopify_connected: boolean; whatsapp_connected: boolean }> | null;
-} = { templates: null, aiUsage: null, integrations: null };
-
 export function TemplatesView() {
-  const [templates, setTemplates] = useState<Template[]>(() => {
-    if (requestCache.templates && (Date.now() - requestCache.templates.timestamp < CACHE_DURATION)) {
-      return requestCache.templates.data;
-    }
-    return [];
-  });
-
-  const [loading, setLoading] = useState(() => {
-    if (requestCache.templates && (Date.now() - requestCache.templates.timestamp < CACHE_DURATION)) {
-      return false;
-    }
-    return true;
-  });
-
-  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(() => {
-    if (requestCache.templates && (Date.now() - requestCache.templates.timestamp < CACHE_DURATION) && requestCache.templates.data.length > 0) {
-      return requestCache.templates.data[0];
-    }
-    return null;
-  });
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   
   // Dialog State
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [templateToDelete, setTemplateToDelete] = useState<Template | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<Partial<Template>>({
     template_name: '',
@@ -109,37 +72,18 @@ export function TemplatesView() {
   const [aiDiscount, setAiDiscount] = useState("");
   const [aiGenerating, setAiGenerating] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
-  const [aiUsage, setAiUsage] = useState<AIUsage | null>(() => {
-    if (requestCache.aiUsage && (Date.now() - requestCache.aiUsage.timestamp < CACHE_DURATION)) {
-      return requestCache.aiUsage.data;
-    }
-    return null;
-  });
+  const [aiUsage, setAiUsage] = useState<AIUsage | null>(null);
 
   // Integration State
-  const [integrations, setIntegrations] = useState<{ shopify_connected: boolean; whatsapp_connected: boolean } | null>(() => {
-    if (requestCache.integrations && (Date.now() - requestCache.integrations.timestamp < CACHE_DURATION)) {
-      return requestCache.integrations.data;
-    }
-    return null;
-  });
+  const [integrations, setIntegrations] = useState<{ shopify_connected: boolean; whatsapp_connected: boolean } | null>(null);
 
   // Validation State
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
 
   // Fetch Templates
-  const fetchTemplates = async (forceRefresh = false) => {
+  const fetchTemplates = async () => {
     try {
-      if (!forceRefresh && requestCache.templates && (Date.now() - requestCache.templates.timestamp < CACHE_DURATION)) {
-        setTemplates(requestCache.templates.data);
-        setLoading(false);
-        if (requestCache.templates.data.length > 0 && !selectedTemplate) {
-          setSelectedTemplate(requestCache.templates.data[0]);
-        }
-        return;
-      }
-
       setLoading(true);
       const res = await fetch(`${SERVER_URL}/api/templates`, {
         headers: { 'Authorization': `Bearer ${publicAnonKey}` }
@@ -147,8 +91,6 @@ export function TemplatesView() {
       if (!res.ok) throw new Error('Failed to fetch templates');
       const data = await res.json();
       setTemplates(data);
-      requestCache.templates = { data, timestamp: Date.now() };
-
       // Select the first enabled one, or the first one, or null
       if (data.length > 0 && !selectedTemplate) {
         // Keep current selection if exists and in list, else select first
@@ -162,40 +104,28 @@ export function TemplatesView() {
     }
   };
 
-  const fetchAIUsage = async (forceRefresh = false) => {
+  const fetchAIUsage = async () => {
     try {
-      if (!forceRefresh && requestCache.aiUsage && (Date.now() - requestCache.aiUsage.timestamp < CACHE_DURATION)) {
-        setAiUsage(requestCache.aiUsage.data);
-        return;
-      }
-
       const res = await fetch(`${SERVER_URL}/api/ai/usage`, {
         headers: { 'Authorization': `Bearer ${publicAnonKey}` }
       });
       if (res.ok) {
         const data = await res.json();
         setAiUsage(data);
-        requestCache.aiUsage = { data, timestamp: Date.now() };
       }
     } catch (err) {
       console.error("Failed to fetch AI usage", err);
     }
   };
 
-  const fetchIntegrations = async (forceRefresh = false) => {
+  const fetchIntegrations = async () => {
     try {
-      if (!forceRefresh && requestCache.integrations && (Date.now() - requestCache.integrations.timestamp < CACHE_DURATION)) {
-        setIntegrations(requestCache.integrations.data);
-        return;
-      }
-
       const res = await fetch(`${SERVER_URL}/api/integrations/status`, {
         headers: { 'Authorization': `Bearer ${publicAnonKey}` }
       });
       if (res.ok) {
         const data = await res.json();
         setIntegrations(data);
-        requestCache.integrations = { data, timestamp: Date.now() };
       }
     } catch (err) {
       console.error("Failed to fetch integration status", err);
@@ -312,7 +242,7 @@ export function TemplatesView() {
       const savedTemplate = await res.json();
       toast.success(isEditing ? "Template updated" : "Template created");
       setIsDialogOpen(false);
-      fetchTemplates(true);
+      fetchTemplates();
       setSelectedTemplate(savedTemplate);
     } catch (err: any) {
       console.error(err);
@@ -322,11 +252,11 @@ export function TemplatesView() {
     }
   };
 
-  const confirmDelete = async () => {
-    if (!templateToDelete) return;
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this template?")) return;
     
     try {
-      const res = await fetch(`${SERVER_URL}/api/templates/${templateToDelete.id}`, {
+      const res = await fetch(`${SERVER_URL}/api/templates/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${publicAnonKey}` }
       });
@@ -334,13 +264,11 @@ export function TemplatesView() {
       if (!res.ok) throw new Error('Failed to delete');
       
       toast.success("Template deleted");
-      if (selectedTemplate?.id === templateToDelete.id) setSelectedTemplate(null);
-      fetchTemplates(true);
+      if (selectedTemplate?.id === id) setSelectedTemplate(null);
+      fetchTemplates();
     } catch (err) {
       console.error(err);
       toast.error("Could not delete template");
-    } finally {
-      setTemplateToDelete(null);
     }
   };
 
@@ -365,7 +293,7 @@ export function TemplatesView() {
       
       if (!res.ok) throw new Error('Failed to update status');
       
-      fetchTemplates(true);
+      fetchTemplates();
       toast.success(checked ? "Template enabled" : "Template disabled");
     } catch (err) {
       console.error(err);
@@ -402,7 +330,6 @@ export function TemplatesView() {
       setAiSuggestions(data.suggestions);
       if (data.usage) {
         setAiUsage(data.usage);
-        requestCache.aiUsage = { data: data.usage, timestamp: Date.now() };
       }
       toast.success("Templates generated!");
     } catch (err: any) {
@@ -436,7 +363,6 @@ export function TemplatesView() {
                     body: JSON.stringify(newStatus)
                 });
                 setIntegrations(newStatus);
-                requestCache.integrations = { data: newStatus, timestamp: Date.now() };
                 toast.success("Integrations connected (Demo Mode)");
             }}>
                 Connect Integrations (Demo)
@@ -528,13 +454,7 @@ export function TemplatesView() {
                        <Button variant="outline" size="sm" onClick={() => handleOpenEdit(selectedTemplate)}>
                          Edit
                        </Button>
-                       <Button
-                         variant="ghost"
-                         size="sm"
-                         className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                         onClick={() => setTemplateToDelete(selectedTemplate)}
-                         aria-label="Delete template"
-                       >
+                       <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => handleDelete(selectedTemplate.id)}>
                          <Trash2 className="w-4 h-4" />
                        </Button>
                     </div>
@@ -596,9 +516,7 @@ export function TemplatesView() {
                     {selectedTemplate.content && (
                       <div className="bg-white rounded-lg border border-gray-200 p-5">
                         <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span>Message Content</span>
-                          </div>
+                          <span>Message Content</span>
                           {selectedTemplate.generated_by_ai && (
                             <span className="text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full flex items-center gap-1">
                               <Sparkles className="w-3 h-3" /> AI Generated ({selectedTemplate.ai_tone})
@@ -888,24 +806,6 @@ export function TemplatesView() {
             </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Delete Confirmation Alert */}
-      <AlertDialog open={!!templateToDelete} onOpenChange={(open) => !open && setTemplateToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete the template <strong>{templateToDelete?.display_name}</strong>.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} variant="destructive">
-              Delete Template
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

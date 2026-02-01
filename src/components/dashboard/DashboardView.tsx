@@ -41,37 +41,13 @@ interface ReadinessData {
 }
 
 import { OnboardingChecklist } from './OnboardingChecklist';
-import { supabase } from '../../utils/supabase/client';
-
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-let dashboardCache: { data: ReadinessData; timestamp: number } | null = null;
-
-// Clear cache on logout or user change to prevent data leakage between sessions
-if (typeof window !== 'undefined') {
-  supabase.auth.onAuthStateChange((event) => {
-    if (event === 'SIGNED_OUT' || event === 'USER_UPDATED') {
-      dashboardCache = null;
-    }
-  });
-}
 
 export function DashboardView() {
-  const [data, setData] = useState<ReadinessData | null>(() => {
-    if (dashboardCache && (Date.now() - dashboardCache.timestamp < CACHE_DURATION)) {
-      return dashboardCache.data;
-    }
-    return null;
-  });
-  const [isLoading, setIsLoading] = useState(() => !data);
+  const [data, setData] = useState<ReadinessData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
-  async function fetchDashboardData(forceRefresh = false) {
-    if (!forceRefresh && dashboardCache && (Date.now() - dashboardCache.timestamp < CACHE_DURATION)) {
-      setData(dashboardCache.data);
-      setIsLoading(false);
-      return;
-    }
-
+  async function fetchDashboardData() {
     try {
       // Use "global" as default shop for MVP without multi-tenant auth
       const shop = 'global';
@@ -87,7 +63,6 @@ export function DashboardView() {
 
       const jsonData = await response.json();
       setData(jsonData.readiness);
-      dashboardCache = { data: jsonData.readiness, timestamp: Date.now() };
     } catch (error) {
       console.error('Error loading dashboard:', error);
       toast.error('Failed to load dashboard data');
@@ -289,7 +264,7 @@ export function DashboardView() {
       </div>
 
       {/* Onboarding Checklist */}
-      <OnboardingChecklist data={data} onRefresh={() => fetchDashboardData(true)} />
+      <OnboardingChecklist data={data} onRefresh={fetchDashboardData} />
     </div>
   );
 }

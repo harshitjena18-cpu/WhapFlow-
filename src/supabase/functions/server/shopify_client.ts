@@ -19,40 +19,45 @@ export async function checkOrderExists(
   phone?: string
 ): Promise<boolean> {
   try {
-    // 1. Build Query (GraphQL)
-    // We filter by created_at >= cartCreatedAt (Shopify search syntax)
-    // If email is provided, we filter by email as well.
-    let searchQuery = `created_at:>=${cartCreatedAt}`;
-    if (email) {
-      searchQuery += ` AND email:${email}`;
+    // 1. Build Query
+    // We filter by created_at_min to only look for orders created AFTER the cart was created.
+    // We fetch status=any to include open, closed, archived orders.
+    const params = new URLSearchParams({
+      status: "any",
+      created_at_min: cartCreatedAt,
+      fields: "id,email,phone,customer,created_at" // Optimize payload
+    });
+
+    const url = `https://${shop}/admin/api/2024-01/orders.json?${params.toString()}`;
+
+    // 2. Call Shopify API
+    const response = await fetch(url, {
+      headers: {
+        "X-Shopify-Access-Token": accessToken,
+        "Content-Type": "application/json"
+      }
+    });
+
+    if (!response.ok) {
+      console.error(`[ShopifyClient] Failed to fetch orders for ${shop}: ${response.statusText}`);
+      // FAIL SAFE: If we can't check, assume it might exist (or just log error).
+      // The requirement says "Always fail-safe (no message) on uncertainty".
+      // So if this fails, we should probably treat it as "risk of spam" -> return true (stop message)?
+      // Or return a specific error. 
+      // For now, let's throw, and the caller handles the fail-safe.
+      throw new Error(`Shopify API error: ${response.status}`);
     }
 
-    const query = `
-      query orders($query: String!) {
-        orders(first: 20, query: $query) {
-          nodes {
-            id
-            email
-            phone
-            customer {
-              email
-              phone
-            }
-          }
-        }
-      }
-    `;
-
-    // 2. Call Shopify API (GraphQL)
-    const data = await shopifyGraphql(shop, accessToken, query, { query: searchQuery });
-    const orders = data.orders?.nodes || [];
+    const data = await response.json();
+    const orders = data.orders || [];
 
     if (orders.length === 0) {
-      return false;
+      return false; 
     }
 
     // 3. Match Order
-    // Even with the filter, we double-check to be safe, and also check phone if provided.
+    // Shopify's "search" param is fuzzy, so we iterate manually for exact match.
+    // We check if any order belongs to the customer email or phone.
     const hasMatchingOrder = orders.some((order: any) => {
       const emailMatch = email && order.email && order.email.toLowerCase() === email.toLowerCase();
       const phoneMatch = phone && order.phone && formatPhone(order.phone) === formatPhone(phone);
