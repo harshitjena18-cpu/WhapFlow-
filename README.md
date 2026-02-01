@@ -1,11 +1,18 @@
-# SaaS Frontend for Whapflow
+# WhapFlow - Shopify Abandoned Cart Recovery via WhatsApp
 
-A modern, React-based SaaS frontend for Whapflow, designed to help eCommerce merchants recover abandoned carts via WhatsApp. This project provides a comprehensive dashboard for managing automations, message templates, analytics, and billing.
+WhapFlow is a modern SaaS platform that helps Shopify merchants recover lost revenue by sending automated, personalized WhatsApp messages to customers who abandon their checkouts.
+
+![WhapFlow Dashboard](https://via.placeholder.com/800x400?text=WhapFlow+Dashboard+Preview)
+
+## 📚 Documentation
+
+- **[Technical Architecture](./ARCHITECTURE.md)**: Detailed system blueprint, security standards, and backend design.
+- **[Attributions](./Attributions.md)**: Third-party libraries and assets used.
 
 ## 🚀 Features
 
 *   **Dashboard**: Real-time overview of integration status, automation readiness, and key metrics.
-*   **Automations**: Configure and monitor abandoned cart recovery workflows.
+*   **Automations**: Configure and monitor abandoned cart recovery workflows with customizable delays.
 *   **Template Management**: Create, edit, and manage WhatsApp message templates. Includes AI-powered template generation using OpenAI.
 *   **Analytics**: Visualize performance metrics like recovery rates and message delivery status.
 *   **Billing & Usage**: View subscription plans, monitor usage limits (AI generations, WhatsApp conversations), and manage billing.
