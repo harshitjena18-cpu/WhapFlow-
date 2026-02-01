@@ -255,9 +255,9 @@ export function TemplatesView() {
       setIsDialogOpen(false);
       fetchTemplates();
       setSelectedTemplate(savedTemplate);
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      toast.error(err.message);
+      toast.error(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setSubmitting(false);
     }
@@ -341,9 +341,9 @@ export function TemplatesView() {
         setAiUsage(data.usage);
       }
       toast.success("Templates generated!");
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      toast.error(err.message);
+      toast.error(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setAiGenerating(false);
     }
