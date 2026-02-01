@@ -619,13 +619,26 @@ async function executeAutomation(payload: any) {
   try {
     console.log(`\n⏰ AUTOMATION: Executing job for cart [${cartId}]. Checking logic...`);
 
-    // 1. Re-fetch current state from "Database"
-    const currentCart = await kv.get(cartKey);
+      console.log(`   - API CHECK: Checking if order exists for ${shop}...`);
+      const orderExists = await checkOrderExists(
+          shop,
+          merchant.access_token,
+          currentCart.created_at,
+          currentCart.customer_email,
+          currentCart.phone
+      );
 
-    if (!currentCart) {
-      console.log(`❌ AUTOMATION SKIPPED: Cart [${cartId}] no longer exists.`);
-      return;
-    }
+      if (orderExists) {
+        console.log(`⏹️ AUTOMATION SKIPPED: Order found for cart ${cartId}.`);
+        currentCart.status = 'converted';
+        currentCart.converted_at = new Date().toISOString();
+        await kv.set(cartKey, currentCart);
+        return; // EXIT
+      }
+
+      // Re-confirm automation is enabled (Check if an active template exists)
+      const templates = await kv.getByPrefix("template:");
+      const hasEnabledTemplate = templates.some((t: any) => t.enabled);
 
       // 1. Re-fetch current state from "Database"
       const currentCart = await kv.get(cartKey);
