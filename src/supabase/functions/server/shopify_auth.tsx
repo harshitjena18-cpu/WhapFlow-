@@ -220,7 +220,7 @@ async function registerWebhooks(shop: string, accessToken: string) {
       });
 
       const data = await response.json();
-
+      
       if (!response.ok) {
         // Ignore "address for this topic has already been taken" errors
         if (JSON.stringify(data).includes("taken")) {
