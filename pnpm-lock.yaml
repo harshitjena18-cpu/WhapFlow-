@@ -10,7 +10,7 @@ importers:
     dependencies:
       '@jsr/supabase__supabase-js':
         specifier: ^2.49.8
-        version: 2.93.3(ws@8.19.0)
+        version: 2.93.3(ws@8.19.0)(zod@3.25.76)
       '@radix-ui/react-accordion':
         specifier: ^1.2.3
         version: 1.2.12(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -149,6 +149,9 @@ importers:
       vaul:
         specifier: ^1.1.2
         version: 1.1.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      zod:
+        specifier: ^3.25.76
+        version: 3.25.76
     devDependencies:
       '@types/node':
         specifier: ^20.10.0
@@ -1845,6 +1848,9 @@ packages:
       utf-8-validate:
         optional: true
 
+  zod@3.25.76:
+    resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
+
 snapshots:
 
   '@babel/runtime@7.28.6': {}
@@ -1944,17 +1950,17 @@ snapshots:
 
   '@floating-ui/utils@0.2.10': {}
 
-  '@jsr/supabase__functions-js@0.0.0-jsr-test.1(ws@8.19.0)':
+  '@jsr/supabase__functions-js@0.0.0-jsr-test.1(ws@8.19.0)(zod@3.25.76)':
     dependencies:
-      openai: 4.104.0(ws@8.19.0)
+      openai: 4.104.0(ws@8.19.0)(zod@3.25.76)
     transitivePeerDependencies:
       - encoding
       - ws
       - zod
 
-  '@jsr/supabase__supabase-js@2.93.3(ws@8.19.0)':
+  '@jsr/supabase__supabase-js@2.93.3(ws@8.19.0)(zod@3.25.76)':
     dependencies:
-      '@jsr/supabase__functions-js': 0.0.0-jsr-test.1(ws@8.19.0)
+      '@jsr/supabase__functions-js': 0.0.0-jsr-test.1(ws@8.19.0)(zod@3.25.76)
       '@supabase/auth-js': 2.93.3
       '@supabase/postgrest-js': 2.93.3
       '@supabase/realtime-js': 2.93.3
@@ -3011,7 +3017,7 @@ snapshots:
 
   object-assign@4.1.1: {}
 
-  openai@4.104.0(ws@8.19.0):
+  openai@4.104.0(ws@8.19.0)(zod@3.25.76):
     dependencies:
       '@types/node': 18.19.130
       '@types/node-fetch': 2.6.13
@@ -3022,6 +3028,7 @@ snapshots:
       node-fetch: 2.7.0
     optionalDependencies:
       ws: 8.19.0
+      zod: 3.25.76
     transitivePeerDependencies:
       - encoding
 
@@ -3256,3 +3263,5 @@ snapshots:
       webidl-conversions: 3.0.1
 
   ws@8.19.0: {}
+
+  zod@3.25.76: {}
