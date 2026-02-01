@@ -46,6 +46,46 @@ app.route("/make-server-c8eef56a/api/billing", billingApp);
 
 // --- Whapflow API Foundation ---
 
+interface Cart {
+  id: string;
+  shop: string;
+  customer_name: string;
+  customer_email: string;
+  phone: string;
+  product_title: string;
+  total_price: string;
+  currency: string;
+  checkout_url: string;
+  status: string;
+  created_at: string;
+  delivery_status?: string;
+  updated_at?: string;
+  wamid?: string;
+  messaged_at?: string;
+  converted_at?: string;
+}
+
+interface Merchant {
+  shop: string;
+  access_token: string;
+  shopify_connected: boolean;
+  scopes?: string;
+  plan?: string;
+  updated_at?: string;
+}
+
+interface Template {
+  id: string;
+  template_name: string;
+  display_name: string;
+  delay_minutes: number;
+  content: string;
+  generated_by_ai: boolean;
+  ai_tone: string | null;
+  enabled: boolean;
+  created_at: string;
+}
+
 /**
  * TEMPLATES API
  * Manage WhatsApp Message Templates
@@ -53,7 +93,7 @@ app.route("/make-server-c8eef56a/api/billing", billingApp);
 
 // Helper: Ensure only one template is enabled
 async function disableOtherTemplates(exceptId: string) {
-  const allTemplates = await kv.getByPrefix("template:");
+  const allTemplates = (await kv.getByPrefix("template:")) as Template[];
   const updates = [];
   
   for (const t of allTemplates) {
@@ -75,7 +115,7 @@ function validateTemplateContent(content: string): string | null {
 }
 
 // Helper: Process WhatsApp Status Updates
-async function processWhatsAppStatus(status: any) {
+async function processWhatsAppStatus(status: Record<string, any>) {
   const wamid = status.id;
   const newStatus = status.status; // sent, delivered, read
 
@@ -92,7 +132,7 @@ async function processWhatsAppStatus(status: any) {
 
   // Update Cart Status
   const cartKey = `abandoned_cart:${cartId}`;
-  const cart = await kv.get(cartKey);
+  const cart = (await kv.get(cartKey)) as Cart | null;
 
   if (cart) {
     cart.delivery_status = newStatus;
@@ -121,8 +161,8 @@ const DEFAULT_CONFIG: IntegrationConfig = {
 app.get("/make-server-c8eef56a/api/integrations/status", async (c) => {
   try {
     // Fetch detailed configurations
-    let shopifyConfig = await kv.get("config:shopify");
-    let whatsappConfig = await kv.get("config:whatsapp");
+    let shopifyConfig = (await kv.get("config:shopify")) as IntegrationConfig | null;
+    let whatsappConfig = (await kv.get("config:whatsapp")) as IntegrationConfig | null;
 
     // Initialize if missing
     if (!shopifyConfig) {
@@ -157,7 +197,7 @@ app.post("/make-server-c8eef56a/api/integrations/status", async (c) => {
     
     // Update Shopify Config
     if (body.shopify_connected !== undefined) {
-      const config: IntegrationConfig = (await kv.get("config:shopify")) || { ...DEFAULT_CONFIG };
+      const config: IntegrationConfig = ((await kv.get("config:shopify")) as IntegrationConfig) || { ...DEFAULT_CONFIG };
       config.connection_status = body.shopify_connected ? 'connected' : 'disconnected';
       config.connected_at = body.shopify_connected ? new Date().toISOString() : null;
       await kv.set("config:shopify", config);
@@ -165,15 +205,15 @@ app.post("/make-server-c8eef56a/api/integrations/status", async (c) => {
 
     // Update WhatsApp Config
     if (body.whatsapp_connected !== undefined) {
-      const config: IntegrationConfig = (await kv.get("config:whatsapp")) || { ...DEFAULT_CONFIG };
+      const config: IntegrationConfig = ((await kv.get("config:whatsapp")) as IntegrationConfig) || { ...DEFAULT_CONFIG };
       config.connection_status = body.whatsapp_connected ? 'connected' : 'disconnected';
       config.connected_at = body.whatsapp_connected ? new Date().toISOString() : null;
       await kv.set("config:whatsapp", config);
     }
     
     // Return updated status
-    const shopifyConfig = await kv.get("config:shopify");
-    const whatsappConfig = await kv.get("config:whatsapp");
+    const shopifyConfig = (await kv.get("config:shopify")) as IntegrationConfig | null;
+    const whatsappConfig = (await kv.get("config:whatsapp")) as IntegrationConfig | null;
     
     return c.json({
       shopify_connected: shopifyConfig?.connection_status === 'connected',
@@ -190,7 +230,7 @@ app.post("/make-server-c8eef56a/api/integrations/status", async (c) => {
 // GET /api/templates
 app.get("/make-server-c8eef56a/api/templates", async (c) => {
   try {
-    const templates = await kv.getByPrefix("template:");
+    const templates = (await kv.getByPrefix("template:")) as Template[];
     // Sort by created_at desc
     templates.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     return c.json(templates);
@@ -218,7 +258,7 @@ app.post("/make-server-c8eef56a/api/templates", async (c) => {
     }
     
     // Check uniqueness of template_name
-    const existing = await kv.getByPrefix("template:");
+    const existing = (await kv.getByPrefix("template:")) as Template[];
     if (existing.some(t => t.template_name === template_name)) {
       return c.json({ error: "Template name must be unique" }, 400);
     }
@@ -250,7 +290,7 @@ app.put("/make-server-c8eef56a/api/templates/:id", async (c) => {
     const id = c.req.param("id");
     const body = await c.req.json();
     
-    const existing = await kv.get(`template:${id}`);
+    const existing = (await kv.get(`template:${id}`)) as Template | null;
     if (!existing) {
       return c.json({ error: "Template not found" }, 404);
     }
@@ -498,14 +538,14 @@ app.post("/make-server-c8eef56a/api/webhooks/shopify", async (c) => {
     console.log('\n🔍 AUTOMATION CHECKS: Verifying integration status...');
     
     // Check if THIS shop is connected
-    const merchant = await getMerchantCredentials(shop);
+    const merchant = (await getMerchantCredentials(shop)) as Merchant | null;
     if (!merchant || !merchant.shopify_connected) {
        console.log(`⏹️ AUTOMATION PAUSED: Merchant ${shop} not connected/active.`);
        return c.json({ status: 'success', received: true, automation: 'paused_merchant_inactive' }, 200);
     }
     
     // Check WhatsApp Connection
-    const whatsappConfig = await kv.get("config:whatsapp");
+    const whatsappConfig = (await kv.get("config:whatsapp")) as IntegrationConfig | null;
     const whatsappConnected = whatsappConfig?.connection_status === 'connected';
     
     if (!whatsappConnected) {
@@ -522,8 +562,8 @@ app.post("/make-server-c8eef56a/api/webhooks/shopify", async (c) => {
     
     // FETCH ENABLED TEMPLATE
     console.log('\n🔍 AUTOMATION CONFIG: Fetching enabled template...');
-    const templates = await kv.getByPrefix("template:");
-    const enabledTemplate = templates.find((t: any) => t.enabled);
+    const templates = (await kv.getByPrefix("template:")) as Template[];
+    const enabledTemplate = templates.find((t) => t.enabled);
 
     if (!enabledTemplate) {
         console.log("⏹️ AUTOMATION SKIPPED: No enabled template found.");
@@ -572,12 +612,12 @@ app.post("/make-server-c8eef56a/api/webhooks/app/uninstalled", async (c) => {
 
     // 1. Cleanup Merchant Record
     const merchantKey = `merchant:${shop}`;
-    const merchant = await kv.get(merchantKey);
+    const merchant = (await kv.get(merchantKey)) as Merchant | null;
     
     if (merchant) {
         console.log(`[Uninstall] Deactivating merchant record for ${shop}...`);
         merchant.shopify_connected = false;
-        merchant.access_token = null; // Security: Clear token
+        merchant.access_token = ""; // Security: Clear token
         merchant.updated_at = new Date().toISOString();
         
         await kv.set(merchantKey, merchant);
@@ -585,8 +625,8 @@ app.post("/make-server-c8eef56a/api/webhooks/app/uninstalled", async (c) => {
 
     // 2. Cleanup Global Config (for MVP dashboard compatibility)
     // Only if the uninstalled shop is the one currently in the global config
-    const globalConfig = await kv.get("config:shopify");
-    if (globalConfig && globalConfig.shop_domain === shop) {
+    const globalConfig = (await kv.get("config:shopify")) as IntegrationConfig | null;
+    if (globalConfig && globalConfig.metadata?.shop_domain === shop) {
         console.log(`[Uninstall] Clearing global dashboard config...`);
         globalConfig.connection_status = 'disconnected';
         globalConfig.connected_at = null;
@@ -613,75 +653,56 @@ async function scheduleAutomation(payload: any, delayMinutes: number) {
   await enqueueJob(payload, delayMinutes);
 }
 
-async function executeAutomation(payload: any) {
+async function executeAutomation(payload: Record<string, any>) {
   const { cartId, cartKey, templateName, shop } = payload;
   
   try {
     console.log(`\n⏰ AUTOMATION: Executing job for cart [${cartId}]. Checking logic...`);
 
-      console.log(`   - API CHECK: Checking if order exists for ${shop}...`);
-      const orderExists = await checkOrderExists(
-          shop,
-          merchant.access_token,
-          currentCart.created_at,
-          currentCart.customer_email,
-          currentCart.phone
-      );
+    // 1. Re-fetch current state from "Database"
+    const currentCart = (await kv.get(cartKey)) as Cart | null;
 
-      if (orderExists) {
-        console.log(`⏹️ AUTOMATION SKIPPED: Order found for cart ${cartId}.`);
-        currentCart.status = 'converted';
-        currentCart.converted_at = new Date().toISOString();
-        await kv.set(cartKey, currentCart);
-        return; // EXIT
-      }
+    if (!currentCart) {
+      console.log(`❌ AUTOMATION SKIPPED: Cart [${cartId}] no longer exists.`);
+      return;
+    }
 
-      // Re-confirm automation is enabled (Check if an active template exists)
-      const templates = await kv.getByPrefix("template:");
-      const hasEnabledTemplate = templates.some((t: any) => t.enabled);
-
-      // 1. Re-fetch current state from "Database"
-      const currentCart = await kv.get(cartKey);
-
-      if (!currentCart) {
-        console.log(`❌ AUTOMATION SKIPPED: Cart [${cartId}] no longer exists.`);
+    // 2. Retrieve merchant credentials
+    const merchant = (await getMerchantCredentials(shop)) as Merchant | null;
+    if (!merchant || !merchant.access_token) {
+        console.error(`❌ AUTOMATION FAILED: No credentials found for ${shop}`);
         return;
-      }
+    }
 
-      // 2. Check Logic
-      const isPending = currentCart.status === 'pending';
+    // 3. API CHECK: Checking if order exists
+    console.log(`   - API CHECK: Checking if order exists for ${shop}...`);
+    const orderExists = await checkOrderExists(
+        shop,
+        merchant.access_token,
+        currentCart.created_at,
+        currentCart.customer_email,
+        currentCart.phone
+    );
 
-      // STEP 3: ORDERS API SAFETY CHECK
-      // Retrieve merchant credentials
-      const merchant = await getMerchantCredentials(shop);
-      if (!merchant || !merchant.access_token) {
-          console.error(`❌ AUTOMATION FAILED: No credentials found for ${shop}`);
-          return;
-      }
-      
-      console.log(`   - API CHECK: Checking if order exists for ${shop}...`);
-      const orderExists = await checkOrderExists(
-          shop,
-          merchant.access_token,
-          currentCart.created_at,
-          currentCart.customer_email,
-          currentCart.phone
-      );
+    if (orderExists) {
+      console.log(`⏹️ AUTOMATION SKIPPED: Order found for cart ${cartId}.`);
+      currentCart.status = 'converted';
+      currentCart.converted_at = new Date().toISOString();
+      await kv.set(cartKey, currentCart);
+      return; // EXIT
+    }
 
-      if (orderExists) {
-        console.log(`⏹️ AUTOMATION SKIPPED: Order found for cart ${cartId}.`);
-        currentCart.status = 'converted';
-        currentCart.converted_at = new Date().toISOString();
-        await kv.set(cartKey, currentCart);
-        return; // EXIT
-      }
+    // 4. Re-confirm automation is enabled (Check if an active template exists)
+    const templates = (await kv.getByPrefix("template:")) as Template[];
+    const hasEnabledTemplate = templates.some((t) => t.enabled);
 
-    // Re-check Plan Limits
+    // 5. Check Logic
+    const isPending = currentCart.status === 'pending';
+
+    // 6. Re-check Plan Limits
     const billingConfig = await billing.getBillingConfig(shop);
     const automationCheck = billing.checkLimitWithConfig('automation', billingConfig);
     const whatsappCheck = billing.checkLimitWithConfig('whatsapp', billingConfig);
-
-          await kv.set(cartKey, currentCart);
 
     if (isPending && hasEnabledTemplate && automationCheck.allowed && whatsappCheck.allowed) {
       console.log(`✅ CONDITIONS MET: Ready to send WhatsApp message.`);
@@ -711,11 +732,13 @@ async function executeAutomation(payload: any) {
       } else {
         console.log('⏹️ AUTOMATION SKIPPED: Conditions not met (e.g. cart recovered or automation off).');
       }
-
-    } catch (err) {
-      console.error('Automation Error:', err);
+    } else {
+      console.log('⏹️ AUTOMATION SKIPPED: Conditions not met (e.g. cart recovered, automation off, or plan limit reached).');
     }
-  }, DELAY_MS);
+
+  } catch (err) {
+    console.error('Automation Error:', err);
+  }
 }
 
 // Process Queue periodically
@@ -795,17 +818,17 @@ app.get("/make-server-c8eef56a/api/dashboard/metrics", async (c) => {
     const shop = c.req.query("shop") || "global"; // Default to "global" if no shop provided
 
     // 1. Fetch Integrations Status
-    const shopifyConfig = await kv.get("config:shopify");
-    const whatsappConfig = await kv.get("config:whatsapp");
+    const shopifyConfig = (await kv.get("config:shopify")) as IntegrationConfig | null;
+    const whatsappConfig = (await kv.get("config:whatsapp")) as IntegrationConfig | null;
     const status = {
       shopify_connected: shopifyConfig?.connection_status === 'connected',
       whatsapp_connected: whatsappConfig?.connection_status === 'connected'
     };
     
     // 2. Fetch Templates Stats
-    const templates = await kv.getByPrefix("template:");
+    const templates = (await kv.getByPrefix("template:")) as Template[];
     const templatesCount = templates.length;
-    const hasEnabledTemplate = templates.some((t: any) => t.enabled);
+    const hasEnabledTemplate = templates.some((t) => t.enabled);
     
     // 3. Fetch AI Usage & Billing
     const billingConfig = await billing.getBillingConfig(shop);

@@ -201,7 +201,7 @@ dashboardApp.get("/automations", async (c) => {
     }
     await kv.set("dashboard_automations", defaultAutomations);
     return c.json({ automations: defaultAutomations });
-  } catch (error) {
+  } catch (_error) {
     return c.json({ automations: defaultAutomations });
   }
 });
@@ -210,7 +210,8 @@ dashboardApp.get("/automations", async (c) => {
 dashboardApp.post("/automations/:id/toggle", async (c) => {
   const id = c.req.param("id");
   try {
-    let automations: any[] = (await kv.get("dashboard_automations")) || defaultAutomations;
+    const fetched = await kv.get("dashboard_automations");
+    let automations = (Array.isArray(fetched) ? fetched : defaultAutomations) as typeof defaultAutomations;
     
     automations = automations.map(a => 
       a.id === id ? { ...a, enabled: !a.enabled } : a
@@ -219,7 +220,7 @@ dashboardApp.post("/automations/:id/toggle", async (c) => {
     await kv.set("dashboard_automations", automations);
     
     return c.json({ success: true, automations });
-  } catch (error) {
+  } catch (_error) {
     return c.json({ error: "Failed to toggle automation" }, 500);
   }
 });

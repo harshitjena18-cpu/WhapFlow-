@@ -163,9 +163,9 @@ export function OnboardingChecklist({ data, onRefresh }: OnboardingChecklistProp
       </div>
 
       <div className="divide-y divide-gray-100/80">
-        {steps.map((step, index) => {
+        {steps.map((step, _index) => {
           const isCurrent = step.id === activeStepId;
-          const isPast = step.isCompleted;
+          const _isPast = step.isCompleted;
           
           return (
             <div 
