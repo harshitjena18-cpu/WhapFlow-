@@ -50,13 +50,21 @@ export async function processPendingJobs(handler: (payload: any) => Promise<void
 
   console.log(`[Queue] Found ${dueJobs.length} due jobs.`);
 
-  for (const job of dueJobs) {
-    // ATOMIC CLAIM: Try to delete the key first.
-    // If kv.del returns true, it means WE successfully deleted it, so we own the job.
-    // If false, another worker beat us to it.
-    const claimed = await kv.del(job.key);
+  // Process jobs concurrently with a limit to avoid overwhelming resources
+  const CONCURRENCY_LIMIT = 5;
+  const jobQueue = [...dueJobs];
 
-    if (claimed) {
+  const worker = async () => {
+    while (jobQueue.length > 0) {
+      const job = jobQueue.shift();
+      if (!job) break;
+
+      // ATOMIC CLAIM: Try to delete the key first.
+      // If kv.del returns true, it means WE successfully deleted it, so we own the job.
+      // If false, another worker beat us to it.
+      const claimed = await kv.del(job.key);
+
+      if (claimed) {
         try {
           console.log(`[Queue] Claimed & Processing job ${job.id}...`);
           await handler(job.payload);
@@ -66,8 +74,11 @@ export async function processPendingJobs(handler: (payload: any) => Promise<void
           // Move to dead-letter queue
           await kv.set(`queue:failed:${job.id}`, { ...job, error: String(error) });
         }
-    } else {
+      } else {
         console.log(`[Queue] Job ${job.id} already claimed by another worker.`);
+      }
     }
-  }
+  };
+
+  await Promise.all(Array.from({ length: CONCURRENCY_LIMIT }, () => worker()));
 }
