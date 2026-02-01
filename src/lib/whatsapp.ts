@@ -16,38 +16,7 @@ export const sendWhatsAppMessage = async (request: WhatsAppMessageRequest): Prom
   return true;
 };
 
-export const getTemplateStatus = async (templateId: string, accessTokenOverride?: string): Promise<string> => {
-  // WARNING: Exposing the access token in client-side code is a security risk.
-  // In production, this call should be proxied through a backend to keep the token secret.
-  const accessToken = accessTokenOverride || import.meta.env?.VITE_WHATSAPP_ACCESS_TOKEN;
-
-  if (!accessToken) {
-    console.warn('VITE_WHATSAPP_ACCESS_TOKEN is not set');
-    return 'APPROVED';
-  }
-
-  try {
-    const response = await fetch(
-      `https://graph.facebook.com/v17.0/${encodeURIComponent(templateId)}?fields=status`,
-      {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-      }
-    );
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error('Error fetching template status:', errorData);
-      return 'UNKNOWN';
-    }
-
-    const data = await response.json();
-    return data.status;
-  } catch (error) {
-    console.error('Failed to get template status', error);
-    return 'UNKNOWN';
-  }
+export const getTemplateStatus = async (templateId: string) => {
+  // TODO: Check if template is approved
+  return 'APPROVED';
 };

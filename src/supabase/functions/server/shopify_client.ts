@@ -20,58 +20,42 @@ export async function checkOrderExists(
 ): Promise<boolean> {
   try {
     // 1. Build Query
-    // We filter by created_at_min to only look for orders created AFTER the cart was created.
-    // We fetch status=any to include open, closed, archived orders.
-    const params = new URLSearchParams({
-      status: "any",
-      created_at_min: cartCreatedAt,
-      fields: "id,email,phone,customer,created_at" // Optimize payload
-    });
+    // Construct search query: created_at:>=... AND (email:... OR phone:...)
+    const clauses = [`created_at:>=${cartCreatedAt}`];
 
-    const url = `https://${shop}/admin/api/2024-01/orders.json?${params.toString()}`;
+    const contactClauses = [];
+    if (email) contactClauses.push(`email:${email}`);
+    if (phone) contactClauses.push(`phone:${phone}`);
 
-    // 2. Call Shopify API
-    const response = await fetch(url, {
-      headers: {
-        "X-Shopify-Access-Token": accessToken,
-        "Content-Type": "application/json"
+    if (contactClauses.length > 0) {
+        clauses.push(`(${contactClauses.join(' OR ')})`);
+    } else {
+        console.warn(`[ShopifyClient] No contact info to check order for ${shop}`);
+        return true; // Fail safe: assume order exists/risk of spam
+    }
+
+    const searchQuery = clauses.join(' AND ');
+
+    const query = `
+      query checkOrders($query: String!) {
+        orders(first: 5, query: $query) {
+          nodes {
+            id
+            createdAt
+            email
+            phone
+          }
+        }
       }
-    });
+    `;
 
-    if (!response.ok) {
-      console.error(`[ShopifyClient] Failed to fetch orders for ${shop}: ${response.statusText}`);
-      // FAIL SAFE: If we can't check, assume it might exist (or just log error).
-      // The requirement says "Always fail-safe (no message) on uncertainty".
-      // So if this fails, we should probably treat it as "risk of spam" -> return true (stop message)?
-      // Or return a specific error. 
-      // For now, let's throw, and the caller handles the fail-safe.
-      throw new Error(`Shopify API error: ${response.status}`);
-    }
+    // 2. Call Shopify GraphQL API
+    const data = await shopifyGraphql(shop, accessToken, query, { query: searchQuery });
+    const orders = data.orders.nodes || [];
 
-    const data = await response.json();
-    const orders = data.orders || [];
-
-    if (orders.length === 0) {
-      return false; 
-    }
-
-    // 3. Match Order
-    // Shopify's "search" param is fuzzy, so we iterate manually for exact match.
-    // We check if any order belongs to the customer email or phone.
-    const hasMatchingOrder = orders.some((order: any) => {
-      const emailMatch = email && order.email && order.email.toLowerCase() === email.toLowerCase();
-      const phoneMatch = phone && order.phone && formatPhone(order.phone) === formatPhone(phone);
-      
-      // Also check customer object if available
-      const customerEmailMatch = email && order.customer?.email && order.customer.email.toLowerCase() === email.toLowerCase();
-      const customerPhoneMatch = phone && order.customer?.phone && formatPhone(order.customer.phone) === formatPhone(phone);
-
-      return emailMatch || phoneMatch || customerEmailMatch || customerPhoneMatch;
-    });
-
-    if (hasMatchingOrder) {
-      console.log(`[ShopifyClient] MATCH FOUND: Order exists for ${email || phone} in ${shop}`);
-      return true;
+    if (orders.length > 0) {
+         console.log(`[ShopifyClient] MATCH FOUND: Order exists for ${email || phone} in ${shop}`);
+         return true;
     }
 
     return false;
@@ -106,12 +90,6 @@ export async function verifyWebhookHmac(rawBody: string, hmacHeader: string, sec
   const hashBase64 = btoa(String.fromCharCode(...hashArray));
 
   return hashBase64 === hmacHeader;
-}
-
-// Helper to normalize phone numbers for comparison
-function formatPhone(phone: string): string {
-  if (!phone) return "";
-  return phone.replace(/\D/g, ""); // Remove non-digits
 }
 
 /**
