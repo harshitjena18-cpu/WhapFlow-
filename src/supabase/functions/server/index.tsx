@@ -627,46 +627,48 @@ async function executeAutomation(payload: any) {
       return;
     }
 
-    // 2. Check Logic
-    const isPending = currentCart.status === 'pending';
+      // 1. Re-fetch current state from "Database"
+      const currentCart = await kv.get(cartKey);
 
-    // STEP 3: ORDERS API SAFETY CHECK
-    // Retrieve merchant credentials
-    const merchant = await getMerchantCredentials(shop);
-    if (!merchant || !merchant.access_token) {
-        console.error(`❌ AUTOMATION FAILED: No credentials found for ${shop}`);
+      if (!currentCart) {
+        console.log(`❌ AUTOMATION SKIPPED: Cart [${cartId}] no longer exists.`);
         return;
-    }
+      }
 
-    console.log(`   - API CHECK: Checking if order exists for ${shop}...`);
-    const orderExists = await checkOrderExists(
-        shop,
-        merchant.access_token,
-        currentCart.created_at,
-        currentCart.customer_email,
-        currentCart.phone
-    );
+      // 2. Check Logic
+      const isPending = currentCart.status === 'pending';
 
-    if (orderExists) {
-      console.log(`⏹️ AUTOMATION SKIPPED: Order found for cart ${cartId}.`);
-      currentCart.status = 'converted';
-      currentCart.converted_at = new Date().toISOString();
-      await kv.set(cartKey, currentCart);
-      return; // EXIT
-    }
+      // STEP 3: ORDERS API SAFETY CHECK
+      // Retrieve merchant credentials
+      const merchant = await getMerchantCredentials(shop);
+      if (!merchant || !merchant.access_token) {
+          console.error(`❌ AUTOMATION FAILED: No credentials found for ${shop}`);
+          return;
+      }
+      
+      console.log(`   - API CHECK: Checking if order exists for ${shop}...`);
+      const orderExists = await checkOrderExists(
+          shop,
+          merchant.access_token,
+          currentCart.created_at,
+          currentCart.customer_email,
+          currentCart.phone
+      );
 
-    // Re-confirm automation is enabled (Check if an active template exists)
-    const templates = await kv.getByPrefix("template:");
-    const hasEnabledTemplate = templates.some((t: any) => t.enabled);
+      if (orderExists) {
+        console.log(`⏹️ AUTOMATION SKIPPED: Order found for cart ${cartId}.`);
+        currentCart.status = 'converted';
+        currentCart.converted_at = new Date().toISOString();
+        await kv.set(cartKey, currentCart);
+        return; // EXIT
+      }
 
     // Re-check Plan Limits
     const billingConfig = await billing.getBillingConfig(shop);
     const automationCheck = billing.checkLimitWithConfig('automation', billingConfig);
     const whatsappCheck = billing.checkLimitWithConfig('whatsapp', billingConfig);
 
-    console.log(`   - Current Status: ${currentCart.status}`);
-    console.log(`   - Automation Enabled: ${hasEnabledTemplate}`);
-    console.log(`   - Plan Limit Check: Automation=${automationCheck.allowed}, WhatsApp=${whatsappCheck.allowed}`);
+          await kv.set(cartKey, currentCart);
 
     if (isPending && hasEnabledTemplate && automationCheck.allowed && whatsappCheck.allowed) {
       console.log(`✅ CONDITIONS MET: Ready to send WhatsApp message.`);
@@ -693,19 +695,14 @@ async function executeAutomation(payload: any) {
 
         await kv.set(cartKey, currentCart);
 
-        console.log(`🚀 AUTOMATION SUCCESS: Message sent to ${currentCart.phone}`);
-        console.log(`📝 Status updated to "messaged"`);
       } else {
-        console.error(`⚠️ AUTOMATION FAILED: WhatsApp API error`, result.error);
+        console.log('⏹️ AUTOMATION SKIPPED: Conditions not met (e.g. cart recovered or automation off).');
       }
 
-    } else {
-      console.log('⏹️ AUTOMATION SKIPPED: Conditions not met (e.g. cart recovered or automation off).');
+    } catch (err) {
+      console.error('Automation Error:', err);
     }
-
-  } catch (err) {
-    console.error('Automation Error:', err);
-  }
+  }, DELAY_MS);
 }
 
 // Process Queue periodically

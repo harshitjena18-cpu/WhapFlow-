@@ -202,7 +202,7 @@ async function registerWebhooks(shop: string, accessToken: string) {
 
   console.log(`[Webhooks] Registering topics for ${shop}...`);
 
-  await Promise.all(WEBHOOKS.map(async (hook) => {
+  for (const hook of WEBHOOKS) {
     try {
       const response = await fetch(`https://${shop}/admin/api/2023-10/webhooks.json`, {
         method: "POST",
@@ -234,7 +234,7 @@ async function registerWebhooks(shop: string, accessToken: string) {
     } catch (err) {
       console.error(`[Webhooks] Network error registering ${hook.topic}:`, err);
     }
-  }));
+  }
 }
 
 export default app;
