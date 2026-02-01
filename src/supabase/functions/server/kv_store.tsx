@@ -40,12 +40,15 @@ export const get = async (key: string): Promise<any> => {
 };
 
 // Delete deletes a key-value pair from the database.
-export const del = async (key: string): Promise<void> => {
+// Returns true if the key was found and deleted, false otherwise.
+export const del = async (key: string): Promise<boolean> => {
   const supabase = client()
-  const { error } = await supabase.from("kv_store_c8eef56a").delete().eq("key", key);
+  // select() is needed to get the count
+  const { error, count } = await supabase.from("kv_store_c8eef56a").delete({ count: "exact" }).eq("key", key);
   if (error) {
     throw new Error(error.message);
   }
+  return count !== null && count > 0;
 };
 
 // Sets multiple key-value pairs in the database.
@@ -61,6 +64,21 @@ export const mset = async (keys: string[], values: any[]): Promise<void> => {
 export const mget = async (keys: string[]): Promise<any[]> => {
   const supabase = client()
   const { data, error } = await supabase.from("kv_store_c8eef56a").select("value").in("key", keys);
+  if (error) {
+    throw new Error(error.message);
+  }
+  return data?.map((d) => d.value) ?? [];
+};
+
+// Scan Queue (Efficient Range Query)
+// Fetches keys starting with "queue:v1:" and less than or equal to endKey
+export const scanQueue = async (endKey: string): Promise<any[]> => {
+  const supabase = client()
+  const { data, error } = await supabase.from("kv_store_c8eef56a")
+    .select("key, value")
+    .like("key", "queue:v1:%")
+    .lte("key", endKey);
+
   if (error) {
     throw new Error(error.message);
   }
