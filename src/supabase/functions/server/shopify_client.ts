@@ -21,15 +21,19 @@ export async function checkOrderExists(
   try {
     // 1. Build Query (GraphQL)
     // We filter by created_at >= cartCreatedAt (Shopify search syntax)
-    // If email is provided, we filter by email as well.
-    let searchQuery = `created_at:>=${cartCreatedAt}`;
-    if (email) {
+    // We explicitly set status:any to include open, closed, and archived orders (matching REST behavior).
+    let searchQuery = `created_at:>=${cartCreatedAt} status:any`;
+
+    // OPTIMIZATION: If email is provided AND phone is NOT provided, we can strictly filter by email.
+    // If phone is provided, we must fetch all recent orders because Shopify's phone search is unreliable
+    // (formatting issues), and we want to ensure we don't miss phone-only matches.
+    if (email && !phone) {
       searchQuery += ` AND email:${email}`;
     }
 
     const query = `
       query orders($query: String!) {
-        orders(first: 20, query: $query) {
+        orders(first: 50, query: $query) {
           nodes {
             id
             email
