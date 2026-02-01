@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MessageCircle as _MessageCircle, Mail, Lock, Store, Chrome, ArrowRight } from 'lucide-react';
+import { MessageCircle, Mail, Lock, Store, Chrome, ArrowRight } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -105,11 +105,10 @@ export function Signup() {
       toast.success('Account created successfully!');
       navigate('/dashboard');
       
-    } catch (error) {
-      const err = error as any;
-      console.error('Signup error:', err);
-      toast.error(err.message || 'Failed to sign up');
-      setErrors(prev => ({ ...prev, form: err.message }));
+    } catch (error: any) {
+      console.error('Signup error:', error);
+      toast.error(error.message || 'Failed to sign up');
+      setErrors(prev => ({ ...prev, form: error.message }));
     } finally {
       setIsLoading(false);
     }
@@ -131,7 +130,7 @@ export function Signup() {
     }
 
     try {
-      const { data: _data, error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: window.location.origin + '/dashboard',
@@ -140,10 +139,9 @@ export function Signup() {
 
       if (error) throw error;
       
-    } catch (error) {
-      const err = error as any;
-      console.error('Social signup error:', err);
-      toast.error(err.message || 'Failed to initiate social signup');
+    } catch (error: any) {
+      console.error('Social signup error:', error);
+      toast.error(error.message || 'Failed to initiate social signup');
     }
   };
 

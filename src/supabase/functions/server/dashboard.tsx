@@ -159,12 +159,9 @@ const defaultAutomations = [
 dashboardApp.get("/data", async (c) => {
   // Try to get data from KV store
   try {
-    // Parallelize data fetching to reduce latency
-    const [metrics, revenue, activity] = await Promise.all([
-      kv.get("dashboard_metrics"),
-      kv.get("dashboard_revenue"),
-      kv.get("dashboard_activity")
-    ]);
+    const metrics = await kv.get("dashboard_metrics");
+    const revenue = await kv.get("dashboard_revenue");
+    const activity = await kv.get("dashboard_activity");
 
     if (metrics && revenue && activity) {
       return c.json({
@@ -204,7 +201,7 @@ dashboardApp.get("/automations", async (c) => {
     }
     await kv.set("dashboard_automations", defaultAutomations);
     return c.json({ automations: defaultAutomations });
-  } catch (_error) {
+  } catch (error) {
     return c.json({ automations: defaultAutomations });
   }
 });
@@ -213,18 +210,16 @@ dashboardApp.get("/automations", async (c) => {
 dashboardApp.post("/automations/:id/toggle", async (c) => {
   const id = c.req.param("id");
   try {
-    // deno-lint-ignore no-explicit-any
     let automations: any[] = (await kv.get("dashboard_automations")) || defaultAutomations;
     
-    // deno-lint-ignore no-explicit-any
-    automations = automations.map((a: any) =>
+    automations = automations.map(a =>
       a.id === id ? { ...a, enabled: !a.enabled } : a
     );
     
     await kv.set("dashboard_automations", automations);
     
     return c.json({ success: true, automations });
-  } catch (_error) {
+  } catch (error) {
     return c.json({ error: "Failed to toggle automation" }, 500);
   }
 });

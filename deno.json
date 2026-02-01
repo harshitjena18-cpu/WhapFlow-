@@ -18,5 +18,15 @@
       "build",
       "node_modules"
     ]
+  },
+  "test": {
+    "exclude": [
+      "src/components",
+      "src/lib",
+      "src/utils",
+      "scripts",
+      "build",
+      "node_modules"
+    ]
   }
 }

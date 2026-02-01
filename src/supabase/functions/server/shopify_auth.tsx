@@ -15,7 +15,7 @@ const REDIRECT_URI = Deno.env.get("SHOPIFY_REDIRECT_URI") || "https://api.whapfl
  * STEP 2: OAUTH START ROUTE
  * GET /auth/shopify
  */
-app.get("/", (c) => {
+app.get("/", async (c) => {
   const shop = c.req.query("shop");
   const clientId = Deno.env.get("SHOPIFY_CLIENT_ID");
 

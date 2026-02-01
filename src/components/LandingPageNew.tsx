@@ -1,11 +1,11 @@
 import { 
   MessageCircle, 
-  TrendingUp as _TrendingUp,
+  TrendingUp,
   Zap, 
   ShoppingCart, 
   BarChart3, 
   Clock, 
-  ArrowRight as _ArrowRight,
+  ArrowRight,
   Check,
   Shield,
   Globe,

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
-import { MessageCircle, Plus, Trash2, Save as _Save, Check as _Check, Loader2, Sparkles, Copy as _Copy, AlertCircle, Bot, Zap, Info } from 'lucide-react';
+import { MessageCircle, Plus, Trash2, Save, Check, Loader2, Sparkles, Copy, AlertCircle, Bot, Zap, Info } from 'lucide-react';
 import { toast } from "sonner@2.0.3";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -23,7 +23,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger as _DialogTrigger,
+  DialogTrigger,
 } from "./ui/dialog";
 import {
   AlertDialog,
@@ -256,10 +256,8 @@ export function TemplatesView() {
       fetchTemplates();
       setSelectedTemplate(savedTemplate);
     } catch (err) {
-      // deno-lint-ignore no-explicit-any
-      const error = err as any;
-      console.error(error);
-      toast.error(error.message);
+      console.error(err);
+      toast.error(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setSubmitting(false);
     }
@@ -344,10 +342,8 @@ export function TemplatesView() {
       }
       toast.success("Templates generated!");
     } catch (err) {
-      // deno-lint-ignore no-explicit-any
-      const error = err as any;
-      console.error(error);
-      toast.error(error.message);
+      console.error(err);
+      toast.error(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setAiGenerating(false);
     }
