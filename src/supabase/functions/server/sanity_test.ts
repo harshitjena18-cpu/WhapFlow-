@@ -1,6 +1,5 @@
+import { assertEquals } from "jsr:@std/assert";
 
 Deno.test("Sanity Check", () => {
-  if (1 !== 1) {
-    throw new Error("Math is broken");
-  }
+  assertEquals(1, 1);
 });
