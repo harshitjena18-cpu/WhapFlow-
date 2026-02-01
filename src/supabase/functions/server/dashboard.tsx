@@ -159,9 +159,12 @@ const defaultAutomations = [
 dashboardApp.get("/data", async (c) => {
   // Try to get data from KV store
   try {
-    const metrics = await kv.get("dashboard_metrics");
-    const revenue = await kv.get("dashboard_revenue");
-    const activity = await kv.get("dashboard_activity");
+    // Parallelize data fetching to reduce latency
+    const [metrics, revenue, activity] = await Promise.all([
+      kv.get("dashboard_metrics"),
+      kv.get("dashboard_revenue"),
+      kv.get("dashboard_activity")
+    ]);
 
     if (metrics && revenue && activity) {
       return c.json({
