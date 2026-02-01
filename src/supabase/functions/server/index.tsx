@@ -1,8 +1,10 @@
 import { Hono } from "npm:hono";
 import { cors } from "npm:hono/cors";
 import { logger } from "npm:hono/logger";
+import { secureHeaders } from "npm:hono/secure-headers";
+import { enqueueJob, processPendingJobs } from "./queue.ts";
 import * as kv from "./kv_store.tsx";
-import { sendWhatsAppTemplate, processWhatsAppStatus } from "./whatsapp.ts";
+import { sendWhatsAppTemplate } from "./whatsapp.ts";
 import * as billing from "./billing.ts"; // Import Billing Service
 import { checkOrderExists, getMerchantCredentials, verifyWebhookHmac } from "./shopify_client.ts";
 import authApp from "./auth.tsx";
@@ -15,6 +17,9 @@ const app = new Hono();
 // Enable logger
 app.use('*', logger(console.log));
 
+// Enable Secure Headers
+app.use('*', secureHeaders());
+
 // Enable CORS for all routes and methods
 app.use(
   "/*",
@@ -26,6 +31,12 @@ app.use(
     maxAge: 600,
   }),
 );
+
+// Global Error Handler
+app.onError((err, c) => {
+  console.error("🔥 Global Error Handler:", err);
+  return c.json({ error: "Internal Server Error", message: err.message }, 500);
+});
 
 // Mount auth routes
 app.route("/make-server-c8eef56a", authApp);
@@ -61,6 +72,34 @@ function validateTemplateContent(content: string): string | null {
   if (content.length > 1024) return "Content exceeds 1024 characters";
   if (!content.includes("{{checkout_link}}")) return "Content must include {{checkout_link}}";
   return null;
+}
+
+// Helper: Process WhatsApp Status Updates
+async function processWhatsAppStatus(status: any) {
+  const wamid = status.id;
+  const newStatus = status.status; // sent, delivered, read
+
+  console.log(`[WhatsApp Status] Message ${wamid} is ${newStatus}`);
+
+  // Find the cart associated with this message
+  // We need a mapping: msg_map:{wamid} -> cartId
+  const cartId = await kv.get(`msg_map:${wamid}`);
+
+  if (!cartId) {
+    console.log(`[WhatsApp Status] No cart found for message ${wamid}`);
+    return;
+  }
+
+  // Update Cart Status
+  const cartKey = `abandoned_cart:${cartId}`;
+  const cart = await kv.get(cartKey);
+
+  if (cart) {
+    cart.delivery_status = newStatus;
+    cart.updated_at = new Date().toISOString();
+    await kv.set(cartKey, cart);
+    console.log(`[WhatsApp Status] Updated cart ${cartId} to ${newStatus}`);
+  }
 }
 
 // Integration Configurations (Future-proofing)
@@ -344,9 +383,10 @@ Generate 3 different variations.`;
     }
 
     // Increment Usage
-    const config = await billing.incrementUsage('ai', shop);
+    await billing.incrementUsage('ai', shop);
     
     // Get updated config for response
+    const config = await billing.getBillingConfig(shop);
     const limits = billing.PLAN_LIMITS[config.plan];
     
     const content = data.choices[0].message.content;
@@ -456,20 +496,16 @@ app.post("/make-server-c8eef56a/api/webhooks/shopify", async (c) => {
     
     // CHECK INTEGRATIONS FIRST (Global Check)
     console.log('\n🔍 AUTOMATION CHECKS: Verifying integration status...');
-
-    const [merchant, whatsappConfig, automationCheck] = await Promise.all([
-      getMerchantCredentials(shop),
-      kv.get("config:whatsapp"),
-      billing.checkLimit('automation', shop)
-    ]);
     
     // Check if THIS shop is connected
+    const merchant = await getMerchantCredentials(shop);
     if (!merchant || !merchant.shopify_connected) {
        console.log(`⏹️ AUTOMATION PAUSED: Merchant ${shop} not connected/active.`);
        return c.json({ status: 'success', received: true, automation: 'paused_merchant_inactive' }, 200);
     }
     
     // Check WhatsApp Connection
+    const whatsappConfig = await kv.get("config:whatsapp");
     const whatsappConnected = whatsappConfig?.connection_status === 'connected';
     
     if (!whatsappConnected) {
@@ -478,6 +514,7 @@ app.post("/make-server-c8eef56a/api/webhooks/shopify", async (c) => {
     }
     
     // CHECK BILLING / PLAN
+    const automationCheck = await billing.checkLimit('automation', shop);
     if (!automationCheck.allowed) {
       console.log(`⏹️ AUTOMATION PAUSED: ${automationCheck.error}`);
       return c.json({ status: 'success', received: true, automation: 'paused_plan_limit' }, 200);
@@ -494,7 +531,7 @@ app.post("/make-server-c8eef56a/api/webhooks/shopify", async (c) => {
     } else {
         console.log(`✅ TEMPLATE FOUND: ${enabledTemplate.display_name} (${enabledTemplate.template_name})`);
         console.log(`   - Delay: ${enabledTemplate.delay_minutes} minutes`);
-        await scheduleAutomation(cartId, cartKey, enabledTemplate.delay_minutes, enabledTemplate.template_name, shop);
+        await scheduleAutomation({ cartId, cartKey, templateName: enabledTemplate.template_name, shop }, enabledTemplate.delay_minutes);
     }
     
     return c.json({ status: 'success', received: true }, 200);
@@ -571,46 +608,16 @@ app.post("/make-server-c8eef56a/api/webhooks/app/uninstalled", async (c) => {
 /**
  * AUTOMATION ENGINE
  */
-
-interface AutomationJob {
-  cartId: string;
-  cartKey: string;
-  templateName: string;
-  shop: string;
-  scheduledAt: string;
+async function scheduleAutomation(payload: any, delayMinutes: number) {
+  console.log(`[Automation] Scheduling job for cart ${payload.cartId} in ${delayMinutes} minutes...`);
+  await enqueueJob(payload, delayMinutes);
 }
 
-// 1. Schedule Automation
-async function scheduleAutomation(
-  cartId: string, 
-  cartKey: string, 
-  delayMinutes: number, 
-  templateName: string,
-  shop: string
-) {
-  const scheduledAt = new Date(Date.now() + delayMinutes * 60 * 1000).toISOString();
+async function executeAutomation(payload: any) {
+  const { cartId, cartKey, templateName, shop } = payload;
   
-  const job: AutomationJob = {
-    cartId,
-    cartKey,
-    templateName,
-    shop,
-    scheduledAt
-  };
-
-  // Queue key format: "queue:automation:<cartId>"
-  await kv.set(`queue:automation:${cartId}`, job);
-  
-  console.log(`\n⏳ AUTOMATION: Scheduled for ${scheduledAt} (Cart [${cartId}] @ ${shop})`);
-  console.log('   - Job saved to queue.');
-}
-
-// 2. Process Automation Logic
-async function processAbandonedCart(job: AutomationJob) {
-  const { cartId, cartKey, templateName, shop } = job;
-
   try {
-    console.log(`\n⏰ AUTOMATION: Processing job for cart [${cartId}]. Checking logic...`);
+    console.log(`\n⏰ AUTOMATION: Executing job for cart [${cartId}]. Checking logic...`);
 
     // 1. Re-fetch current state from "Database"
     const currentCart = await kv.get(cartKey);
@@ -676,6 +683,13 @@ async function processAbandonedCart(job: AutomationJob) {
 
         currentCart.status = 'messaged';
         currentCart.messaged_at = new Date().toISOString();
+
+        if (result.wamid) {
+             currentCart.wamid = result.wamid;
+             await kv.set(`msg_map:${result.wamid}`, cartId);
+             console.log(`🔗 Mapped message ${result.wamid} to cart ${cartId}`);
+        }
+
         await kv.set(cartKey, currentCart);
 
         console.log(`🚀 AUTOMATION SUCCESS: Message sent to ${currentCart.phone}`);
@@ -693,34 +707,9 @@ async function processAbandonedCart(job: AutomationJob) {
   }
 }
 
-// 3. Cron Scheduler
-Deno.cron("Process Abandoned Carts", "* * * * *", async () => {
-  console.log("⏰ CRON: Checking for pending automations...");
-  try {
-      const queueItems = await kv.getByPrefix("queue:automation:");
-      const now = new Date();
-      let processedCount = 0;
-
-      for (const job of queueItems) {
-          const scheduledAt = new Date(job.scheduledAt);
-
-          if (scheduledAt <= now) {
-              console.log(`⚡ CRON: Triggering automation for cart [${job.cartId}]`);
-
-              // Process the job
-              await processAbandonedCart(job);
-
-              // Clean up queue (ensure we don't process it again)
-              await kv.del(`queue:automation:${job.cartId}`);
-              processedCount++;
-          }
-      }
-      if (processedCount > 0) {
-        console.log(`✅ CRON: Processed ${processedCount} jobs.`);
-      }
-  } catch (e) {
-      console.error("CRON Error:", e);
-  }
+// Process Queue periodically
+Deno.cron("Process Queue", "* * * * *", async () => {
+    await processPendingJobs(executeAutomation);
 });
 
 /**
@@ -729,15 +718,14 @@ Deno.cron("Process Abandoned Carts", "* * * * *", async () => {
  */
 app.post("/make-server-c8eef56a/api/whatsapp/send", async (c) => {
   try {
-    const { phoneNumber, templateId, components } = await c.req.json();
+    const { phoneNumber, templateId } = await c.req.json();
     console.log(`[WhatsApp] Intent to send template "${templateId}" to ${phoneNumber}`);
     
     // Call the shared helper
     const result = await sendWhatsAppTemplate({
       to: phoneNumber,
       templateName: templateId || "abandoned_cart_test",
-      languageCode: "en_US",
-      components: components
+      languageCode: "en_US"
     });
     
     if (result.success) {
@@ -752,59 +740,43 @@ app.post("/make-server-c8eef56a/api/whatsapp/send", async (c) => {
 });
 
 /**
- * WhatsApp Template Status
- * Path: /app/api/whatsapp/templates/:id/status
- */
-app.get("/make-server-c8eef56a/api/whatsapp/templates/:id/status", async (c) => {
-  try {
-    const templateId = c.req.param("id");
-    console.log(`[WhatsApp] Checking status for template "${templateId}"`);
-
-    const result = await getTemplateStatus(templateId);
-
-    if (result.success) {
-      return c.json({ status: result.status }, 200);
-    } else {
-      return c.json({ error: 'WhatsApp API Error', details: result.error }, 500);
-    }
-  } catch (error) {
-    console.error('[WhatsApp] Error checking template status:', error);
-    return c.json({ error: 'Internal Server Error' }, 500);
-  }
-});
-
-/**
  * WhatsApp Webhook Receiver
- * Path: /app/api/webhooks/whatsapp/route.ts (Future)
+ * Path: /app/api/webhooks/whatsapp/route.ts
  */
+// GET: Verification Challenge
 app.get("/make-server-c8eef56a/api/webhooks/whatsapp", (c) => {
-  const mode = c.req.query('hub.mode');
-  const token = c.req.query('hub.verify_token');
-  const challenge = c.req.query('hub.challenge');
+  const mode = c.req.query("hub.mode");
+  const token = c.req.query("hub.verify_token");
+  const challenge = c.req.query("hub.challenge");
 
   const verifyToken = Deno.env.get("WHATSAPP_VERIFY_TOKEN");
 
-  if (!verifyToken) {
-    console.error("WHATSAPP_VERIFY_TOKEN is not set in environment variables");
-    return c.json({ error: 'Server Configuration Error' }, 500);
+  if (mode === "subscribe" && token === verifyToken) {
+    console.log("[WhatsApp Webhook] Webhook verified.");
+    return c.text(challenge || "");
   }
 
-  if (mode === 'subscribe' && token === verifyToken) {
-    console.log("WEBHOOK_VERIFIED");
-    return c.text(challenge || "");
-  } else {
-    return c.json({ error: 'Forbidden' }, 403);
-  }
+  console.error("[WhatsApp Webhook] Verification failed.");
+  return c.json({ error: "Forbidden" }, 403);
 });
 
+// POST: Status Updates & Messages
 app.post("/make-server-c8eef56a/api/webhooks/whatsapp", async (c) => {
   try {
-    const payload = await c.req.json();
-    await processWhatsAppStatus(payload);
+    const body = await c.req.json();
+
+    // Check if it's a status update
+    if (body.entry && body.entry[0]?.changes && body.entry[0]?.changes[0]?.value?.statuses) {
+      const statuses = body.entry[0].changes[0].value.statuses;
+      for (const status of statuses) {
+         await processWhatsAppStatus(status);
+      }
+    }
+
     return c.json({ status: 'ok' });
-  } catch (e) {
-    console.error("Error in WhatsApp Webhook:", e);
-    return c.json({ status: 'error' }, 500);
+  } catch (error) {
+    console.error("[WhatsApp Webhook] Error processing POST:", error);
+    return c.json({ error: "Internal Error" }, 500);
   }
 });
 
