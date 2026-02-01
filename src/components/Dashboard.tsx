@@ -11,8 +11,6 @@ import {
   DollarSign,
   TrendingUp,
   Package,
-  Menu,
-  X
 } from 'lucide-react';
 import { Link } from 'react-router';
 import { Button } from './ui/button';
@@ -25,7 +23,6 @@ import {
   TableHeader,
   TableRow,
 } from './ui/table';
-import logo from 'figma:asset/9ad57f78ffcb8b81f228eb1f033e9199d9c738a7.png';
 
 type NavItem = {
   name: string;

@@ -7,6 +7,7 @@ interface SendMessageParams {
   to: string;
   templateName: string;
   languageCode?: string;
+  // deno-lint-ignore no-explicit-any
   components?: any[];
 }
 

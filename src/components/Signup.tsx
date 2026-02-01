@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MessageCircle, Mail, Lock, Store, Chrome, ArrowRight } from 'lucide-react';
+import { Mail, Lock, Store, Chrome, ArrowRight } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -130,15 +130,16 @@ export function Signup() {
     }
 
     try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin + '/dashboard',
+          redirectTo: globalThis.location.origin + '/dashboard',
         }
       });
 
       if (error) throw error;
       
+      // deno-lint-ignore no-explicit-any
     } catch (error: any) {
       console.error('Social signup error:', error);
       toast.error(error.message || 'Failed to initiate social signup');

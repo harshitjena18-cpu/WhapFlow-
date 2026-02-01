@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MessageCircle, Mail, Lock, Chrome, ArrowRight } from 'lucide-react';
+import { Mail, Lock, Chrome, ArrowRight } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -46,7 +46,7 @@ export function Login() {
     setIsLoading(true);
     
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email: formData.email,
         password: formData.password,
       });
@@ -58,6 +58,7 @@ export function Login() {
       // Navigate to dashboard
       toast.success('Successfully logged in!');
       navigate('/dashboard');
+      // deno-lint-ignore no-explicit-any
     } catch (error: any) {
       console.error('Login error:', error);
       toast.error(error.message || 'Failed to login');
@@ -83,16 +84,17 @@ export function Login() {
     }
 
     try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin + '/dashboard',
+          redirectTo: globalThis.location.origin + '/dashboard',
         }
       });
 
       if (error) throw error;
       
       // Note: This will redirect the user away from the page
+      // deno-lint-ignore no-explicit-any
     } catch (error: any) {
       console.error('Social login error:', error);
       toast.error(error.message || 'Failed to initiate social login');

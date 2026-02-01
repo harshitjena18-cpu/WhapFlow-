@@ -4,6 +4,7 @@ import * as kv from "./kv_store.tsx";
 export interface Job {
   id: string;
   key: string;
+  // deno-lint-ignore no-explicit-any
   payload: any;
   scheduled_for: string; // ISO Date
   created_at: string;
@@ -12,6 +13,7 @@ export interface Job {
 /**
  * Add a job to the queue.
  */
+// deno-lint-ignore no-explicit-any
 export async function enqueueJob(payload: any, delayMinutes: number) {
   const id = crypto.randomUUID();
   const now = new Date();
@@ -39,6 +41,7 @@ export async function enqueueJob(payload: any, delayMinutes: number) {
  * Process pending jobs.
  * @param handler Function to execute for each job.
  */
+// deno-lint-ignore no-explicit-any
 export async function processPendingJobs(handler: (payload: any) => Promise<void>) {
   const now = new Date();
   const endKey = `queue:v1:${now.toISOString()}`; // Fetch anything scheduled up to "now"
