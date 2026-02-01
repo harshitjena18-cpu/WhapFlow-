@@ -660,8 +660,9 @@ async function executeAutomation(payload: any) {
     const hasEnabledTemplate = templates.some((t: any) => t.enabled);
 
     // Re-check Plan Limits
-    const automationCheck = await billing.checkLimit('automation', shop);
-    const whatsappCheck = await billing.checkLimit('whatsapp', shop);
+    const billingConfig = await billing.getBillingConfig(shop);
+    const automationCheck = billing.checkLimitWithConfig('automation', billingConfig);
+    const whatsappCheck = billing.checkLimitWithConfig('whatsapp', billingConfig);
 
     console.log(`   - Current Status: ${currentCart.status}`);
     console.log(`   - Automation Enabled: ${hasEnabledTemplate}`);

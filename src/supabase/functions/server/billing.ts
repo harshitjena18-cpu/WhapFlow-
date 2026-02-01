@@ -129,6 +129,14 @@ export async function incrementUsage(metric: 'ai' | 'whatsapp', shop: string = "
  */
 export async function checkLimit(metric: 'ai' | 'whatsapp' | 'automation', shop: string = "global"): Promise<{ allowed: boolean; error?: string }> {
   const config = await getBillingConfig(shop);
+  return checkLimitWithConfig(metric, config);
+}
+
+/**
+ * Check limits against a pre-fetched configuration object.
+ * Useful for checking multiple limits without re-fetching from DB.
+ */
+export function checkLimitWithConfig(metric: 'ai' | 'whatsapp' | 'automation', config: BillingConfig): { allowed: boolean; error?: string } {
   const limits = PLAN_LIMITS[config.plan];
 
   if (metric === 'ai') {
