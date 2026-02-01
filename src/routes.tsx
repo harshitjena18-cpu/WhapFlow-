@@ -1,45 +1,27 @@
-import { createBrowserRouter } from 'react-router';
-import { lazy, Suspense } from 'react';
+import { createBrowserRouter, Navigate } from 'react-router';
 import { DashboardLayout } from './components/DashboardLayout';
-import { LandingPageNew } from './components/LandingPageNew';
-
-// Lazy load components
-const DashboardView = lazy(() => import('./components/dashboard/DashboardView').then(m => ({ default: m.DashboardView })));
-const AutomationsView = lazy(() => import('./components/AutomationsView').then(m => ({ default: m.AutomationsView })));
-const TemplatesView = lazy(() => import('./components/TemplatesView').then(m => ({ default: m.TemplatesView })));
-const AnalyticsView = lazy(() => import('./components/AnalyticsView').then(m => ({ default: m.AnalyticsView })));
-const BillingView = lazy(() => import('./components/BillingView').then(m => ({ default: m.BillingView })));
-const SettingsView = lazy(() => import('./components/SettingsView').then(m => ({ default: m.SettingsView })));
-const Login = lazy(() => import('./components/Login').then(m => ({ default: m.Login })));
-const Signup = lazy(() => import('./components/Signup').then(m => ({ default: m.Signup })));
-
-// Loading component for top-level routes
-const LoadingFallback = () => (
-  <div className="flex items-center justify-center min-h-screen bg-white">
-    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#25D366]"></div>
-  </div>
-);
+import { DashboardViewModern } from './components/dashboard/DashboardViewModern';
+import { AutomationsView } from './components/AutomationsView';
+import { TemplatesView } from './components/TemplatesView';
+import { AnalyticsView } from './components/AnalyticsView';
+import { BillingView } from './components/BillingView';
+import { SettingsView } from './components/SettingsView';
+import { LandingPagePremium } from './components/LandingPagePremium';
+import { Login } from './components/Login';
+import { Signup } from './components/Signup';
 
 export const router = createBrowserRouter([
   {
     path: '/',
-    element: <LandingPageNew />,
+    element: <LandingPagePremium />,
   },
   {
     path: '/login',
-    element: (
-      <Suspense fallback={<LoadingFallback />}>
-        <Login />
-      </Suspense>
-    ),
+    element: <Login />,
   },
   {
     path: '/signup',
-    element: (
-      <Suspense fallback={<LoadingFallback />}>
-        <Signup />
-      </Suspense>
-    ),
+    element: <Signup />,
   },
   {
     path: '/',
@@ -47,7 +29,7 @@ export const router = createBrowserRouter([
     children: [
       {
         path: 'dashboard',
-        element: <DashboardView />,
+        element: <DashboardViewModern />,
       },
       {
         path: 'automations',

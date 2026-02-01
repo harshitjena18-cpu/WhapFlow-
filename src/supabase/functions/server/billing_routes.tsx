@@ -12,6 +12,50 @@ const APP_URL = "https://app.whapflow.com";
 const API_URL = "https://api.whapflow.com/make-server-c8eef56a";
 
 /**
+ * GET /api/billing/plans
+ * Returns available billing plans with their limits
+ */
+app.get("/plans", async (c) => {
+  try {
+    return c.json({
+      plans: {
+        free: {
+          name: PLAN_LIMITS.free.name,
+          price: PLAN_LIMITS.free.price,
+          ai_limit: PLAN_LIMITS.free.ai_generations,
+          whatsapp_limit: PLAN_LIMITS.free.whatsapp_conversations,
+          automation_enabled: PLAN_LIMITS.free.automation_enabled
+        },
+        starter: {
+          name: PLAN_LIMITS.starter.name,
+          price: PLAN_LIMITS.starter.price,
+          ai_limit: PLAN_LIMITS.starter.ai_generations,
+          whatsapp_limit: PLAN_LIMITS.starter.whatsapp_conversations,
+          automation_enabled: PLAN_LIMITS.starter.automation_enabled
+        },
+        growth: {
+          name: PLAN_LIMITS.growth.name,
+          price: PLAN_LIMITS.growth.price,
+          ai_limit: PLAN_LIMITS.growth.ai_generations,
+          whatsapp_limit: PLAN_LIMITS.growth.whatsapp_conversations,
+          automation_enabled: PLAN_LIMITS.growth.automation_enabled
+        },
+        pro: {
+          name: PLAN_LIMITS.pro.name,
+          price: PLAN_LIMITS.pro.price,
+          ai_limit: PLAN_LIMITS.pro.ai_generations,
+          whatsapp_limit: PLAN_LIMITS.pro.whatsapp_conversations,
+          automation_enabled: PLAN_LIMITS.pro.automation_enabled
+        }
+      }
+    });
+  } catch (error) {
+    console.error("[Billing] Get Plans Error:", error);
+    return c.json({ error: "Failed to fetch plans" }, 500);
+  }
+});
+
+/**
  * STEP 3: CREATE SUBSCRIPTION (Upgrade Flow)
  * POST /api/billing/create-subscription
  * Body: { plan: "starter" | "growth" | "pro", shop: "example.myshopify.com" }
