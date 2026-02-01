@@ -1,0 +1,22 @@
+{
+  "lint": {
+    "rules": {
+      "exclude": [
+        "no-explicit-any",
+        "no-unused-vars",
+        "no-window",
+        "ban-ts-comment",
+        "no-node-globals",
+        "ban-unused-ignore"
+      ]
+    },
+    "exclude": [
+      "src/components",
+      "src/lib",
+      "src/utils",
+      "scripts",
+      "build",
+      "node_modules"
+    ]
+  }
+}
