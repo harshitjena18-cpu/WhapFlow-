@@ -25,6 +25,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "./ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "./ui/alert-dialog";
 
 // Types
 interface Template {
@@ -51,6 +61,7 @@ export function TemplatesView() {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+  const [templateToDelete, setTemplateToDelete] = useState<string | null>(null);
   
   // Dialog State
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -253,8 +264,6 @@ export function TemplatesView() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this template?")) return;
-    
     try {
       const res = await fetch(`${SERVER_URL}/api/templates/${id}`, {
         method: 'DELETE',
@@ -399,8 +408,17 @@ export function TemplatesView() {
                     <Loader2 className="w-6 h-6 animate-spin" />
                   </div>
                 ) : templates.length === 0 ? (
-                  <div className="p-8 text-center text-gray-500 text-sm">
-                    No templates yet. Create one!
+                  <div className="p-8 text-center space-y-4">
+                    <div className="text-gray-500 text-sm">No templates yet. Create one!</div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleOpenCreate()}
+                      className="border-[#25D366] text-[#128C7E] hover:bg-[#25D366]/5"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Create Template
+                    </Button>
                   </div>
                 ) : (
                   templates.map((template) => (
@@ -454,7 +472,13 @@ export function TemplatesView() {
                        <Button variant="outline" size="sm" onClick={() => handleOpenEdit(selectedTemplate)}>
                          Edit
                        </Button>
-                       <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => handleDelete(selectedTemplate.id)}>
+                       <Button
+                         variant="ghost"
+                         size="sm"
+                         className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                         onClick={() => setTemplateToDelete(selectedTemplate.id)}
+                         aria-label="Delete template"
+                       >
                          <Trash2 className="w-4 h-4" />
                        </Button>
                     </div>
@@ -806,6 +830,31 @@ export function TemplatesView() {
             </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!templateToDelete} onOpenChange={(open) => !open && setTemplateToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the template
+              "{templates.find(t => t.id === templateToDelete)?.display_name}" and remove it from our servers.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (templateToDelete) handleDelete(templateToDelete);
+                setTemplateToDelete(null);
+              }}
+              variant="destructive"
+            >
+              Delete Template
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
