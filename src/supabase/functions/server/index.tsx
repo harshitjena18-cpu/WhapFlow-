@@ -35,7 +35,8 @@ app.use(
 // Global Error Handler
 app.onError((err, c) => {
   console.error("🔥 Global Error Handler:", err);
-  return c.json({ error: "Internal Server Error", message: err.message }, 500);
+  // SECURITY: Do not leak internal error messages to the client
+  return c.json({ error: "Internal Server Error" }, 500);
 });
 
 // Mount auth routes
@@ -427,14 +428,19 @@ app.post("/make-server-c8eef56a/api/webhooks/shopify", async (c) => {
     
     // SECURITY: Verify HMAC
     const secret = Deno.env.get('SHOPIFY_CLIENT_SECRET');
-    if (secret && hmac) {
-      const isValid = await verifyWebhookHmac(rawBody, hmac, secret);
-      if (!isValid) {
-        console.error(`[Shopify Webhook] HMAC verification failed for ${shop}`);
-        return c.json({ error: 'Unauthorized' }, 401);
-      }
-    } else {
-        console.warn("[Shopify Webhook] Skipping HMAC check (Missing secret or header)");
+    if (!secret) {
+      console.error("[Shopify Webhook] Critical Error: SHOPIFY_CLIENT_SECRET not configured");
+      return c.json({ error: 'Server configuration error' }, 500);
+    }
+    if (!hmac) {
+      console.error("[Shopify Webhook] Missing HMAC header");
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    const isValid = await verifyWebhookHmac(rawBody, hmac, secret);
+    if (!isValid) {
+      console.error(`[Shopify Webhook] HMAC verification failed for ${shop}`);
+      return c.json({ error: 'Unauthorized' }, 401);
     }
 
     if (!shop) {
@@ -556,14 +562,19 @@ app.post("/make-server-c8eef56a/api/webhooks/app/uninstalled", async (c) => {
 
     // SECURITY: Verify HMAC
     const secret = Deno.env.get('SHOPIFY_CLIENT_SECRET');
-    if (secret && hmac) {
-      const isValid = await verifyWebhookHmac(rawBody, hmac, secret);
-      if (!isValid) {
-        console.error(`[Uninstall Webhook] HMAC verification failed for ${shop}`);
-        return c.json({ error: 'Unauthorized' }, 401);
-      }
-    } else {
-        console.warn("[Uninstall Webhook] Skipping HMAC check (Missing secret or header)");
+    if (!secret) {
+      console.error("[Uninstall Webhook] Critical Error: SHOPIFY_CLIENT_SECRET not configured");
+      return c.json({ error: 'Server configuration error' }, 500);
+    }
+    if (!hmac) {
+      console.error("[Uninstall Webhook] Missing HMAC header");
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    const isValid = await verifyWebhookHmac(rawBody, hmac, secret);
+    if (!isValid) {
+      console.error(`[Uninstall Webhook] HMAC verification failed for ${shop}`);
+      return c.json({ error: 'Unauthorized' }, 401);
     }
 
     if (!shop) {
@@ -762,7 +773,8 @@ app.get("/make-server-c8eef56a/api/webhooks/whatsapp", (c) => {
 
   const verifyToken = Deno.env.get("WHATSAPP_VERIFY_TOKEN");
 
-  if (mode === "subscribe" && token === verifyToken) {
+  // SECURITY: Ensure verifyToken is configured and matches the request token
+  if (mode === "subscribe" && verifyToken && token === verifyToken) {
     console.log("[WhatsApp Webhook] Webhook verified.");
     return c.text(challenge || "");
   }
