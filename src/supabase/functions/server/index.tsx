@@ -768,9 +768,7 @@ app.post("/make-server-c8eef56a/api/webhooks/whatsapp", async (c) => {
     // Check if it's a status update
     if (body.entry && body.entry[0]?.changes && body.entry[0]?.changes[0]?.value?.statuses) {
       const statuses = body.entry[0].changes[0].value.statuses;
-      for (const status of statuses) {
-         await processWhatsAppStatus(status);
-      }
+      await Promise.all(statuses.map((status: any) => processWhatsAppStatus(status)));
     }
 
     return c.json({ status: 'ok' });
