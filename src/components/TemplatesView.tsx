@@ -49,7 +49,6 @@ const SERVER_URL = `https://${projectId}.supabase.co/functions/v1/make-server-c8
 
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 interface CacheData<T> { data: T; timestamp: number; }
-// Move cache outside component to persist across mounts
 const requestCache: {
   templates: CacheData<Template[]> | null;
   aiUsage: CacheData<AIUsage> | null;
