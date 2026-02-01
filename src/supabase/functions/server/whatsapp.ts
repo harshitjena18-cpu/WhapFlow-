@@ -57,7 +57,8 @@ export const sendWhatsAppTemplate = async ({
     }
 
     console.log("✅ WhatsApp Message Sent:", data);
-    return { success: true, data };
+    const wamid = data.messages?.[0]?.id;
+    return { success: true, data, wamid };
   } catch (error) {
     console.error("❌ Network/Server Error sending WhatsApp:", error);
     return { success: false, error };

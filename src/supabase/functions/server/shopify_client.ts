@@ -19,58 +19,43 @@ export async function checkOrderExists(
   phone?: string
 ): Promise<boolean> {
   try {
-    // 1. Build Query (GraphQL)
-    // We filter by created_at >= cartCreatedAt (Shopify search syntax)
-    // We explicitly set status:any to include open, closed, and archived orders (matching REST behavior).
-    let searchQuery = `created_at:>=${cartCreatedAt} status:any`;
+    // 1. Build Query
+    // Construct search query: created_at:>=... AND (email:... OR phone:...)
+    const clauses = [`created_at:>=${cartCreatedAt}`];
 
-    // OPTIMIZATION: If email is provided AND phone is NOT provided, we can strictly filter by email.
-    // If phone is provided, we must fetch all recent orders because Shopify's phone search is unreliable
-    // (formatting issues), and we want to ensure we don't miss phone-only matches.
-    if (email && !phone) {
-      searchQuery += ` AND email:${email}`;
+    const contactClauses = [];
+    if (email) contactClauses.push(`email:${email}`);
+    if (phone) contactClauses.push(`phone:${phone}`);
+
+    if (contactClauses.length > 0) {
+        clauses.push(`(${contactClauses.join(' OR ')})`);
+    } else {
+        console.warn(`[ShopifyClient] No contact info to check order for ${shop}`);
+        return true; // Fail safe: assume order exists/risk of spam
     }
 
+    const searchQuery = clauses.join(' AND ');
+
     const query = `
-      query orders($query: String!) {
-        orders(first: 50, query: $query) {
+      query checkOrders($query: String!) {
+        orders(first: 5, query: $query) {
           nodes {
             id
+            createdAt
             email
             phone
-            customer {
-              email
-              phone
-            }
           }
         }
       }
     `;
 
-    // 2. Call Shopify API (GraphQL)
+    // 2. Call Shopify GraphQL API
     const data = await shopifyGraphql(shop, accessToken, query, { query: searchQuery });
-    const orders = data.orders?.nodes || [];
+    const orders = data.orders.nodes || [];
 
-    if (orders.length === 0) {
-      return false;
-    }
-
-    // 3. Match Order
-    // Even with the filter, we double-check to be safe, and also check phone if provided.
-    const hasMatchingOrder = orders.some((order: any) => {
-      const emailMatch = email && order.email && order.email.toLowerCase() === email.toLowerCase();
-      const phoneMatch = phone && order.phone && formatPhone(order.phone) === formatPhone(phone);
-      
-      // Also check customer object if available
-      const customerEmailMatch = email && order.customer?.email && order.customer.email.toLowerCase() === email.toLowerCase();
-      const customerPhoneMatch = phone && order.customer?.phone && formatPhone(order.customer.phone) === formatPhone(phone);
-
-      return emailMatch || phoneMatch || customerEmailMatch || customerPhoneMatch;
-    });
-
-    if (hasMatchingOrder) {
-      console.log(`[ShopifyClient] MATCH FOUND: Order exists for ${email || phone} in ${shop}`);
-      return true;
+    if (orders.length > 0) {
+         console.log(`[ShopifyClient] MATCH FOUND: Order exists for ${email || phone} in ${shop}`);
+         return true;
     }
 
     return false;
@@ -105,12 +90,6 @@ export async function verifyWebhookHmac(rawBody: string, hmacHeader: string, sec
   const hashBase64 = btoa(String.fromCharCode(...hashArray));
 
   return hashBase64 === hmacHeader;
-}
-
-// Helper to normalize phone numbers for comparison
-function formatPhone(phone: string): string {
-  if (!phone) return "";
-  return phone.replace(/\D/g, ""); // Remove non-digits
 }
 
 /**
