@@ -1,6 +1,6 @@
 import { createBrowserRouter, Navigate } from 'react-router';
 import { DashboardLayout } from './components/DashboardLayout';
-import { DashboardView } from './components/dashboard/DashboardView';
+import { DashboardViewModern } from './components/dashboard/DashboardViewModern';
 import { AutomationsView } from './components/AutomationsView';
 import { TemplatesView } from './components/TemplatesView';
 import { AnalyticsView } from './components/AnalyticsView';
@@ -29,7 +29,7 @@ export const router = createBrowserRouter([
     children: [
       {
         path: 'dashboard',
-        element: <DashboardView />,
+        element: <DashboardViewModern />,
       },
       {
         path: 'automations',
