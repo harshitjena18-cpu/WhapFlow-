@@ -3,7 +3,6 @@ import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { toast } from "sonner@2.0.3";
 import { CheckCircle2, XCircle, AlertCircle, FileText, Zap, ShoppingBag, MessageSquare, ArrowRight, CreditCard, Sparkles } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
-import { Progress } from '../ui/progress';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 

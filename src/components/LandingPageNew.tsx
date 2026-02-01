@@ -1,11 +1,9 @@
 import { 
   MessageCircle, 
-  TrendingUp, 
   Zap, 
   ShoppingCart, 
   BarChart3, 
   Clock, 
-  ArrowRight,
   Check,
   Shield,
   Globe,

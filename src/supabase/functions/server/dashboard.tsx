@@ -181,8 +181,8 @@ dashboardApp.get("/data", async (c) => {
       revenue: defaultRevenueData,
       activity: defaultActivityLogs,
     });
-  } catch (error) {
-    console.error("Error fetching dashboard data:", error);
+  } catch (_error) {
+    console.error("Error fetching dashboard data:", _error);
     // Fallback to defaults if KV fails
     return c.json({
       metrics: defaultMetrics,
@@ -201,16 +201,25 @@ dashboardApp.get("/automations", async (c) => {
     }
     await kv.set("dashboard_automations", defaultAutomations);
     return c.json({ automations: defaultAutomations });
-  } catch (error) {
+  } catch (_error) {
     return c.json({ automations: defaultAutomations });
   }
 });
+
+interface Automation {
+  id: string;
+  name: string;
+  description: string;
+  enabled: boolean;
+  trigger: string;
+  lastRun?: string;
+}
 
 // POST /dashboard/automations/:id/toggle
 dashboardApp.post("/automations/:id/toggle", async (c) => {
   const id = c.req.param("id");
   try {
-    let automations: any[] = (await kv.get("dashboard_automations")) || defaultAutomations;
+    let automations = ((await kv.get("dashboard_automations")) as Automation[]) || (defaultAutomations as Automation[]);
     
     automations = automations.map(a => 
       a.id === id ? { ...a, enabled: !a.enabled } : a
@@ -219,7 +228,7 @@ dashboardApp.post("/automations/:id/toggle", async (c) => {
     await kv.set("dashboard_automations", automations);
     
     return c.json({ success: true, automations });
-  } catch (error) {
+  } catch (_error) {
     return c.json({ error: "Failed to toggle automation" }, 500);
   }
 });

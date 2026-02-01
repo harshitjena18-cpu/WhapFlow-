@@ -52,9 +52,19 @@ app.route("/make-server-c8eef56a/api/billing", billingApp);
  * Manage WhatsApp Message Templates
  */
 
+interface Template {
+  id: string;
+  template_name: string;
+  display_name: string;
+  delay_minutes: number;
+  content: string;
+  enabled: boolean;
+  created_at: string;
+}
+
 // Helper: Ensure only one template is enabled
 async function disableOtherTemplates(exceptId: string) {
-  const allTemplates = await kv.getByPrefix("template:");
+  const allTemplates = (await kv.getByPrefix("template:")) as Template[];
   const updates = [];
   
   for (const t of allTemplates) {
@@ -75,8 +85,27 @@ function validateTemplateContent(content: string): string | null {
   return null;
 }
 
+interface AbandonedCart {
+  id: string;
+  shop: string;
+  customer_name: string;
+  customer_email: string;
+  phone: string;
+  product_title: string;
+  total_price: string;
+  currency: string;
+  checkout_url: string;
+  status: string;
+  delivery_status?: string;
+  updated_at: string;
+  created_at: string;
+  messaged_at?: string;
+  converted_at?: string;
+  wamid?: string;
+}
+
 // Helper: Process WhatsApp Status Updates
-async function processWhatsAppStatus(status: any) {
+async function processWhatsAppStatus(status: { id: string; status: string }) {
   const wamid = status.id;
   const newStatus = status.status; // sent, delivered, read
 
@@ -84,7 +113,7 @@ async function processWhatsAppStatus(status: any) {
 
   // Find the cart associated with this message
   // We need a mapping: msg_map:{wamid} -> cartId
-  const cartId = await kv.get(`msg_map:${wamid}`);
+  const cartId = (await kv.get(`msg_map:${wamid}`)) as string | undefined;
 
   if (!cartId) {
     console.log(`[WhatsApp Status] No cart found for message ${wamid}`);
@@ -93,7 +122,7 @@ async function processWhatsAppStatus(status: any) {
 
   // Update Cart Status
   const cartKey = `abandoned_cart:${cartId}`;
-  const cart = await kv.get(cartKey);
+  const cart = (await kv.get(cartKey)) as AbandonedCart | undefined;
 
   if (cart) {
     cart.delivery_status = newStatus;
@@ -108,7 +137,7 @@ interface IntegrationConfig {
   connected_at: string | null;
   last_error: string | null;
   connection_status: 'connected' | 'disconnected' | 'error' | 'pending';
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
 }
 
 const DEFAULT_CONFIG: IntegrationConfig = {
@@ -504,14 +533,14 @@ app.post("/make-server-c8eef56a/api/webhooks/shopify", async (c) => {
     console.log('\n🔍 AUTOMATION CHECKS: Verifying integration status...');
     
     // Check if THIS shop is connected
-    const merchant = await getMerchantCredentials(shop);
+    const merchant = (await getMerchantCredentials(shop)) as { shopify_connected: boolean } | undefined;
     if (!merchant || !merchant.shopify_connected) {
        console.log(`⏹️ AUTOMATION PAUSED: Merchant ${shop} not connected/active.`);
        return c.json({ status: 'success', received: true, automation: 'paused_merchant_inactive' }, 200);
     }
     
     // Check WhatsApp Connection
-    const whatsappConfig = await kv.get("config:whatsapp");
+    const whatsappConfig = (await kv.get("config:whatsapp")) as IntegrationConfig | undefined;
     const whatsappConnected = whatsappConfig?.connection_status === 'connected';
     
     if (!whatsappConnected) {
@@ -528,8 +557,8 @@ app.post("/make-server-c8eef56a/api/webhooks/shopify", async (c) => {
     
     // FETCH ENABLED TEMPLATE
     console.log('\n🔍 AUTOMATION CONFIG: Fetching enabled template...');
-    const templates = await kv.getByPrefix("template:");
-    const enabledTemplate = templates.find((t: any) => t.enabled);
+    const templates = (await kv.getByPrefix("template:")) as Template[];
+    const enabledTemplate = templates.find((t) => t.enabled);
 
     if (!enabledTemplate) {
         console.log("⏹️ AUTOMATION SKIPPED: No enabled template found.");
@@ -583,7 +612,7 @@ app.post("/make-server-c8eef56a/api/webhooks/app/uninstalled", async (c) => {
 
     // 1. Cleanup Merchant Record
     const merchantKey = `merchant:${shop}`;
-    const merchant = await kv.get(merchantKey);
+    const merchant = (await kv.get(merchantKey)) as { shopify_connected: boolean; access_token: string | null; updated_at: string } | undefined;
     
     if (merchant) {
         console.log(`[Uninstall] Deactivating merchant record for ${shop}...`);
@@ -596,7 +625,7 @@ app.post("/make-server-c8eef56a/api/webhooks/app/uninstalled", async (c) => {
 
     // 2. Cleanup Global Config (for MVP dashboard compatibility)
     // Only if the uninstalled shop is the one currently in the global config
-    const globalConfig = await kv.get("config:shopify");
+    const globalConfig = (await kv.get("config:shopify")) as { shop_domain?: string; connection_status: string; connected_at: string | null } | undefined;
     if (globalConfig && globalConfig.shop_domain === shop) {
         console.log(`[Uninstall] Clearing global dashboard config...`);
         globalConfig.connection_status = 'disconnected';
@@ -619,82 +648,74 @@ app.post("/make-server-c8eef56a/api/webhooks/app/uninstalled", async (c) => {
 /**
  * AUTOMATION ENGINE
  */
-async function scheduleAutomation(payload: any, delayMinutes: number) {
+interface AutomationPayload {
+  cartId: string;
+  cartKey: string;
+  templateName: string;
+  shop: string;
+}
+
+async function scheduleAutomation(payload: AutomationPayload, delayMinutes: number) {
   console.log(`[Automation] Scheduling job for cart ${payload.cartId} in ${delayMinutes} minutes...`);
   await enqueueJob(payload, delayMinutes);
 }
 
-async function executeAutomation(payload: any) {
+async function executeAutomation(payload: AutomationPayload) {
   const { cartId, cartKey, templateName, shop } = payload;
   
   try {
     console.log(`\n⏰ AUTOMATION: Executing job for cart [${cartId}]. Checking logic...`);
 
-      console.log(`   - API CHECK: Checking if order exists for ${shop}...`);
-      const orderExists = await checkOrderExists(
-          shop,
-          merchant.access_token,
-          currentCart.created_at,
-          currentCart.customer_email,
-          currentCart.phone
-      );
+    // 1. Re-fetch current state from "Database"
+    const currentCart = (await kv.get(cartKey)) as AbandonedCart | undefined;
 
-      if (orderExists) {
-        console.log(`⏹️ AUTOMATION SKIPPED: Order found for cart ${cartId}.`);
-        currentCart.status = 'converted';
-        currentCart.converted_at = new Date().toISOString();
-        await kv.set(cartKey, currentCart);
-        return; // EXIT
-      }
+    if (!currentCart) {
+      console.log(`❌ AUTOMATION SKIPPED: Cart [${cartId}] no longer exists.`);
+      return;
+    }
 
-      // Re-confirm automation is enabled (Check if an active template exists)
-      const templates = await kv.getByPrefix("template:");
-      const hasEnabledTemplate = templates.some((t: any) => t.enabled);
+    // 2. Check Logic
+    const isPending = currentCart.status === 'pending';
+    if (!isPending) {
+      console.log(`⏹️ AUTOMATION SKIPPED: Cart [${cartId}] status is ${currentCart.status}.`);
+      return;
+    }
 
-      // 1. Re-fetch current state from "Database"
-      const currentCart = await kv.get(cartKey);
-
-      if (!currentCart) {
-        console.log(`❌ AUTOMATION SKIPPED: Cart [${cartId}] no longer exists.`);
+    // STEP 3: ORDERS API SAFETY CHECK
+    // Retrieve merchant credentials
+    const merchant = (await getMerchantCredentials(shop)) as { access_token: string } | undefined;
+    if (!merchant || !merchant.access_token) {
+        console.error(`❌ AUTOMATION FAILED: No credentials found for ${shop}`);
         return;
-      }
+    }
 
-      // 2. Check Logic
-      const isPending = currentCart.status === 'pending';
+    console.log(`   - API CHECK: Checking if order exists for ${shop}...`);
+    const orderExists = await checkOrderExists(
+        shop,
+        merchant.access_token,
+        currentCart.created_at,
+        currentCart.customer_email,
+        currentCart.phone
+    );
 
-      // STEP 3: ORDERS API SAFETY CHECK
-      // Retrieve merchant credentials
-      const merchant = await getMerchantCredentials(shop);
-      if (!merchant || !merchant.access_token) {
-          console.error(`❌ AUTOMATION FAILED: No credentials found for ${shop}`);
-          return;
-      }
-      
-      console.log(`   - API CHECK: Checking if order exists for ${shop}...`);
-      const orderExists = await checkOrderExists(
-          shop,
-          merchant.access_token,
-          currentCart.created_at,
-          currentCart.customer_email,
-          currentCart.phone
-      );
+    if (orderExists) {
+      console.log(`⏹️ AUTOMATION SKIPPED: Order found for cart ${cartId}.`);
+      currentCart.status = 'converted';
+      currentCart.converted_at = new Date().toISOString();
+      await kv.set(cartKey, currentCart);
+      return; // EXIT
+    }
 
-      if (orderExists) {
-        console.log(`⏹️ AUTOMATION SKIPPED: Order found for cart ${cartId}.`);
-        currentCart.status = 'converted';
-        currentCart.converted_at = new Date().toISOString();
-        await kv.set(cartKey, currentCart);
-        return; // EXIT
-      }
+    // Re-confirm automation is enabled (Check if an active template exists)
+    const templates = (await kv.getByPrefix("template:")) as Template[];
+    const hasEnabledTemplate = templates.some((t) => t.enabled);
 
     // Re-check Plan Limits
     const billingConfig = await billing.getBillingConfig(shop);
     const automationCheck = billing.checkLimitWithConfig('automation', billingConfig);
     const whatsappCheck = billing.checkLimitWithConfig('whatsapp', billingConfig);
 
-          await kv.set(cartKey, currentCart);
-
-    if (isPending && hasEnabledTemplate && automationCheck.allowed && whatsappCheck.allowed) {
+    if (hasEnabledTemplate && automationCheck.allowed && whatsappCheck.allowed) {
       console.log(`✅ CONDITIONS MET: Ready to send WhatsApp message.`);
       console.log(`   - Automation ready using template: ${templateName}`);
       
@@ -718,15 +739,13 @@ async function executeAutomation(payload: any) {
         }
 
         await kv.set(cartKey, currentCart);
-
-      } else {
-        console.log('⏹️ AUTOMATION SKIPPED: Conditions not met (e.g. cart recovered or automation off).');
       }
-
-    } catch (err) {
-      console.error('Automation Error:', err);
+    } else {
+      console.log('⏹️ AUTOMATION SKIPPED: Conditions not met (e.g. template disabled or plan limit).');
     }
-  }, DELAY_MS);
+  } catch (err) {
+    console.error('Automation Error:', err);
+  }
 }
 
 // Process Queue periodically
@@ -791,7 +810,7 @@ app.post("/make-server-c8eef56a/api/webhooks/whatsapp", async (c) => {
     // Check if it's a status update
     if (body.entry && body.entry[0]?.changes && body.entry[0]?.changes[0]?.value?.statuses) {
       const statuses = body.entry[0].changes[0].value.statuses;
-      await Promise.all(statuses.map((status: any) => processWhatsAppStatus(status)));
+      await Promise.all(statuses.map((status: { id: string; status: string }) => processWhatsAppStatus(status)));
     }
 
     return c.json({ status: 'ok' });
@@ -815,9 +834,9 @@ app.get("/make-server-c8eef56a/api/dashboard/metrics", async (c) => {
     };
     
     // 2. Fetch Templates Stats
-    const templates = await kv.getByPrefix("template:");
+    const templates = (await kv.getByPrefix("template:")) as Template[];
     const templatesCount = templates.length;
-    const hasEnabledTemplate = templates.some((t: any) => t.enabled);
+    const hasEnabledTemplate = templates.some((t) => t.enabled);
     
     // 3. Fetch AI Usage & Billing
     const billingConfig = await billing.getBillingConfig(shop);

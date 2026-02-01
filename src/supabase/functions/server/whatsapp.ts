@@ -7,7 +7,7 @@ interface SendMessageParams {
   to: string;
   templateName: string;
   languageCode?: string;
-  components?: any[];
+  components?: unknown[];
 }
 
 export const sendWhatsAppTemplate = async ({
