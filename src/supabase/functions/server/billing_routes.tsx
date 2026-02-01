@@ -1,5 +1,5 @@
 import { Hono } from "npm:hono";
-import * as kv from "./kv_store.tsx";
+import * as _kv from "./kv_store.tsx";
 import * as billing from "./billing.ts";
 import { getMerchantCredentials, shopifyGraphql, verifyWebhookHmac } from "./shopify_client.ts";
 import { PlanLevel, PLAN_LIMITS } from "./billing.ts";
@@ -9,13 +9,13 @@ const app = new Hono();
 // CONFIG
 // In production, use env vars. For now, hardcode or derive.
 const APP_URL = "https://app.whapflow.com";
-const API_URL = "https://api.whapflow.com/make-server-c8eef56a";
+const _API_URL = "https://api.whapflow.com/make-server-c8eef56a";
 
 /**
  * GET /api/billing/plans
  * Returns available billing plans with their limits
  */
-app.get("/plans", async (c) => {
+app.get("/plans", (c) => {
   try {
     return c.json({
       plans: {
@@ -226,6 +226,7 @@ app.get("/status", async (c) => {
  */
 
 // Helper for Webhook processing
+// deno-lint-ignore no-explicit-any
 async function processBillingWebhook(c: any, action: 'update' | 'cancel') {
   const hmac = c.req.header('X-Shopify-Hmac-Sha256');
   const shop = c.req.header('X-Shopify-Shop-Domain');
