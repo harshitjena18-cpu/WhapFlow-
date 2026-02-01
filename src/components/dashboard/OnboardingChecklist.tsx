@@ -1,6 +1,6 @@
 import { CheckCircle2, Circle, Lock, ArrowRight, Loader2, PlayCircle } from 'lucide-react';
 import { Button } from '../ui/button';
-import { Link, useNavigate } from 'react-router';
+import { Link as _Link, useNavigate } from 'react-router';
 import { useState } from 'react';
 import { toast } from "sonner@2.0.3";
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
@@ -163,9 +163,8 @@ export function OnboardingChecklist({ data, onRefresh }: OnboardingChecklistProp
       </div>
 
       <div className="divide-y divide-gray-100/80">
-        {steps.map((step, index) => {
+        {steps.map((step, _index) => {
           const isCurrent = step.id === activeStepId;
-          const isPast = step.isCompleted;
           
           return (
             <div 

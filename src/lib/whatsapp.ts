@@ -10,10 +10,10 @@
 import { WhatsAppMessageRequest } from "../types";
 
 const getEnv = (key: string): string | undefined => {
-  // @ts-ignore
+  // @ts-ignore: Deno is only available in Deno environment
   if (typeof Deno !== "undefined") return Deno.env.get(key);
-  // @ts-ignore
-  if (typeof process !== "undefined") return process.env[key];
+  // @ts-ignore: process is only available in Node.js environment
+  if (typeof globalThis.process !== "undefined") return globalThis.process.env[key];
   return undefined;
 };
 
@@ -123,6 +123,7 @@ export const getTemplateStatus = async (templateId: string, accessTokenOverride?
     const data = await response.json();
 
     // Find the template with 'en_US' language, or fallback to the first one if only one exists
+    // deno-lint-ignore no-explicit-any
     const template = data.data.find((t: any) => t.language === "en_US") || data.data[0];
 
     if (template) {

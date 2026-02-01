@@ -1,13 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
-// deno-lint-ignore no-unused-vars
-import { projectId as _projectId, publicAnonKey as _publicAnonKey } from '../../utils/supabase/info';
-// deno-lint-ignore no-unused-vars
-import { toast as _toast } from 'sonner@2.0.3';
 import { 
   TrendingUp, 
-  TrendingDown as _TrendingDown,
   MessageCircle, 
-  ShoppingCart as _ShoppingCart,
   Users, 
   DollarSign,
   ArrowUpRight,
@@ -17,15 +11,12 @@ import {
   Download,
   MoreHorizontal,
   CheckCircle2,
-  AlertCircle as _AlertCircle,
   Zap,
   Target,
   Activity
 } from 'lucide-react';
 import { motion, useInView } from 'motion/react';
 import { 
-  LineChart as _LineChart,
-  Line as _Line,
   BarChart, 
   Bar, 
   PieChart,
@@ -85,8 +76,7 @@ interface ChartDataPoint {
 }
 
 export function DashboardViewModern() {
-  // deno-lint-ignore no-unused-vars
-  const [metrics, _setMetrics] = useState<DashboardMetrics>({
+  const [metrics] = useState<DashboardMetrics>({
     cartRecoveryRate: 42.5,
     cartRecoveryChange: 18.6,
     totalRevenue: 9257.51,
@@ -98,8 +88,7 @@ export function DashboardViewModern() {
   });
 
   const [isLoading, setIsLoading] = useState(true);
-  // deno-lint-ignore no-unused-vars
-  const [dateRange, _setDateRange] = useState('Last 7 days');
+  const [dateRange] = useState('Last 7 days');
 
   // Chart data
   const salesData: ChartDataPoint[] = [

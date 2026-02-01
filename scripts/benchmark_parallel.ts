@@ -4,9 +4,9 @@
 const MOCK_LATENCY = 50; // ms
 
 async function mockFetch(name: string) {
-  const start = performance.now();
+  const _start = performance.now();
   await new Promise(resolve => setTimeout(resolve, MOCK_LATENCY));
-  // console.log(`Fetched ${name} in ${performance.now() - start}ms`);
+  // console.log(`Fetched ${name} in ${performance.now() - _start}ms`);
   return { name, data: {} };
 }
 

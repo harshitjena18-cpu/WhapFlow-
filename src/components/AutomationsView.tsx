@@ -53,7 +53,7 @@ export function AutomationsView() {
       }
       
       toast.success('Automation updated');
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to update automation');
       // Revert on failure
       fetchAutomations();

@@ -17,7 +17,7 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { Link } from 'react-router';
-import { motion, useScroll, useTransform, useInView } from 'motion/react';
+import { motion, useScroll as _useScroll, useTransform as _useTransform, useInView } from 'motion/react';
 import { useRef } from 'react';
 import { WhapflowLogo } from './WhapflowLogo';
 import { projectId, publicAnonKey } from '../utils/supabase/info';

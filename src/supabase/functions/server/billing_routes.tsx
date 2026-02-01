@@ -1,5 +1,4 @@
 import { Hono } from "npm:hono";
-import * as _kv from "./kv_store.tsx";
 import * as billing from "./billing.ts";
 import { getMerchantCredentials, shopifyGraphql, verifyWebhookHmac } from "./shopify_client.ts";
 import { PlanLevel, PLAN_LIMITS } from "./billing.ts";
@@ -9,7 +8,6 @@ const app = new Hono();
 // CONFIG
 // In production, use env vars. For now, hardcode or derive.
 const APP_URL = "https://app.whapflow.com";
-const _API_URL = "https://api.whapflow.com/make-server-c8eef56a";
 
 /**
  * GET /api/billing/plans

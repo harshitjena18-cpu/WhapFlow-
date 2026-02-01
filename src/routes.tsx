@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate } from 'react-router';
+import { createBrowserRouter, Navigate as _Navigate } from 'react-router';
 import { DashboardLayout } from './components/DashboardLayout';
 import { DashboardViewModern } from './components/dashboard/DashboardViewModern';
 import { AutomationsView } from './components/AutomationsView';

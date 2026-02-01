@@ -1,4 +1,4 @@
-import { Check, CreditCard, Sparkles, Zap, MessageSquare } from 'lucide-react';
+import { Check, CreditCard as _CreditCard, Sparkles, Zap, MessageSquare } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { useEffect, useState } from 'react';

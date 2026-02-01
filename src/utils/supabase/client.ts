@@ -3,15 +3,14 @@ import { projectId, publicAnonKey } from './info';
 
 // Add a global declaration to avoid TypeScript errors
 declare global {
-  interface Window {
-    __supabaseClient?: SupabaseClient;
-  }
+  // deno-lint-ignore no-var
+  var __supabaseClient: SupabaseClient | undefined;
 }
 
 function getSupabaseClient() {
-  if (typeof window !== 'undefined') {
-    if (!window.__supabaseClient) {
-      window.__supabaseClient = createClient(
+  if (typeof globalThis !== 'undefined') {
+    if (!globalThis.__supabaseClient) {
+      globalThis.__supabaseClient = createClient(
         `https://${projectId}.supabase.co`,
         publicAnonKey,
         {
@@ -23,7 +22,7 @@ function getSupabaseClient() {
         }
       );
     }
-    return window.__supabaseClient;
+    return globalThis.__supabaseClient;
   }
   
   // Fallback for non-browser environments

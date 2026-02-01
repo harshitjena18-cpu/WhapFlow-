@@ -651,7 +651,7 @@ async function executeAutomation(payload: any) {
     const whatsappCheck = billing.checkLimitWithConfig('whatsapp', billingConfig);
 
     if (!isPending || !hasEnabledTemplate || !automationCheck.allowed || !whatsappCheck.allowed) {
-      console.log('⏹️ AUTOMATION SKIPPED: Pre-conditions not met (e.g. cart already messaged, automation off, or limit reached).');
+      console.log('⏹️ AUTOMATION SKIPPED: Pre-conditions not met.');
       return;
     }
 
@@ -673,35 +673,31 @@ async function executeAutomation(payload: any) {
       return;
     }
 
-    // 3. Final Execution
-    if (isPending && hasEnabledTemplate && automationCheck.allowed && whatsappCheck.allowed) {
-      console.log(`✅ CONDITIONS MET: Ready to send WhatsApp message.`);
-      console.log(`   - Automation ready using template: ${templateName}`);
-      
-      const result = await sendWhatsAppTemplate({
-        to: currentCart.phone,
-        templateName: templateName,
-        languageCode: "en_US"
-      });
+    // 3. Send WhatsApp message
+    console.log(`✅ CONDITIONS MET: Ready to send WhatsApp message using template: ${templateName}`);
 
-      if (result.success) {
-        // Increment Usage
-        await billing.incrementUsage('whatsapp', shop);
+    const result = await sendWhatsAppTemplate({
+      to: currentCart.phone,
+      templateName: templateName,
+      languageCode: "en_US"
+    });
 
-        currentCart.status = 'messaged';
-        currentCart.messaged_at = new Date().toISOString();
+    if (result.success) {
+      // Increment Usage
+      await billing.incrementUsage('whatsapp', shop);
 
-        if (result.wamid) {
-             currentCart.wamid = result.wamid;
-             await kv.set(`msg_map:${result.wamid}`, cartId);
-             console.log(`🔗 Mapped message ${result.wamid} to cart ${cartId}`);
-        }
+      currentCart.status = 'messaged';
+      currentCart.messaged_at = new Date().toISOString();
 
-        await kv.set(cartKey, currentCart);
-
-      } else {
-        console.log('⏹️ AUTOMATION SKIPPED: Conditions not met (e.g. cart recovered or automation off).');
+      if (result.wamid) {
+            currentCart.wamid = result.wamid;
+            await kv.set(`msg_map:${result.wamid}`, cartId);
+            console.log(`🔗 Mapped message ${result.wamid} to cart ${cartId}`);
       }
+
+      await kv.set(cartKey, currentCart);
+    } else {
+      console.error('❌ AUTOMATION FAILED: WhatsApp API error during send.');
     }
 
   } catch (_err) {

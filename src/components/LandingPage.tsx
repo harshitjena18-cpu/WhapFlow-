@@ -2,6 +2,7 @@ import { MessageCircle, TrendingUp, Zap, ShoppingCart, BarChart3, Clock, ArrowRi
 import { Button } from './ui/button';
 import { Link } from 'react-router';
 import { ImageWithFallback } from './figma/ImageWithFallback';
+// deno-lint-ignore no-unused-vars
 import logo from 'figma:asset/9ad57f78ffcb8b81f228eb1f033e9199d9c738a7.png';
 
 export function LandingPage() {

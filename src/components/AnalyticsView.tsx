@@ -102,7 +102,7 @@ export function AnalyticsView() {
                   dataKey="value"
                   style={{ fontSize: '13px', fontWeight: 500 }}
                 >
-                  {channelData.map((entry, index) => (
+                  {channelData.map((_entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>

@@ -10,10 +10,10 @@
 import { ShopifyCartPayload } from "../types";
 
 const getEnv = (key: string): string | undefined => {
-  // @ts-ignore
+  // @ts-ignore: Deno is only available in Deno environment
   if (typeof Deno !== "undefined") return Deno.env.get(key);
-  // @ts-ignore
-  if (typeof process !== "undefined") return process.env[key];
+  // @ts-ignore: process is only available in Node.js environment
+  if (typeof globalThis.process !== "undefined") return globalThis.process.env[key];
   return undefined;
 };
 
@@ -69,6 +69,7 @@ export const verifyShopifyWebhook = async (hmac: string, body: string): Promise<
   }
 };
 
+// deno-lint-ignore no-explicit-any
 export const parseShopifyCart = (payload: any): ShopifyCartPayload => {
   // TODO: Implement safe parsing and validation (e.g. using Zod)
   return payload as ShopifyCartPayload;

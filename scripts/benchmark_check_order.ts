@@ -45,7 +45,7 @@ const MOCK_GRAPHQL_RESPONSE_NO_MATCH = {
 
 
 // 1. Legacy Implementation (Iterative)
-async function checkOrderExists_Legacy(shop: string, token: string, createdAt: string, email: string, phone: string) {
+async function checkOrderExists_Legacy(_shop: string, _token: string, _createdAt: string, email: string, phone: string) {
   // Simulate fetch REST API (250 items)
   // In real life this would be network request + JSON parse + iteration
   await new Promise(resolve => setTimeout(resolve, 50)); // Network latency simulation
@@ -61,7 +61,7 @@ async function checkOrderExists_Legacy(shop: string, token: string, createdAt: s
 }
 
 // 2. Optimized Implementation (GraphQL)
-async function checkOrderExists_Optimized(shop: string, token: string, createdAt: string, email: string, phone: string) {
+async function checkOrderExists_Optimized(_shop: string, _token: string, _createdAt: string, _email: string, _phone: string) {
   // Simulate GraphQL request (specific query)
   // Returns only matching items (0 or 1 usually)
   await new Promise(resolve => setTimeout(resolve, 50)); // Network latency simulation

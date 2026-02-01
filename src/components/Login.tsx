@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MessageCircle, Mail, Lock, Chrome, ArrowRight } from 'lucide-react';
+import { MessageCircle as _MessageCircle, Mail, Lock, Chrome, ArrowRight } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -46,7 +46,7 @@ export function Login() {
     setIsLoading(true);
     
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { data: _data, error } = await supabase.auth.signInWithPassword({
         email: formData.email,
         password: formData.password,
       });
@@ -58,10 +58,12 @@ export function Login() {
       // Navigate to dashboard
       toast.success('Successfully logged in!');
       navigate('/dashboard');
-    } catch (error: any) {
-      console.error('Login error:', error);
-      toast.error(error.message || 'Failed to login');
-      setErrors(prev => ({ ...prev, form: error.message }));
+    } catch (error) {
+      // deno-lint-ignore no-explicit-any
+      const err = error as any;
+      console.error('Login error:', err);
+      toast.error(err.message || 'Failed to login');
+      setErrors(prev => ({ ...prev, form: err.message }));
     } finally {
       setIsLoading(false);
     }
@@ -83,19 +85,21 @@ export function Login() {
     }
 
     try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      const { data: _data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin + '/dashboard',
+          redirectTo: globalThis.location.origin + '/dashboard',
         }
       });
 
       if (error) throw error;
       
       // Note: This will redirect the user away from the page
-    } catch (error: any) {
-      console.error('Social login error:', error);
-      toast.error(error.message || 'Failed to initiate social login');
+    } catch (error) {
+      // deno-lint-ignore no-explicit-any
+      const err = error as any;
+      console.error('Social login error:', err);
+      toast.error(err.message || 'Failed to initiate social login');
     }
   };
 

@@ -6,7 +6,7 @@ import {
   BarChart3, 
   CreditCard, 
   Settings,
-  MessageCircle,
+  MessageCircle as _MessageCircle,
   Menu,
   X
 } from 'lucide-react';
@@ -80,7 +80,7 @@ export function Sidebar() {
                     }`
                   }
                 >
-                  {({ isActive }) => (
+                  {({ isActive: _isActive }) => (
                     <>
                       <item.icon className="w-5 h-5" />
                       <span className="font-medium text-sm">{item.name}</span>
