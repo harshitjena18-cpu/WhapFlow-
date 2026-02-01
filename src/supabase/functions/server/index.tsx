@@ -75,6 +75,7 @@ function validateTemplateContent(content: string): string | null {
 }
 
 // Helper: Process WhatsApp Status Updates
+// deno-lint-ignore no-explicit-any
 async function processWhatsAppStatus(status: any) {
   const wamid = status.id;
   const newStatus = status.status; // sent, delivered, read
@@ -107,7 +108,7 @@ interface IntegrationConfig {
   connected_at: string | null;
   last_error: string | null;
   connection_status: 'connected' | 'disconnected' | 'error' | 'pending';
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
 }
 
 const DEFAULT_CONFIG: IntegrationConfig = {
@@ -395,7 +396,7 @@ Generate 3 different variations.`;
         // Handle case where AI returns { "templates": [...] } or just the array
         const parsed = JSON.parse(content);
         suggestions = Array.isArray(parsed) ? parsed : (parsed.templates || parsed.messages || []);
-    } catch (e) {
+    } catch (_e) {
         console.error("Failed to parse AI response:", content);
         return c.json({ error: "Failed to parse AI suggestions" }, 500);
     }
@@ -525,6 +526,7 @@ app.post("/make-server-c8eef56a/api/webhooks/shopify", async (c) => {
     }
     
     // FETCH ENABLED TEMPLATE
+    // deno-lint-ignore no-explicit-any
     const enabledTemplate = templates.find((t: any) => t.enabled);
 
     if (!enabledTemplate) {
@@ -610,11 +612,13 @@ app.post("/make-server-c8eef56a/api/webhooks/app/uninstalled", async (c) => {
 /**
  * AUTOMATION ENGINE
  */
+// deno-lint-ignore no-explicit-any
 async function scheduleAutomation(payload: any, delayMinutes: number) {
   console.log(`[Automation] Scheduling job for cart ${payload.cartId} in ${delayMinutes} minutes...`);
   await enqueueJob(payload, delayMinutes);
 }
 
+// deno-lint-ignore no-explicit-any
 async function executeAutomation(payload: any) {
   const { cartId, cartKey, templateName, shop } = payload;
   
@@ -641,6 +645,7 @@ async function executeAutomation(payload: any) {
 
     // 1. Pre-checks (Status & Plan)
     const isPending = currentCart.status === 'pending';
+    // deno-lint-ignore no-explicit-any
     const hasEnabledTemplate = templates.some((t: any) => t.enabled);
     const automationCheck = billing.checkLimitWithConfig('automation', billingConfig);
     const whatsappCheck = billing.checkLimitWithConfig('whatsapp', billingConfig);
@@ -699,8 +704,8 @@ async function executeAutomation(payload: any) {
       }
     }
 
-  } catch (err) {
-    console.error('Automation Error:', err);
+  } catch (_err) {
+    console.error('Automation Error:', _err);
   }
 }
 
@@ -731,7 +736,7 @@ app.post("/make-server-c8eef56a/api/whatsapp/send", async (c) => {
       return c.json({ error: 'WhatsApp API Error', details: result.error }, 500);
     }
 
-  } catch (error) {
+  } catch (_error) {
     return c.json({ error: 'Invalid request' }, 400);
   }
 });
@@ -765,6 +770,7 @@ app.post("/make-server-c8eef56a/api/webhooks/whatsapp", async (c) => {
     // Check if it's a status update
     if (body.entry && body.entry[0]?.changes && body.entry[0]?.changes[0]?.value?.statuses) {
       const statuses = body.entry[0].changes[0].value.statuses;
+      // deno-lint-ignore no-explicit-any
       await Promise.all(statuses.map((status: any) => processWhatsAppStatus(status)));
     }
 
@@ -795,6 +801,7 @@ app.get("/make-server-c8eef56a/api/dashboard/metrics", async (c) => {
     
     // 2. Derive Stats
     const templatesCount = templates.length;
+    // deno-lint-ignore no-explicit-any
     const hasEnabledTemplate = templates.some((t: any) => t.enabled);
     
     // 3. Billing Context
