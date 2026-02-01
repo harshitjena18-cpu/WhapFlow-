@@ -711,12 +711,24 @@ async function executeAutomation(payload: any) {
         await kv.set(cartKey, currentCart);
 
       } else {
-        console.log('⏹️ AUTOMATION SKIPPED: Conditions not met (e.g. cart recovered or automation off).');
+        console.error(`❌ AUTOMATION FAILED: WhatsApp API Error for cart ${cartId}`, result.error);
+        currentCart.status = 'failed';
+        currentCart.last_error = result.error;
+        await kv.set(cartKey, currentCart);
       }
     }
 
-  } catch (_err) {
-    console.error('Automation Error:', _err);
+  } catch (err) {
+    console.error(`❌ CRITICAL AUTOMATION ERROR for cart ${cartId}:`, err);
+    try {
+      // Attempt to record failure state so the job isn't silently lost
+      const cart = await kv.get(cartKey);
+      if (cart) {
+        cart.status = 'failed';
+        cart.last_error = String(err);
+        await kv.set(cartKey, cart);
+      }
+    } catch (_e) { /* Ignore secondary storage error */ }
   }
 }
 
