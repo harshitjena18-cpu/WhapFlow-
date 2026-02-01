@@ -9,11 +9,85 @@
 
 import { WhatsAppMessageRequest } from "../types";
 
+const getEnv = (key: string): string | undefined => {
+  // @ts-ignore
+  if (typeof Deno !== "undefined") return Deno.env.get(key);
+  // @ts-ignore
+  if (typeof process !== "undefined") return process.env[key];
+  return undefined;
+};
+
 export const sendWhatsAppMessage = async (request: WhatsAppMessageRequest): Promise<boolean> => {
-  // TODO: Call Meta Graph API
-  // POST https://graph.facebook.com/v17.0/{PHONE_NUMBER_ID}/messages
-  console.log('[WhatsApp] Sending message to', request.phoneNumber);
-  return true;
+  const phoneNumberId = getEnv("WHATSAPP_PHONE_NUMBER_ID");
+  const accessToken = getEnv("WHATSAPP_ACCESS_TOKEN");
+
+  if (!phoneNumberId || !accessToken) {
+    console.error("[WhatsApp] Missing configuration: WHATSAPP_PHONE_NUMBER_ID or WHATSAPP_ACCESS_TOKEN");
+    return false;
+  }
+
+  const url = `https://graph.facebook.com/v17.0/${phoneNumberId}/messages`;
+
+  // Construct components from parameters
+  const components = [];
+  if (request.parameters && Object.keys(request.parameters).length > 0) {
+    const sortedKeys = Object.keys(request.parameters).sort((a, b) => {
+      // Try numeric sort first, fallback to string sort
+      const numA = parseInt(a, 10);
+      const numB = parseInt(b, 10);
+      if (!isNaN(numA) && !isNaN(numB)) {
+        return numA - numB;
+      }
+      return a.localeCompare(b);
+    });
+
+    const bodyParameters = sortedKeys.map(key => ({
+      type: "text",
+      text: request.parameters![key]
+    }));
+
+    components.push({
+      type: "body",
+      parameters: bodyParameters
+    });
+  }
+
+  const body = {
+    messaging_product: "whatsapp",
+    to: request.phoneNumber,
+    type: "template",
+    template: {
+      name: request.templateId,
+      language: {
+        code: "en_US" // Default language, could be parameterized if needed
+      },
+      components: components
+    }
+  };
+
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error("[WhatsApp] API Error:", JSON.stringify(data, null, 2));
+      return false;
+    }
+
+    console.log("[WhatsApp] Message sent successfully to", request.phoneNumber);
+    return true;
+  } catch (error) {
+    console.error("[WhatsApp] Network error:", error);
+    return false;
+  }
 };
 
 export const getTemplateStatus = async (templateId: string) => {
