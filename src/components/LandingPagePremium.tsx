@@ -17,7 +17,7 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { Link } from 'react-router';
-import { motion, useScroll, useTransform, useInView } from 'motion/react';
+import { motion, useInView } from 'motion/react';
 import { useRef } from 'react';
 import { WhapflowLogo } from './WhapflowLogo';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
@@ -185,10 +185,10 @@ export function LandingPagePremium() {
 
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
+      setIsScrolled(globalThis.scrollY > 20);
     };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    globalThis.addEventListener('scroll', handleScroll);
+    return () => globalThis.removeEventListener('scroll', handleScroll);
   }, []);
 
   const faqs = [
@@ -577,7 +577,7 @@ export function LandingPagePremium() {
                 title: "Smart Automation",
                 description: "Set up once and let intelligent automation handle the rest, 24/7."
               }
-            ].map((feature, index) => (
+            ].map((feature) => (
               <motion.div
                 key={feature.title}
                 variants={fadeInUp}
@@ -669,7 +669,7 @@ export function LandingPagePremium() {
             whileInView="visible"
             viewport={{ once: true }}
           >
-            {pricingPlans.map((plan, index) => (
+            {pricingPlans.map((plan) => (
               <motion.div
                 key={plan.name}
                 variants={fadeInUp}

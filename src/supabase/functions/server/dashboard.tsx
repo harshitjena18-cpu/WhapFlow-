@@ -201,7 +201,7 @@ dashboardApp.get("/automations", async (c) => {
     }
     await kv.set("dashboard_automations", defaultAutomations);
     return c.json({ automations: defaultAutomations });
-  } catch (error) {
+  } catch (_error) {
     return c.json({ automations: defaultAutomations });
   }
 });
@@ -210,6 +210,7 @@ dashboardApp.get("/automations", async (c) => {
 dashboardApp.post("/automations/:id/toggle", async (c) => {
   const id = c.req.param("id");
   try {
+    // deno-lint-ignore no-explicit-any
     let automations: any[] = (await kv.get("dashboard_automations")) || defaultAutomations;
     
     automations = automations.map(a => 
@@ -219,7 +220,7 @@ dashboardApp.post("/automations/:id/toggle", async (c) => {
     await kv.set("dashboard_automations", automations);
     
     return c.json({ success: true, automations });
-  } catch (error) {
+  } catch (_error) {
     return c.json({ error: "Failed to toggle automation" }, 500);
   }
 });

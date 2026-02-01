@@ -102,7 +102,7 @@ export async function shopifyGraphql(
   shop: string,
   accessToken: string,
   query: string,
-  variables: Record<string, any> = {}
+  variables: Record<string, unknown> = {}
 ) {
   try {
     const response = await fetch(`https://${shop}/admin/api/2024-01/graphql.json`, {

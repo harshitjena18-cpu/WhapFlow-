@@ -613,11 +613,28 @@ async function scheduleAutomation(payload: any, delayMinutes: number) {
   await enqueueJob(payload, delayMinutes);
 }
 
+// deno-lint-ignore no-explicit-any
 async function executeAutomation(payload: any) {
   const { cartId, cartKey, templateName, shop } = payload;
   
   try {
     console.log(`\n⏰ AUTOMATION: Executing job for cart [${cartId}]. Checking logic...`);
+
+      // 1. Re-fetch current state from "Database"
+      const currentCart = await kv.get(cartKey);
+
+      if (!currentCart) {
+        console.log(`❌ AUTOMATION SKIPPED: Cart [${cartId}] no longer exists.`);
+        return;
+      }
+
+      // STEP 3: ORDERS API SAFETY CHECK
+      // Retrieve merchant credentials
+      const merchant = await getMerchantCredentials(shop);
+      if (!merchant || !merchant.access_token) {
+          console.error(`❌ AUTOMATION FAILED: No credentials found for ${shop}`);
+          return;
+      }
 
       console.log(`   - API CHECK: Checking if order exists for ${shop}...`);
       const orderExists = await checkOrderExists(
@@ -637,44 +654,13 @@ async function executeAutomation(payload: any) {
       }
 
       // Re-confirm automation is enabled (Check if an active template exists)
+      // deno-lint-ignore no-explicit-any
       const templates = await kv.getByPrefix("template:");
+      // deno-lint-ignore no-explicit-any
       const hasEnabledTemplate = templates.some((t: any) => t.enabled);
-
-      // 1. Re-fetch current state from "Database"
-      const currentCart = await kv.get(cartKey);
-
-      if (!currentCart) {
-        console.log(`❌ AUTOMATION SKIPPED: Cart [${cartId}] no longer exists.`);
-        return;
-      }
 
       // 2. Check Logic
       const isPending = currentCart.status === 'pending';
-
-      // STEP 3: ORDERS API SAFETY CHECK
-      // Retrieve merchant credentials
-      const merchant = await getMerchantCredentials(shop);
-      if (!merchant || !merchant.access_token) {
-          console.error(`❌ AUTOMATION FAILED: No credentials found for ${shop}`);
-          return;
-      }
-      
-      console.log(`   - API CHECK: Checking if order exists for ${shop}...`);
-      const orderExists = await checkOrderExists(
-          shop,
-          merchant.access_token,
-          currentCart.created_at,
-          currentCart.customer_email,
-          currentCart.phone
-      );
-
-      if (orderExists) {
-        console.log(`⏹️ AUTOMATION SKIPPED: Order found for cart ${cartId}.`);
-        currentCart.status = 'converted';
-        currentCart.converted_at = new Date().toISOString();
-        await kv.set(cartKey, currentCart);
-        return; // EXIT
-      }
 
     // Re-check Plan Limits
     const billingConfig = await billing.getBillingConfig(shop);
@@ -715,7 +701,6 @@ async function executeAutomation(payload: any) {
     } catch (err) {
       console.error('Automation Error:', err);
     }
-  }, DELAY_MS);
 }
 
 // Process Queue periodically
@@ -779,6 +764,7 @@ app.post("/make-server-c8eef56a/api/webhooks/whatsapp", async (c) => {
     // Check if it's a status update
     if (body.entry && body.entry[0]?.changes && body.entry[0]?.changes[0]?.value?.statuses) {
       const statuses = body.entry[0].changes[0].value.statuses;
+      // deno-lint-ignore no-explicit-any
       await Promise.all(statuses.map((status: any) => processWhatsAppStatus(status)));
     }
 
@@ -805,6 +791,7 @@ app.get("/make-server-c8eef56a/api/dashboard/metrics", async (c) => {
     // 2. Fetch Templates Stats
     const templates = await kv.getByPrefix("template:");
     const templatesCount = templates.length;
+    // deno-lint-ignore no-explicit-any
     const hasEnabledTemplate = templates.some((t: any) => t.enabled);
     
     // 3. Fetch AI Usage & Billing

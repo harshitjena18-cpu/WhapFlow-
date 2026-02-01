@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
-import { MessageCircle, Plus, Trash2, Save, Check, Loader2, Sparkles, Copy, AlertCircle, Bot, Zap, Info } from 'lucide-react';
+import { MessageCircle, Plus, Trash2, Loader2, Sparkles, AlertCircle, Bot, Zap, Info } from 'lucide-react';
 import { toast } from "sonner@2.0.3";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -23,7 +23,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "./ui/dialog";
 
 // Types
@@ -244,9 +243,10 @@ export function TemplatesView() {
       setIsDialogOpen(false);
       fetchTemplates();
       setSelectedTemplate(savedTemplate);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      toast.error(err.message);
+      const message = err instanceof Error ? err.message : "An unknown error occurred";
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }
@@ -332,9 +332,10 @@ export function TemplatesView() {
         setAiUsage(data.usage);
       }
       toast.success("Templates generated!");
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      toast.error(err.message);
+      const message = err instanceof Error ? err.message : "An unknown error occurred";
+      toast.error(message);
     } finally {
       setAiGenerating(false);
     }
