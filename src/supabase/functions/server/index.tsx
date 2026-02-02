@@ -35,7 +35,8 @@ app.use(
 // Global Error Handler
 app.onError((err, c) => {
   console.error("🔥 Global Error Handler:", err);
-  return c.json({ error: "Internal Server Error", message: err.message }, 500);
+  // SECURITY: Do not leak internal error messages to the client
+  return c.json({ error: "Internal Server Error" }, 500);
 });
 
 // Mount auth routes
@@ -75,6 +76,7 @@ function validateTemplateContent(content: string): string | null {
 }
 
 // Helper: Process WhatsApp Status Updates
+// deno-lint-ignore no-explicit-any
 async function processWhatsAppStatus(status: any) {
   const wamid = status.id;
   const newStatus = status.status; // sent, delivered, read
@@ -107,7 +109,7 @@ interface IntegrationConfig {
   connected_at: string | null;
   last_error: string | null;
   connection_status: 'connected' | 'disconnected' | 'error' | 'pending';
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
 }
 
 const DEFAULT_CONFIG: IntegrationConfig = {
@@ -395,7 +397,7 @@ Generate 3 different variations.`;
         // Handle case where AI returns { "templates": [...] } or just the array
         const parsed = JSON.parse(content);
         suggestions = Array.isArray(parsed) ? parsed : (parsed.templates || parsed.messages || []);
-    } catch (e) {
+    } catch (_e) {
         console.error("Failed to parse AI response:", content);
         return c.json({ error: "Failed to parse AI suggestions" }, 500);
     }
@@ -427,14 +429,19 @@ app.post("/make-server-c8eef56a/api/webhooks/shopify", async (c) => {
     
     // SECURITY: Verify HMAC
     const secret = Deno.env.get('SHOPIFY_CLIENT_SECRET');
-    if (secret && hmac) {
-      const isValid = await verifyWebhookHmac(rawBody, hmac, secret);
-      if (!isValid) {
-        console.error(`[Shopify Webhook] HMAC verification failed for ${shop}`);
-        return c.json({ error: 'Unauthorized' }, 401);
-      }
-    } else {
-        console.warn("[Shopify Webhook] Skipping HMAC check (Missing secret or header)");
+    if (!secret) {
+      console.error("[Shopify Webhook] Critical Error: SHOPIFY_CLIENT_SECRET not configured");
+      return c.json({ error: 'Server configuration error' }, 500);
+    }
+    if (!hmac) {
+      console.error("[Shopify Webhook] Missing HMAC header");
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    const isValid = await verifyWebhookHmac(rawBody, hmac, secret);
+    if (!isValid) {
+      console.error(`[Shopify Webhook] HMAC verification failed for ${shop}`);
+      return c.json({ error: 'Unauthorized' }, 401);
     }
 
     if (!shop) {
@@ -457,13 +464,13 @@ app.post("/make-server-c8eef56a/api/webhooks/shopify", async (c) => {
     const currency = payload.currency || "USD";
     const recoveryUrl = payload.abandoned_checkout_url || "No URL";
 
-    // 3. Log extracted data
+    // 3. Log extracted data (PII Redacted for security)
     console.log('\n📦 DATA EXTRACTED:');
-    console.log(`👤 Customer: ${customerName}`);
-    console.log(`📱 Phone:    ${customerPhone}`);
+    console.log(`👤 Customer: [REDACTED]`);
+    console.log(`📱 Phone:    [REDACTED]`);
     console.log(`🛍️ Product:  ${firstProduct} (and ${payload.line_items?.length - 1 || 0} others)`);
     console.log(`💰 Value:    ${cartValue} ${currency}`);
-    console.log(`🔗 Recovery: ${recoveryUrl}`);
+    console.log(`🔗 Recovery: [REDACTED]`);
     
     // 4. PERSISTENCE: Save to Database
     console.log('\n💾 PERSISTENCE: Saving abandoned cart to database...');
@@ -494,35 +501,38 @@ app.post("/make-server-c8eef56a/api/webhooks/shopify", async (c) => {
 
     // 5. AUTOMATION DELAY: Wait, then check logic
     
-    // CHECK INTEGRATIONS FIRST (Global Check)
-    console.log('\n🔍 AUTOMATION CHECKS: Verifying integration status...');
+    // CHECK INTEGRATIONS & LIMITS (Parallelized for performance)
+    console.log('\n🔍 AUTOMATION CHECKS: Verifying integration status and limits...');
     
+    const [merchant, whatsappConfig, billingConfig, templates] = await Promise.all([
+      getMerchantCredentials(shop),
+      kv.get("config:whatsapp"),
+      billing.getBillingConfig(shop),
+      kv.getByPrefix("template:")
+    ]);
+
     // Check if THIS shop is connected
-    const merchant = await getMerchantCredentials(shop);
     if (!merchant || !merchant.shopify_connected) {
        console.log(`⏹️ AUTOMATION PAUSED: Merchant ${shop} not connected/active.`);
        return c.json({ status: 'success', received: true, automation: 'paused_merchant_inactive' }, 200);
     }
     
     // Check WhatsApp Connection
-    const whatsappConfig = await kv.get("config:whatsapp");
     const whatsappConnected = whatsappConfig?.connection_status === 'connected';
-    
     if (!whatsappConnected) {
       console.log("⏹️ AUTOMATION PAUSED: WhatsApp integration not connected.");
       return c.json({ status: 'success', received: true, automation: 'paused_integrations_missing' }, 200);
     }
     
     // CHECK BILLING / PLAN
-    const automationCheck = await billing.checkLimit('automation', shop);
+    const automationCheck = billing.checkLimitWithConfig('automation', billingConfig);
     if (!automationCheck.allowed) {
       console.log(`⏹️ AUTOMATION PAUSED: ${automationCheck.error}`);
       return c.json({ status: 'success', received: true, automation: 'paused_plan_limit' }, 200);
     }
     
     // FETCH ENABLED TEMPLATE
-    console.log('\n🔍 AUTOMATION CONFIG: Fetching enabled template...');
-    const templates = await kv.getByPrefix("template:");
+    // deno-lint-ignore no-explicit-any
     const enabledTemplate = templates.find((t: any) => t.enabled);
 
     if (!enabledTemplate) {
@@ -556,14 +566,19 @@ app.post("/make-server-c8eef56a/api/webhooks/app/uninstalled", async (c) => {
 
     // SECURITY: Verify HMAC
     const secret = Deno.env.get('SHOPIFY_CLIENT_SECRET');
-    if (secret && hmac) {
-      const isValid = await verifyWebhookHmac(rawBody, hmac, secret);
-      if (!isValid) {
-        console.error(`[Uninstall Webhook] HMAC verification failed for ${shop}`);
-        return c.json({ error: 'Unauthorized' }, 401);
-      }
-    } else {
-        console.warn("[Uninstall Webhook] Skipping HMAC check (Missing secret or header)");
+    if (!secret) {
+      console.error("[Uninstall Webhook] Critical Error: SHOPIFY_CLIENT_SECRET not configured");
+      return c.json({ error: 'Server configuration error' }, 500);
+    }
+    if (!hmac) {
+      console.error("[Uninstall Webhook] Missing HMAC header");
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    const isValid = await verifyWebhookHmac(rawBody, hmac, secret);
+    if (!isValid) {
+      console.error(`[Uninstall Webhook] HMAC verification failed for ${shop}`);
+      return c.json({ error: 'Unauthorized' }, 401);
     }
 
     if (!shop) {
@@ -608,36 +623,50 @@ app.post("/make-server-c8eef56a/api/webhooks/app/uninstalled", async (c) => {
 /**
  * AUTOMATION ENGINE
  */
+// deno-lint-ignore no-explicit-any
 async function scheduleAutomation(payload: any, delayMinutes: number) {
   console.log(`[Automation] Scheduling job for cart ${payload.cartId} in ${delayMinutes} minutes...`);
   await enqueueJob(payload, delayMinutes);
 }
 
+// deno-lint-ignore no-explicit-any
 async function executeAutomation(payload: any) {
   const { cartId, cartKey, templateName, shop } = payload;
   
   try {
     console.log(`\n⏰ AUTOMATION: Executing job for cart [${cartId}]. Checking logic...`);
 
-    // 1. Re-fetch current state from "Database"
-    const currentCart = await kv.get(cartKey);
+    // Fetch all required data in parallel to minimize latency and fix variable access order
+    const [currentCart, merchant, templates, billingConfig] = await Promise.all([
+      kv.get(cartKey),
+      getMerchantCredentials(shop),
+      kv.getByPrefix("template:"),
+      billing.getBillingConfig(shop)
+    ]);
 
     if (!currentCart) {
       console.log(`❌ AUTOMATION SKIPPED: Cart [${cartId}] no longer exists.`);
       return;
     }
 
-    // 2. Check Logic
-    const isPending = currentCart.status === 'pending';
-
-    // STEP 3: ORDERS API SAFETY CHECK
-    // Retrieve merchant credentials
-    const merchant = await getMerchantCredentials(shop);
     if (!merchant || !merchant.access_token) {
-        console.error(`❌ AUTOMATION FAILED: No credentials found for ${shop}`);
-        return;
+      console.error(`❌ AUTOMATION FAILED: No credentials found for ${shop}`);
+      return;
     }
 
+    // 1. Pre-checks (Status & Plan)
+    const isPending = currentCart.status === 'pending';
+    // deno-lint-ignore no-explicit-any
+    const hasEnabledTemplate = templates.some((t: any) => t.enabled);
+    const automationCheck = billing.checkLimitWithConfig('automation', billingConfig);
+    const whatsappCheck = billing.checkLimitWithConfig('whatsapp', billingConfig);
+
+    if (!isPending || !hasEnabledTemplate || !automationCheck.allowed || !whatsappCheck.allowed) {
+      console.log('⏹️ AUTOMATION SKIPPED: Pre-conditions not met (e.g. cart already messaged, automation off, or limit reached).');
+      return;
+    }
+
+    // 2. Orders API Safety Check (Preventing spam if already converted)
     console.log(`   - API CHECK: Checking if order exists for ${shop}...`);
     const orderExists = await checkOrderExists(
         shop,
@@ -652,21 +681,10 @@ async function executeAutomation(payload: any) {
       currentCart.status = 'converted';
       currentCart.converted_at = new Date().toISOString();
       await kv.set(cartKey, currentCart);
-      return; // EXIT
+      return;
     }
 
-    // Re-confirm automation is enabled (Check if an active template exists)
-    const templates = await kv.getByPrefix("template:");
-    const hasEnabledTemplate = templates.some((t: any) => t.enabled);
-
-    // Re-check Plan Limits
-    const automationCheck = await billing.checkLimit('automation', shop);
-    const whatsappCheck = await billing.checkLimit('whatsapp', shop);
-
-    console.log(`   - Current Status: ${currentCart.status}`);
-    console.log(`   - Automation Enabled: ${hasEnabledTemplate}`);
-    console.log(`   - Plan Limit Check: Automation=${automationCheck.allowed}, WhatsApp=${whatsappCheck.allowed}`);
-
+    // 3. Final Execution
     if (isPending && hasEnabledTemplate && automationCheck.allowed && whatsappCheck.allowed) {
       console.log(`✅ CONDITIONS MET: Ready to send WhatsApp message.`);
       console.log(`   - Automation ready using template: ${templateName}`);
@@ -692,18 +710,25 @@ async function executeAutomation(payload: any) {
 
         await kv.set(cartKey, currentCart);
 
-        console.log(`🚀 AUTOMATION SUCCESS: Message sent to ${currentCart.phone}`);
-        console.log(`📝 Status updated to "messaged"`);
       } else {
-        console.error(`⚠️ AUTOMATION FAILED: WhatsApp API error`, result.error);
+        console.error(`❌ AUTOMATION FAILED: WhatsApp API Error for cart ${cartId}`, result.error);
+        currentCart.status = 'failed';
+        currentCart.last_error = result.error;
+        await kv.set(cartKey, currentCart);
       }
-
-    } else {
-      console.log('⏹️ AUTOMATION SKIPPED: Conditions not met (e.g. cart recovered or automation off).');
     }
 
   } catch (err) {
-    console.error('Automation Error:', err);
+    console.error(`❌ CRITICAL AUTOMATION ERROR for cart ${cartId}:`, err);
+    try {
+      // Attempt to record failure state so the job isn't silently lost
+      const cart = await kv.get(cartKey);
+      if (cart) {
+        cart.status = 'failed';
+        cart.last_error = String(err);
+        await kv.set(cartKey, cart);
+      }
+    } catch (_e) { /* Ignore secondary storage error */ }
   }
 }
 
@@ -719,7 +744,8 @@ Deno.cron("Process Queue", "* * * * *", async () => {
 app.post("/make-server-c8eef56a/api/whatsapp/send", async (c) => {
   try {
     const { phoneNumber, templateId } = await c.req.json();
-    console.log(`[WhatsApp] Intent to send template "${templateId}" to ${phoneNumber}`);
+    // SECURITY: Redact phoneNumber from logs
+    console.log(`[WhatsApp] Intent to send template "${templateId}" to [REDACTED]`);
     
     // Call the shared helper
     const result = await sendWhatsAppTemplate({
@@ -734,7 +760,7 @@ app.post("/make-server-c8eef56a/api/whatsapp/send", async (c) => {
       return c.json({ error: 'WhatsApp API Error', details: result.error }, 500);
     }
 
-  } catch (error) {
+  } catch (_error) {
     return c.json({ error: 'Invalid request' }, 400);
   }
 });
@@ -751,7 +777,8 @@ app.get("/make-server-c8eef56a/api/webhooks/whatsapp", (c) => {
 
   const verifyToken = Deno.env.get("WHATSAPP_VERIFY_TOKEN");
 
-  if (mode === "subscribe" && token === verifyToken) {
+  // SECURITY: Ensure verifyToken is configured and matches the request token
+  if (mode === "subscribe" && verifyToken && token === verifyToken) {
     console.log("[WhatsApp Webhook] Webhook verified.");
     return c.text(challenge || "");
   }
@@ -768,9 +795,8 @@ app.post("/make-server-c8eef56a/api/webhooks/whatsapp", async (c) => {
     // Check if it's a status update
     if (body.entry && body.entry[0]?.changes && body.entry[0]?.changes[0]?.value?.statuses) {
       const statuses = body.entry[0].changes[0].value.statuses;
-      for (const status of statuses) {
-         await processWhatsAppStatus(status);
-      }
+      // deno-lint-ignore no-explicit-any
+      await Promise.all(statuses.map((status: any) => processWhatsAppStatus(status)));
     }
 
     return c.json({ status: 'ok' });
@@ -785,21 +811,25 @@ app.get("/make-server-c8eef56a/api/dashboard/metrics", async (c) => {
   try {
     const shop = c.req.query("shop") || "global"; // Default to "global" if no shop provided
 
-    // 1. Fetch Integrations Status
-    const shopifyConfig = await kv.get("config:shopify");
-    const whatsappConfig = await kv.get("config:whatsapp");
+    // 1. Fetch all dependencies in parallel to minimize round-trip latency
+    const [shopifyConfig, whatsappConfig, templates, billingConfig] = await Promise.all([
+      kv.get("config:shopify"),
+      kv.get("config:whatsapp"),
+      kv.getByPrefix("template:"),
+      billing.getBillingConfig(shop)
+    ]);
+
     const status = {
       shopify_connected: shopifyConfig?.connection_status === 'connected',
       whatsapp_connected: whatsappConfig?.connection_status === 'connected'
     };
     
-    // 2. Fetch Templates Stats
-    const templates = await kv.getByPrefix("template:");
+    // 2. Derive Stats
     const templatesCount = templates.length;
+    // deno-lint-ignore no-explicit-any
     const hasEnabledTemplate = templates.some((t: any) => t.enabled);
     
-    // 3. Fetch AI Usage & Billing
-    const billingConfig = await billing.getBillingConfig(shop);
+    // 3. Billing Context
     const limits = billing.PLAN_LIMITS[billingConfig.plan];
     
     // 4. Determine Automation Status

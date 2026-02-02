@@ -82,7 +82,8 @@ export const sendWhatsAppMessage = async (request: WhatsAppMessageRequest): Prom
       return false;
     }
 
-    console.log("[WhatsApp] Message sent successfully to", request.phoneNumber);
+    // SECURITY: Redact phoneNumber in logs
+    console.log("[WhatsApp] Message sent successfully to [REDACTED]");
     return true;
   } catch (error) {
     console.error("[WhatsApp] Network error:", error);
@@ -90,7 +91,50 @@ export const sendWhatsAppMessage = async (request: WhatsAppMessageRequest): Prom
   }
 };
 
-export const getTemplateStatus = async (templateId: string) => {
-  // TODO: Check if template is approved
-  return 'APPROVED';
+export const getTemplateStatus = async (templateId: string, accessTokenOverride?: string): Promise<string | null> => {
+  const accessToken = accessTokenOverride || getEnv("WHATSAPP_ACCESS_TOKEN");
+  const businessAccountId = getEnv("WHATSAPP_BUSINESS_ACCOUNT_ID");
+
+  if (!accessToken) {
+    console.error("[WhatsApp] Missing access token");
+    return null;
+  }
+
+  if (!businessAccountId) {
+    console.error("[WhatsApp] Missing business account ID");
+    return null;
+  }
+
+  const url = `https://graph.facebook.com/v17.0/${businessAccountId}/message_templates?name=${encodeURIComponent(templateId)}`;
+
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("[WhatsApp] Failed to fetch template status:", JSON.stringify(errorData, null, 2));
+      return null;
+    }
+
+    const data = await response.json();
+
+    // Find the template with 'en_US' language, or fallback to the first one if only one exists
+    const template = data.data.find((t: any) => t.language === "en_US") || data.data[0];
+
+    if (template) {
+      return template.status;
+    } else {
+       console.warn(`[WhatsApp] Template '${templateId}' not found.`);
+       return null;
+    }
+
+  } catch (error) {
+    console.error("[WhatsApp] Network error checking template status:", error);
+    return null;
+  }
 };

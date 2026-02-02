@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
-import { MessageCircle, Plus, Trash2, Save, Check, Loader2, Sparkles, Copy, AlertCircle, Bot, Zap, Info } from 'lucide-react';
+import { MessageCircle, Plus, Trash2, Save as _Save, Check as _Check, Loader2, Sparkles, Copy as _Copy, AlertCircle, Bot, Zap, Info } from 'lucide-react';
 import { toast } from "sonner@2.0.3";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -23,8 +23,18 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
+  DialogTrigger as _DialogTrigger,
 } from "./ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "./ui/alert-dialog";
 
 // Types
 interface Template {
@@ -51,6 +61,7 @@ export function TemplatesView() {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+  const [templateToDelete, setTemplateToDelete] = useState<string | null>(null);
   
   // Dialog State
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -244,17 +255,17 @@ export function TemplatesView() {
       setIsDialogOpen(false);
       fetchTemplates();
       setSelectedTemplate(savedTemplate);
-    } catch (err: any) {
-      console.error(err);
-      toast.error(err.message);
+    } catch (err) {
+      // deno-lint-ignore no-explicit-any
+      const error = err as any;
+      console.error(error);
+      toast.error(error.message);
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this template?")) return;
-    
     try {
       const res = await fetch(`${SERVER_URL}/api/templates/${id}`, {
         method: 'DELETE',
@@ -332,9 +343,11 @@ export function TemplatesView() {
         setAiUsage(data.usage);
       }
       toast.success("Templates generated!");
-    } catch (err: any) {
-      console.error(err);
-      toast.error(err.message);
+    } catch (err) {
+      // deno-lint-ignore no-explicit-any
+      const error = err as any;
+      console.error(error);
+      toast.error(error.message);
     } finally {
       setAiGenerating(false);
     }
@@ -399,8 +412,17 @@ export function TemplatesView() {
                     <Loader2 className="w-6 h-6 animate-spin" />
                   </div>
                 ) : templates.length === 0 ? (
-                  <div className="p-8 text-center text-gray-500 text-sm">
-                    No templates yet. Create one!
+                  <div className="p-8 text-center space-y-4">
+                    <div className="text-gray-500 text-sm">No templates yet. Create one!</div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleOpenCreate()}
+                      className="border-[#25D366] text-[#128C7E] hover:bg-[#25D366]/5"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Create Template
+                    </Button>
                   </div>
                 ) : (
                   templates.map((template) => (
@@ -454,7 +476,13 @@ export function TemplatesView() {
                        <Button variant="outline" size="sm" onClick={() => handleOpenEdit(selectedTemplate)}>
                          Edit
                        </Button>
-                       <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => handleDelete(selectedTemplate.id)}>
+                       <Button
+                         variant="ghost"
+                         size="sm"
+                         className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                         onClick={() => setTemplateToDelete(selectedTemplate.id)}
+                         aria-label="Delete template"
+                       >
                          <Trash2 className="w-4 h-4" />
                        </Button>
                     </div>
@@ -806,6 +834,31 @@ export function TemplatesView() {
             </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!templateToDelete} onOpenChange={(open) => !open && setTemplateToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the template
+              "{templates.find(t => t.id === templateToDelete)?.display_name}" and remove it from our servers.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (templateToDelete) handleDelete(templateToDelete);
+                setTemplateToDelete(null);
+              }}
+              variant="destructive"
+            >
+              Delete Template
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

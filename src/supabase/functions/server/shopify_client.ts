@@ -21,11 +21,16 @@ export async function checkOrderExists(
   try {
     // 1. Build Query
     // Construct search query: created_at:>=... AND (email:... OR phone:...)
-    const clauses = [`created_at:>=${cartCreatedAt}`];
+    // Include status:open OR status:closed OR status:cancelled to catch ALL orders
+    const clauses = [
+      `created_at:>=${cartCreatedAt}`,
+      `(status:open OR status:closed OR status:cancelled)`
+    ];
 
     const contactClauses = [];
-    if (email) contactClauses.push(`email:${email}`);
-    if (phone) contactClauses.push(`phone:${phone}`);
+    // Quote values to handle spaces/special chars safely
+    if (email) contactClauses.push(`email:"${email}"`);
+    if (phone) contactClauses.push(`phone:"${phone}"`);
 
     if (contactClauses.length > 0) {
         clauses.push(`(${contactClauses.join(' OR ')})`);
@@ -36,14 +41,12 @@ export async function checkOrderExists(
 
     const searchQuery = clauses.join(' AND ');
 
+    // Only request 'id' and 'first: 1' for maximum efficiency
     const query = `
       query checkOrders($query: String!) {
-        orders(first: 5, query: $query) {
+        orders(first: 1, query: $query) {
           nodes {
             id
-            createdAt
-            email
-            phone
           }
         }
       }
@@ -54,7 +57,8 @@ export async function checkOrderExists(
     const orders = data.orders.nodes || [];
 
     if (orders.length > 0) {
-         console.log(`[ShopifyClient] MATCH FOUND: Order exists for ${email || phone} in ${shop}`);
+         // SECURITY: Redact contact info in logs
+         console.log(`[ShopifyClient] MATCH FOUND: Order exists for [REDACTED CONTACT INFO] in ${shop}`);
          return true;
     }
 
