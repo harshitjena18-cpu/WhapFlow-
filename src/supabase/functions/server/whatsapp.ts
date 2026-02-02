@@ -56,8 +56,9 @@ export const sendWhatsAppTemplate = async ({
       return { success: false, error: data };
     }
 
-    console.log("✅ WhatsApp Message Sent:", data);
+    // SECURITY: Log only wamid to avoid leaking PII in response data
     const wamid = data.messages?.[0]?.id;
+    console.log("✅ WhatsApp Message Sent. ID:", wamid);
     return { success: true, data, wamid };
   } catch (error) {
     console.error("❌ Network/Server Error sending WhatsApp:", error);

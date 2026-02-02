@@ -57,7 +57,8 @@ export async function checkOrderExists(
     const orders = data.orders.nodes || [];
 
     if (orders.length > 0) {
-         console.log(`[ShopifyClient] MATCH FOUND: Order exists for ${email || phone} in ${shop}`);
+         // SECURITY: Redact contact info in logs
+         console.log(`[ShopifyClient] MATCH FOUND: Order exists for [REDACTED CONTACT INFO] in ${shop}`);
          return true;
     }
 
