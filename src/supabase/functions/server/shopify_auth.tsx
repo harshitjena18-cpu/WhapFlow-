@@ -115,7 +115,6 @@ app.get("/callback", async (c) => {
     shopifyConfig.connected_at = new Date().toISOString();
     shopifyConfig.connection_status = "connected";
     shopifyConfig.shop_domain = shop; // Metadata
-    await kv.set("config:shopify", shopifyConfig);
 
     // 2. Securely Store Credentials (keyed by shop)
     const merchantRecord = {
@@ -127,7 +126,12 @@ app.get("/callback", async (c) => {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
-    await kv.set(`merchant:${shop}`, merchantRecord);
+
+    // PERFORMANCE: Parallelize both KV set operations
+    await Promise.all([
+      kv.set("config:shopify", shopifyConfig),
+      kv.set(`merchant:${shop}`, merchantRecord)
+    ]);
     
     // Also set a mapping if needed, or just rely on the global config for the MVP demo.
 
@@ -202,7 +206,8 @@ async function registerWebhooks(shop: string, accessToken: string) {
 
   console.log(`[Webhooks] Registering topics for ${shop}...`);
 
-  for (const hook of WEBHOOKS) {
+  // PERFORMANCE: Parallelize webhook registration to reduce latency for the OAuth callback
+  await Promise.all(WEBHOOKS.map(async (hook) => {
     try {
       const response = await fetch(`https://${shop}/admin/api/2023-10/webhooks.json`, {
         method: "POST",
@@ -234,7 +239,7 @@ async function registerWebhooks(shop: string, accessToken: string) {
     } catch (err) {
       console.error(`[Webhooks] Network error registering ${hook.topic}:`, err);
     }
-  }
+  }));
 }
 
 export default app;
