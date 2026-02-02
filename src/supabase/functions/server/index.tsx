@@ -464,13 +464,13 @@ app.post("/make-server-c8eef56a/api/webhooks/shopify", async (c) => {
     const currency = payload.currency || "USD";
     const recoveryUrl = payload.abandoned_checkout_url || "No URL";
 
-    // 3. Log extracted data
+    // 3. Log extracted data (PII Redacted for security)
     console.log('\n📦 DATA EXTRACTED:');
-    console.log(`👤 Customer: ${customerName}`);
-    console.log(`📱 Phone:    ${customerPhone}`);
+    console.log(`👤 Customer: [REDACTED]`);
+    console.log(`📱 Phone:    [REDACTED]`);
     console.log(`🛍️ Product:  ${firstProduct} (and ${payload.line_items?.length - 1 || 0} others)`);
     console.log(`💰 Value:    ${cartValue} ${currency}`);
-    console.log(`🔗 Recovery: ${recoveryUrl}`);
+    console.log(`🔗 Recovery: [REDACTED]`);
     
     // 4. PERSISTENCE: Save to Database
     console.log('\n💾 PERSISTENCE: Saving abandoned cart to database...');
@@ -744,7 +744,8 @@ Deno.cron("Process Queue", "* * * * *", async () => {
 app.post("/make-server-c8eef56a/api/whatsapp/send", async (c) => {
   try {
     const { phoneNumber, templateId } = await c.req.json();
-    console.log(`[WhatsApp] Intent to send template "${templateId}" to ${phoneNumber}`);
+    // SECURITY: Redact phoneNumber from logs
+    console.log(`[WhatsApp] Intent to send template "${templateId}" to [REDACTED]`);
     
     // Call the shared helper
     const result = await sendWhatsAppTemplate({

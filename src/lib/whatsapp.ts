@@ -82,7 +82,8 @@ export const sendWhatsAppMessage = async (request: WhatsAppMessageRequest): Prom
       return false;
     }
 
-    console.log("[WhatsApp] Message sent successfully to", request.phoneNumber);
+    // SECURITY: Redact phoneNumber in logs
+    console.log("[WhatsApp] Message sent successfully to [REDACTED]");
     return true;
   } catch (error) {
     console.error("[WhatsApp] Network error:", error);
