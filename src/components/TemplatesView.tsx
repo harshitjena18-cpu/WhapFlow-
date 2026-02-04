@@ -1,18 +1,6 @@
 import { useState, useEffect } from 'react';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
-import {
-  MessageCircle,
-  Plus,
-  Trash2,
-  Check,
-  Loader2,
-  Sparkles,
-  Copy,
-  AlertCircle,
-  Bot,
-  Zap,
-  Info
-} from 'lucide-react';
+import { MessageCircle, Plus, Trash2, Save as _Save, Check as _Check, Loader2, Sparkles, Copy as _Copy, AlertCircle, Bot, Zap, Info } from 'lucide-react';
 import { toast } from "sonner@2.0.3";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -25,7 +13,6 @@ import { Progress } from "./ui/progress";
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from "./ui/tooltip";
 import {
@@ -35,7 +22,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
+  DialogTrigger as _DialogTrigger,
 } from "./ui/dialog";
 import {
   AlertDialog,
@@ -383,7 +370,6 @@ export function TemplatesView() {
   const usagePercentage = aiUsage ? (aiUsage.ai_generations_used / aiUsage.ai_generations_limit) * 100 : 0;
 
   return (
-    <TooltipProvider>
       <div className="space-y-8 max-w-6xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between pb-4 border-b border-gray-100">
@@ -548,7 +534,7 @@ export function TemplatesView() {
                                   onClick={() => handleCopy(selectedTemplate.template_name)}
                                   aria-label="Copy template name"
                                 >
-                                  {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                                  {copied ? <_Check className="w-4 h-4 text-green-500" /> : <_Copy className="w-4 h-4" />}
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>
@@ -910,6 +896,5 @@ export function TemplatesView() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
-    </TooltipProvider>
   );
 }
