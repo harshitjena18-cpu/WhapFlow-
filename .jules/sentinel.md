@@ -7,3 +7,8 @@
 **Vulnerability:** Personally Identifiable Information (PII) including customer names, phone numbers, emails, and recovery URLs were being logged in plaintext to the console in webhook handlers and API routes.
 **Learning:** Even with a security blueprint in place, debug logs can easily become a source of PII leakage if not rigorously audited. Standard logging of "payloads" or "extracted data" often defaults to including sensitive fields.
 **Prevention:** Implement a strict "no-PII in logs" policy enforced by code reviews. Use redaction by default for any field that could contain user data. Prefer logging only internal IDs (CartID, MessageID) for traceability.
+
+## 2025-05-17 - Plaintext Access Token Storage
+**Vulnerability:** Shopify Admin API access tokens were stored in plaintext in the KV store (`merchant:${shop}` keys).
+**Learning:** Storing third-party API tokens in plaintext creates a high-impact risk if the database or KV store is compromised. Even in early stages, sensitive credentials should be encrypted at rest.
+**Prevention:** Implement a standard encryption utility for all sensitive credentials stored at rest. Use AES-GCM or similar modern algorithms with keys managed via environment variables. Ensure the utility supports backward compatibility for seamless migration of existing plaintext records.

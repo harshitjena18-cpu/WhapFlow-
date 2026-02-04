@@ -1,10 +1,16 @@
 import * as kv from "./kv_store.tsx";
+import { decrypt } from "./crypto.ts";
 
 /**
  * Retrieve merchant credentials from KV
  */
 export async function getMerchantCredentials(shop: string) {
-  return await kv.get(`merchant:${shop}`);
+  const merchant = await kv.get(`merchant:${shop}`);
+  if (merchant && merchant.access_token) {
+    // Decrypt the token if it was stored encrypted
+    merchant.access_token = await decrypt(merchant.access_token);
+  }
+  return merchant;
 }
 
 /**
