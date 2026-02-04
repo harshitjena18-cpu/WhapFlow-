@@ -23,3 +23,7 @@
 - **Improved:** ~350ms (Parallelized webhooks and KV sets)
 - **Gain:** ~3.5x faster completion
 **Context:** OAuth callbacks are high-friction moments for merchants. Reducing latency during this phase improves the "time-to-dashboard" UX significantly.
+
+## 2025-05-15 - [Integration & Billing Parallelization]
+**Learning:** Sequential KV operations and Shopify API calls are a major source of latency in the API foundation. Parallelizing these operations with `Promise.all` and reusing in-memory data instead of re-fetching from KV can reduce latency by up to 66% for specific endpoints.
+**Action:** Always check for sequential `await` calls that are independent of each other and parallelize them. For POST routes, avoid re-fetching data from KV that was just updated in memory.
