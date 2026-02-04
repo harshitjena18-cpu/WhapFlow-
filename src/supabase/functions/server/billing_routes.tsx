@@ -180,7 +180,12 @@ app.get("/status", async (c) => {
       }
     `;
 
-    const data = await shopifyGraphql(shop, merchant.access_token, query);
+    // PERFORMANCE: Parallelize Shopify API call and local database config fetch
+    const [data, currentConfig] = await Promise.all([
+      shopifyGraphql(shop, merchant.access_token, query),
+      billing.getBillingConfig(shop)
+    ]);
+
     const subscriptions = data.currentAppInstallation.activeSubscriptions;
     
     let activePlan: PlanLevel = 'free';
@@ -200,7 +205,6 @@ app.get("/status", async (c) => {
     }
 
     // Sync with database
-    const currentConfig = await billing.getBillingConfig(shop);
     if (currentConfig.plan !== activePlan) {
         console.log(`[Billing] Syncing plan for ${shop}: ${currentConfig.plan} -> ${activePlan}`);
         await billing.updatePlan(shop, activePlan, subscriptionId || undefined);

@@ -155,15 +155,29 @@ const defaultAutomations = [
   },
 ];
 
+// Helper: Verify shop and merchant existence
+async function getValidatedShop(c: any) {
+  const shop = c.req.query("shop");
+  if (!shop) return { error: "Missing shop parameter", status: 400 };
+
+  const merchant = await kv.get(`merchant:${shop}`);
+  if (!merchant) return { error: "Unauthorized: Merchant not found", status: 401 };
+
+  return { shop };
+}
+
 // GET /dashboard/data
 dashboardApp.get("/data", async (c) => {
+  const { shop, error, status } = await getValidatedShop(c);
+  if (error) return c.json({ error }, status as any);
+
   // Try to get data from KV store
   try {
-    // Parallelize data fetching to reduce latency
+    // SECURITY: Keys are now scoped by shop to prevent multi-tenancy leaks
     const [metrics, revenue, activity] = await Promise.all([
-      kv.get("dashboard_metrics"),
-      kv.get("dashboard_revenue"),
-      kv.get("dashboard_activity")
+      kv.get(`shop:${shop}:metrics`),
+      kv.get(`shop:${shop}:revenue`),
+      kv.get(`shop:${shop}:activity`)
     ]);
 
     if (metrics && revenue && activity) {
@@ -174,18 +188,20 @@ dashboardApp.get("/data", async (c) => {
       });
     }
 
-    // If missing, seed the KV store with defaults (optional, but good for persistence)
-    await kv.set("dashboard_metrics", defaultMetrics);
-    await kv.set("dashboard_revenue", defaultRevenueData);
-    await kv.set("dashboard_activity", defaultActivityLogs);
+    // If missing, seed the KV store with defaults (scoped by shop)
+    await Promise.all([
+      kv.set(`shop:${shop}:metrics`, defaultMetrics),
+      kv.set(`shop:${shop}:revenue`, defaultRevenueData),
+      kv.set(`shop:${shop}:activity`, defaultActivityLogs)
+    ]);
 
     return c.json({
       metrics: defaultMetrics,
       revenue: defaultRevenueData,
       activity: defaultActivityLogs,
     });
-  } catch (error) {
-    console.error("Error fetching dashboard data:", error);
+  } catch (err) {
+    console.error(`Error fetching dashboard data for ${shop}:`, err);
     // Fallback to defaults if KV fails
     return c.json({
       metrics: defaultMetrics,
@@ -197,34 +213,40 @@ dashboardApp.get("/data", async (c) => {
 
 // GET /dashboard/automations
 dashboardApp.get("/automations", async (c) => {
+  const { shop, error, status } = await getValidatedShop(c);
+  if (error) return c.json({ error }, status as any);
+
   try {
-    const automations = await kv.get("dashboard_automations");
+    const automations = await kv.get(`shop:${shop}:automations`);
     if (automations) {
       return c.json({ automations });
     }
-    await kv.set("dashboard_automations", defaultAutomations);
+    await kv.set(`shop:${shop}:automations`, defaultAutomations);
     return c.json({ automations: defaultAutomations });
-  } catch (_error) {
+  } catch (_err) {
     return c.json({ automations: defaultAutomations });
   }
 });
 
 // POST /dashboard/automations/:id/toggle
 dashboardApp.post("/automations/:id/toggle", async (c) => {
+  const { shop, error, status } = await getValidatedShop(c);
+  if (error) return c.json({ error }, status as any);
+
   const id = c.req.param("id");
   try {
     // deno-lint-ignore no-explicit-any
-    let automations: any[] = (await kv.get("dashboard_automations")) || defaultAutomations;
+    let automations: any[] = (await kv.get(`shop:${shop}:automations`)) || defaultAutomations;
     
     // deno-lint-ignore no-explicit-any
     automations = automations.map((a: any) =>
       a.id === id ? { ...a, enabled: !a.enabled } : a
     );
     
-    await kv.set("dashboard_automations", automations);
+    await kv.set(`shop:${shop}:automations`, automations);
     
     return c.json({ success: true, automations });
-  } catch (_error) {
+  } catch (_err) {
     return c.json({ error: "Failed to toggle automation" }, 500);
   }
 });
