@@ -827,7 +827,16 @@ app.post("/make-server-c8eef56a/api/webhooks/whatsapp", async (c) => {
 // GET /api/dashboard/metrics
 app.get("/make-server-c8eef56a/api/dashboard/metrics", async (c) => {
   try {
-    const shop = c.req.query("shop") || "global"; // Default to "global" if no shop provided
+    const shop = c.req.query("shop");
+    if (!shop) {
+      return c.json({ error: "Missing shop parameter" }, 400);
+    }
+
+    // SECURITY: Verify merchant exists to prevent unauthorized data access
+    const merchant = await kv.get(`merchant:${shop}`);
+    if (!merchant && shop !== "global") {
+      return c.json({ error: "Unauthorized: Merchant not found" }, 401);
+    }
 
     // 1. Fetch all dependencies in parallel to minimize round-trip latency
     const [shopifyConfig, whatsappConfig, templates, billingConfig] = await Promise.all([
