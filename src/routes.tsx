@@ -1,27 +1,31 @@
-import { createBrowserRouter, Navigate } from 'react-router';
+import { createBrowserRouter } from 'react-router';
 import { DashboardLayout } from './components/DashboardLayout';
-import { DashboardViewModern } from './components/dashboard/DashboardViewModern';
-import { AutomationsView } from './components/AutomationsView';
-import { TemplatesView } from './components/TemplatesView';
-import { AnalyticsView } from './components/AnalyticsView';
-import { BillingView } from './components/BillingView';
-import { SettingsView } from './components/SettingsView';
-import { LandingPagePremium } from './components/LandingPagePremium';
-import { Login } from './components/Login';
-import { Signup } from './components/Signup';
 
+/**
+ * Route-based Code Splitting using React Router's `lazy` property.
+ * This optimizes the initial bundle size by loading view components only when navigated to.
+ */
 export const router = createBrowserRouter([
   {
     path: '/',
-    element: <LandingPagePremium />,
+    lazy: async () => {
+      const { LandingPagePremium } = await import('./components/LandingPagePremium');
+      return { Component: LandingPagePremium };
+    },
   },
   {
     path: '/login',
-    element: <Login />,
+    lazy: async () => {
+      const { Login } = await import('./components/Login');
+      return { Component: Login };
+    },
   },
   {
     path: '/signup',
-    element: <Signup />,
+    lazy: async () => {
+      const { Signup } = await import('./components/Signup');
+      return { Component: Signup };
+    },
   },
   {
     path: '/',
@@ -29,27 +33,45 @@ export const router = createBrowserRouter([
     children: [
       {
         path: 'dashboard',
-        element: <DashboardViewModern />,
+        lazy: async () => {
+          const { DashboardViewModern } = await import('./components/dashboard/DashboardViewModern');
+          return { Component: DashboardViewModern };
+        },
       },
       {
         path: 'automations',
-        element: <AutomationsView />,
+        lazy: async () => {
+          const { AutomationsView } = await import('./components/AutomationsView');
+          return { Component: AutomationsView };
+        },
       },
       {
         path: 'templates',
-        element: <TemplatesView />,
+        lazy: async () => {
+          const { TemplatesView } = await import('./components/TemplatesView');
+          return { Component: TemplatesView };
+        },
       },
       {
         path: 'analytics',
-        element: <AnalyticsView />,
+        lazy: async () => {
+          const { AnalyticsView } = await import('./components/AnalyticsView');
+          return { Component: AnalyticsView };
+        },
       },
       {
         path: 'billing',
-        element: <BillingView />,
+        lazy: async () => {
+          const { BillingView } = await import('./components/BillingView');
+          return { Component: BillingView };
+        },
       },
       {
         path: 'settings',
-        element: <SettingsView />,
+        lazy: async () => {
+          const { SettingsView } = await import('./components/SettingsView');
+          return { Component: SettingsView };
+        },
       },
     ],
   },
