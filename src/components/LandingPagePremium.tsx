@@ -63,10 +63,10 @@ export function LandingPagePremium() {
   const howItWorksRef = useRef(null);
   const pricingRef = useRef(null);
   
-  const _isHeroInView = useInView(heroRef, { once: true, margin: "-100px" });
-  const _isFeaturesInView = useInView(featuresRef, { once: true, margin: "-100px" });
-  const _isHowItWorksInView = useInView(howItWorksRef, { once: true, margin: "-100px" });
-  const _isPricingInView = useInView(pricingRef, { once: true, margin: "-100px" });
+  const isHeroInView = useInView(heroRef, { once: true, margin: "-100px" });
+  const isFeaturesInView = useInView(featuresRef, { once: true, margin: "-100px" });
+  const isHowItWorksInView = useInView(howItWorksRef, { once: true, margin: "-100px" });
+  const isPricingInView = useInView(pricingRef, { once: true, margin: "-100px" });
 
   // Fetch pricing from backend
   useEffect(() => {
