@@ -122,18 +122,25 @@ const DEFAULT_CONFIG: IntegrationConfig = {
 // GET /api/integrations/status
 app.get("/make-server-c8eef56a/api/integrations/status", async (c) => {
   try {
-    // Fetch detailed configurations
-    let shopifyConfig = await kv.get("config:shopify");
-    let whatsappConfig = await kv.get("config:whatsapp");
+    // PERFORMANCE: Fetch configurations in parallel to reduce latency
+    let [shopifyConfig, whatsappConfig] = await Promise.all([
+      kv.get("config:shopify"),
+      kv.get("config:whatsapp")
+    ]);
 
     // Initialize if missing
+    const initialSets = [];
     if (!shopifyConfig) {
       shopifyConfig = { ...DEFAULT_CONFIG };
-      await kv.set("config:shopify", shopifyConfig);
+      initialSets.push(kv.set("config:shopify", shopifyConfig));
     }
     if (!whatsappConfig) {
       whatsappConfig = { ...DEFAULT_CONFIG };
-      await kv.set("config:whatsapp", whatsappConfig);
+      initialSets.push(kv.set("config:whatsapp", whatsappConfig));
+    }
+
+    if (initialSets.length > 0) {
+      await Promise.all(initialSets);
     }
     
     // Derive simple status for frontend compatibility
@@ -157,26 +164,37 @@ app.post("/make-server-c8eef56a/api/integrations/status", async (c) => {
   try {
     const body = await c.req.json();
     
+    // PERFORMANCE: Fetch both configs in parallel instead of sequentially
+    let [shopifyConfig, whatsappConfig] = await Promise.all([
+      kv.get("config:shopify"),
+      kv.get("config:whatsapp")
+    ]);
+
+    const updates = [];
+    const now = new Date().toISOString();
+
     // Update Shopify Config
     if (body.shopify_connected !== undefined) {
-      const config: IntegrationConfig = (await kv.get("config:shopify")) || { ...DEFAULT_CONFIG };
-      config.connection_status = body.shopify_connected ? 'connected' : 'disconnected';
-      config.connected_at = body.shopify_connected ? new Date().toISOString() : null;
-      await kv.set("config:shopify", config);
+      shopifyConfig = shopifyConfig || { ...DEFAULT_CONFIG };
+      shopifyConfig.connection_status = body.shopify_connected ? 'connected' : 'disconnected';
+      shopifyConfig.connected_at = body.shopify_connected ? now : null;
+      updates.push(kv.set("config:shopify", shopifyConfig));
     }
 
     // Update WhatsApp Config
     if (body.whatsapp_connected !== undefined) {
-      const config: IntegrationConfig = (await kv.get("config:whatsapp")) || { ...DEFAULT_CONFIG };
-      config.connection_status = body.whatsapp_connected ? 'connected' : 'disconnected';
-      config.connected_at = body.whatsapp_connected ? new Date().toISOString() : null;
-      await kv.set("config:whatsapp", config);
+      whatsappConfig = whatsappConfig || { ...DEFAULT_CONFIG };
+      whatsappConfig.connection_status = body.whatsapp_connected ? 'connected' : 'disconnected';
+      whatsappConfig.connected_at = body.whatsapp_connected ? now : null;
+      updates.push(kv.set("config:whatsapp", whatsappConfig));
     }
     
-    // Return updated status
-    const shopifyConfig = await kv.get("config:shopify");
-    const whatsappConfig = await kv.get("config:whatsapp");
+    // PERFORMANCE: Persist updates in parallel
+    if (updates.length > 0) {
+      await Promise.all(updates);
+    }
     
+    // PERFORMANCE: Return updated state directly from memory instead of re-fetching from KV
     return c.json({
       shopify_connected: shopifyConfig?.connection_status === 'connected',
       whatsapp_connected: whatsappConfig?.connection_status === 'connected',
@@ -809,7 +827,16 @@ app.post("/make-server-c8eef56a/api/webhooks/whatsapp", async (c) => {
 // GET /api/dashboard/metrics
 app.get("/make-server-c8eef56a/api/dashboard/metrics", async (c) => {
   try {
-    const shop = c.req.query("shop") || "global"; // Default to "global" if no shop provided
+    const shop = c.req.query("shop");
+    if (!shop) {
+      return c.json({ error: "Missing shop parameter" }, 400);
+    }
+
+    // SECURITY: Verify merchant exists to prevent unauthorized data access
+    const merchant = await kv.get(`merchant:${shop}`);
+    if (!merchant && shop !== "global") {
+      return c.json({ error: "Unauthorized: Merchant not found" }, 401);
+    }
 
     // 1. Fetch all dependencies in parallel to minimize round-trip latency
     const [shopifyConfig, whatsappConfig, templates, billingConfig] = await Promise.all([

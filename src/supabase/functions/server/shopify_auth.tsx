@@ -1,6 +1,7 @@
 import { Hono } from "npm:hono";
 import { setCookie, getCookie } from "npm:hono/cookie";
 import * as kv from "./kv_store.tsx";
+import { encrypt } from "./crypto.ts";
 
 const app = new Hono();
 
@@ -117,9 +118,12 @@ app.get("/callback", async (c) => {
     shopifyConfig.shop_domain = shop; // Metadata
 
     // 2. Securely Store Credentials (keyed by shop)
+    // Encrypt the access token before storing it at rest
+    const encryptedToken = await encrypt(accessToken);
+
     const merchantRecord = {
       shop: shop,
-      access_token: accessToken, // In production, encrypt this!
+      access_token: encryptedToken,
       scopes: tokenData.scope,
       plan: "free",
       shopify_connected: true,

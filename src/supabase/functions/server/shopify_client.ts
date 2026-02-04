@@ -1,10 +1,16 @@
 import * as kv from "./kv_store.tsx";
+import { decrypt } from "./crypto.ts";
 
 /**
  * Retrieve merchant credentials from KV
  */
 export async function getMerchantCredentials(shop: string) {
-  return await kv.get(`merchant:${shop}`);
+  const merchant = await kv.get(`merchant:${shop}`);
+  if (merchant && merchant.access_token) {
+    // Decrypt the token if it was stored encrypted
+    merchant.access_token = await decrypt(merchant.access_token);
+  }
+  return merchant;
 }
 
 /**
@@ -73,27 +79,37 @@ export async function checkOrderExists(
 
 /**
  * Verify HMAC for Webhooks (Body-based)
+ * Uses constant-time comparison to prevent timing attacks.
  */
 export async function verifyWebhookHmac(rawBody: string, hmacHeader: string, secret: string): Promise<boolean> {
   if (!rawBody || !hmacHeader || !secret) return false;
 
-  const encoder = new TextEncoder();
-  const keyData = encoder.encode(secret);
-  const msgData = encoder.encode(rawBody);
+  try {
+    const encoder = new TextEncoder();
+    const keyData = encoder.encode(secret);
+    const msgData = encoder.encode(rawBody);
 
-  const cryptoKey = await crypto.subtle.importKey(
-    "raw",
-    keyData,
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"]
-  );
+    const cryptoKey = await crypto.subtle.importKey(
+      "raw",
+      keyData,
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["verify"]
+    );
 
-  const signature = await crypto.subtle.sign("HMAC", cryptoKey, msgData);
-  const hashArray = Array.from(new Uint8Array(signature));
-  const hashBase64 = btoa(String.fromCharCode(...hashArray));
+    // Shopify webhooks use base64 for the HMAC header
+    const signatureBytes = Uint8Array.from(atob(hmacHeader), c => c.charCodeAt(0));
 
-  return hashBase64 === hmacHeader;
+    return await crypto.subtle.verify(
+      "HMAC",
+      cryptoKey,
+      signatureBytes,
+      msgData
+    );
+  } catch (error) {
+    console.error("[ShopifyClient] HMAC verification error:", error);
+    return false;
+  }
 }
 
 /**

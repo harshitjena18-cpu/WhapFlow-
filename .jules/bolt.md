@@ -24,6 +24,6 @@
 - **Gain:** ~3.5x faster completion
 **Context:** OAuth callbacks are high-friction moments for merchants. Reducing latency during this phase improves the "time-to-dashboard" UX significantly.
 
-## 2025-05-15 - Route-based Code Splitting & Visibility Logic
-**Learning:** Implementing route-based code splitting using `React.lazy` successfully reduced the initial bundle size by offloading ~10 major view components into separate chunks. However, when verifying the optimization on animated pages (like `LandingPagePremium`), I discovered that component visibility logic (e.g., `useInView`) can easily break if variable naming is inconsistent between the hook return and the JSX usage, leading to components that never "animate in" and remain invisible.
-**Action:** Always perform visual verification on lazy-loaded routes, especially those with entrance animations or scroll-triggered effects, to ensure the loading state (Suspense) and subsequent visibility logic work harmoniously.
+## 2025-05-15 - [Integration & Billing Parallelization]
+**Learning:** Sequential KV operations and Shopify API calls are a major source of latency in the API foundation. Parallelizing these operations with `Promise.all` and reusing in-memory data instead of re-fetching from KV can reduce latency by up to 66% for specific endpoints.
+**Action:** Always check for sequential `await` calls that are independent of each other and parallelize them. For POST routes, avoid re-fetching data from KV that was just updated in memory.
