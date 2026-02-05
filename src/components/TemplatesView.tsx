@@ -357,6 +357,7 @@ export function TemplatesView() {
   const usagePercentage = aiUsage ? (aiUsage.ai_generations_used / aiUsage.ai_generations_limit) * 100 : 0;
 
   return (
+    <TooltipProvider delayDuration={400}>
     <div className="space-y-8 max-w-6xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between pb-4 border-b border-gray-100">
@@ -476,15 +477,20 @@ export function TemplatesView() {
                        <Button variant="outline" size="sm" onClick={() => handleOpenEdit(selectedTemplate)}>
                          Edit
                        </Button>
-                       <Button
-                         variant="ghost"
-                         size="sm"
-                         className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                         onClick={() => setTemplateToDelete(selectedTemplate.id)}
-                         aria-label="Delete template"
-                       >
-                         <Trash2 className="w-4 h-4" />
-                       </Button>
+                       <Tooltip>
+                         <TooltipTrigger asChild>
+                           <Button
+                             variant="ghost"
+                             size="sm"
+                             className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                             onClick={() => setTemplateToDelete(selectedTemplate.id)}
+                             aria-label="Delete template"
+                           >
+                             <Trash2 className="w-4 h-4" />
+                           </Button>
+                         </TooltipTrigger>
+                         <TooltipContent><p>Delete template</p></TooltipContent>
+                       </Tooltip>
                     </div>
                   </div>
 
@@ -501,9 +507,28 @@ export function TemplatesView() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                           <span className="block text-xs font-medium text-gray-500 uppercase">Template Name (ID)</span>
-                          <p className="mt-1 text-sm font-mono text-gray-900 bg-white px-2 py-1 rounded border border-gray-200 inline-block">
-                            {selectedTemplate.template_name}
-                          </p>
+                          <div className="mt-1 flex items-center gap-2">
+                            <p className="text-sm font-mono text-gray-900 bg-white px-2 py-1 rounded border border-gray-200 inline-block">
+                              {selectedTemplate.template_name}
+                            </p>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-gray-400 hover:text-[#25D366] transition-colors"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(selectedTemplate.template_name);
+                                    toast.success("Template ID copied");
+                                  }}
+                                  aria-label="Copy template ID"
+                                >
+                                  <_Copy className="w-3.5 h-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent><p>Copy ID</p></TooltipContent>
+                            </Tooltip>
+                          </div>
                           <p className="mt-1 text-xs text-gray-400">Must match WhatsApp Manager</p>
                         </div>
                         
@@ -544,7 +569,28 @@ export function TemplatesView() {
                     {selectedTemplate.content && (
                       <div className="bg-white rounded-lg border border-gray-200 p-5">
                         <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center justify-between">
-                          <span>Message Content</span>
+                          <div className="flex items-center gap-2">
+                            <span>Message Content</span>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-gray-400 hover:text-[#25D366] transition-colors"
+                                  onClick={() => {
+                                    if (selectedTemplate.content) {
+                                      navigator.clipboard.writeText(selectedTemplate.content);
+                                      toast.success("Content copied");
+                                    }
+                                  }}
+                                  aria-label="Copy message content"
+                                >
+                                  <_Copy className="w-3 h-3" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent><p>Copy content</p></TooltipContent>
+                            </Tooltip>
+                          </div>
                           {selectedTemplate.generated_by_ai && (
                             <span className="text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full flex items-center gap-1">
                               <Sparkles className="w-3 h-3" /> AI Generated ({selectedTemplate.ai_tone})
@@ -648,7 +694,6 @@ export function TemplatesView() {
                   />
                 </div>
 
-                <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <div className="w-full">
@@ -677,7 +722,6 @@ export function TemplatesView() {
                       </TooltipContent>
                     )}
                   </Tooltip>
-                </TooltipProvider>
 
                 <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded border border-gray-100 flex gap-2">
                   <Info className="w-4 h-4 text-blue-400 flex-shrink-0" />
@@ -860,5 +904,6 @@ export function TemplatesView() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+    </TooltipProvider>
   );
 }
