@@ -17,3 +17,8 @@
 **Vulnerability:** Shopify webhook HMAC verification was using direct string comparison (`===`) on Base64-encoded hashes.
 **Learning:** Manual string comparison of cryptographic hashes is susceptible to timing attacks, where an attacker can deduce the correct hash by measuring small differences in response times.
 **Prevention:** Always use constant-time comparison for cryptographic signatures. In web environments, prefer `crypto.subtle.verify` which is designed to be timing-attack resistant.
+
+## 2026-02-06 - Authentication before State (Deduplication)
+**Vulnerability:** Webhook deduplication was initially implemented by checking and setting the "processed" state in the KV store *before* verifying the HMAC signature of the request.
+**Learning:** Performing stateful operations or consuming resources (like database hits or KV storage) before authentication allows unauthenticated attackers to potentially cause Denial of Service (DoS) or resource exhaustion by sending fake requests with random identifiers.
+**Prevention:** Always perform authentication and integrity checks (HMAC verification, JWT validation, etc.) before any stateful logic or deduplication checks. Authentication must be the first gate in any sensitive handler.
