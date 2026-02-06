@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
-import { MessageCircle, Plus, Trash2, Save as _Save, Check as _Check, Loader2, Sparkles, Copy as _Copy, AlertCircle, Bot, Zap, Info } from 'lucide-react';
-import { toast } from "sonner@2.0.3";
+import { MessageCircle, Plus, Trash2, Save as _Save, Check as _Check, Loader2, Sparkles, Copy, AlertCircle, Bot, Zap, Info } from 'lucide-react';
+import { toast } from "sonner";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -13,7 +13,6 @@ import { Progress } from "./ui/progress";
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from "./ui/tooltip";
 import {
@@ -501,9 +500,28 @@ export function TemplatesView() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                           <span className="block text-xs font-medium text-gray-500 uppercase">Template Name (ID)</span>
-                          <p className="mt-1 text-sm font-mono text-gray-900 bg-white px-2 py-1 rounded border border-gray-200 inline-block">
-                            {selectedTemplate.template_name}
-                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <p className="text-sm font-mono text-gray-900 bg-white px-2 py-1 rounded border border-gray-200 inline-block">
+                              {selectedTemplate.template_name}
+                            </p>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-gray-400 hover:text-[#25D366] transition-colors"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(selectedTemplate.template_name);
+                                    toast.success("Template ID copied to clipboard");
+                                  }}
+                                  aria-label="Copy template ID"
+                                >
+                                  <Copy className="w-3.5 h-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Copy ID</TooltipContent>
+                            </Tooltip>
+                          </div>
                           <p className="mt-1 text-xs text-gray-400">Must match WhatsApp Manager</p>
                         </div>
                         
@@ -545,11 +563,30 @@ export function TemplatesView() {
                       <div className="bg-white rounded-lg border border-gray-200 p-5">
                         <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center justify-between">
                           <span>Message Content</span>
-                          {selectedTemplate.generated_by_ai && (
-                            <span className="text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full flex items-center gap-1">
-                              <Sparkles className="w-3 h-3" /> AI Generated ({selectedTemplate.ai_tone})
-                            </span>
-                          )}
+                          <div className="flex items-center gap-2">
+                            {selectedTemplate.generated_by_ai && (
+                              <span className="text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                <Sparkles className="w-3 h-3" /> AI Generated ({selectedTemplate.ai_tone})
+                              </span>
+                            )}
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-gray-400 hover:text-[#25D366] transition-colors"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(selectedTemplate.content || "");
+                                    toast.success("Message content copied to clipboard");
+                                  }}
+                                  aria-label="Copy message content"
+                                >
+                                  <Copy className="w-3.5 h-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Copy Content</TooltipContent>
+                            </Tooltip>
+                          </div>
                         </h3>
                         <div className="bg-gray-50 p-4 rounded-md text-sm text-gray-800 whitespace-pre-wrap font-sans border border-gray-100">
                           {selectedTemplate.content}
@@ -648,36 +685,34 @@ export function TemplatesView() {
                   />
                 </div>
 
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="w-full">
-                        <Button 
-                          onClick={handleGenerateAI} 
-                          disabled={aiGenerating || isLimitReached}
-                          className="w-full bg-purple-600 hover:bg-purple-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {aiGenerating ? (
-                            <>
-                              <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                              Generating...
-                            </>
-                          ) : (
-                            <>
-                              <Bot className="w-4 h-4 mr-2" />
-                              {isLimitReached ? "Limit Reached" : "Generate Drafts"}
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    </TooltipTrigger>
-                    {isLimitReached && (
-                      <TooltipContent>
-                        <p>You have used all your free AI credits for this month.</p>
-                      </TooltipContent>
-                    )}
-                  </Tooltip>
-                </TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="w-full">
+                      <Button
+                        onClick={handleGenerateAI}
+                        disabled={aiGenerating || isLimitReached}
+                        className="w-full bg-purple-600 hover:bg-purple-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {aiGenerating ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                            Generating...
+                          </>
+                        ) : (
+                          <>
+                            <Bot className="w-4 h-4 mr-2" />
+                            {isLimitReached ? "Limit Reached" : "Generate Drafts"}
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </TooltipTrigger>
+                  {isLimitReached && (
+                    <TooltipContent>
+                      <p>You have used all your free AI credits for this month.</p>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
 
                 <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded border border-gray-100 flex gap-2">
                   <Info className="w-4 h-4 text-blue-400 flex-shrink-0" />
