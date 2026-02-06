@@ -28,6 +28,6 @@
 **Learning:** Sequential KV operations and Shopify API calls are a major source of latency in the API foundation. Parallelizing these operations with `Promise.all` and reusing in-memory data instead of re-fetching from KV can reduce latency by up to 66% for specific endpoints.
 **Action:** Always check for sequential `await` calls that are independent of each other and parallelize them. For POST routes, avoid re-fetching data from KV that was just updated in memory.
 
-## 2025-05-16 - [Crypto Key Caching]
-**Learning:** Deriving a `CryptoKey` from a secret using `subtle.digest` and `subtle.importKey` is a computationally expensive operation that adds significant latency (2-5ms) to every encryption/decryption call. In a serverless environment, this can be optimized by caching the derived key at the module level.
-**Action:** Always cache derived cryptographic keys when the secret remains constant to avoid redundant expensive computations.
+## 2026-02-05 - [Crypto Key Caching]
+**Learning:** In Edge Functions, cryptographic operations like `crypto.subtle.importKey` and `crypto.subtle.digest` have significant overhead (~2-5ms). Caching the derived `CryptoKey` in a module-level variable (scoped to the isolate) eliminates this overhead for subsequent calls.
+**Action:** Always cache derived keys or expensive static resources at the module level to benefit from isolate reuse in serverless environments. Ensure the cache is invalidated if the underlying secret changes (important for test suites).

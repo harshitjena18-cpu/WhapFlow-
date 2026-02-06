@@ -61,9 +61,12 @@ app.get("/callback", async (c) => {
   const clientId = Deno.env.get("SHOPIFY_CLIENT_ID");
   const clientSecret = Deno.env.get("SHOPIFY_CLIENT_SECRET");
 
-  // 1. Basic Validation
+  // 1. Basic Validation & SSRF Protection
   if (!shop || !code || !state || !hmac) {
     return c.text("Error: Missing required parameters", 400);
+  }
+  if (!shop.endsWith(".myshopify.com")) {
+    return c.text("Error: Invalid shop domain", 400);
   }
 
   if (!clientId || !clientSecret) {
@@ -157,6 +160,7 @@ app.get("/callback", async (c) => {
  */
 async function verifyHmac(query: Record<string, string>, secret: string) {
   const { hmac, ...rest } = query;
+  if (!hmac) return false;
   
   // Sort keys alphabetically
   const keys = Object.keys(rest).sort();
@@ -171,16 +175,16 @@ async function verifyHmac(query: Record<string, string>, secret: string) {
     keyData,
     { name: "HMAC", hash: "SHA-256" },
     false,
-    ["sign"]
+    ["verify"]
   );
 
-  const signature = await crypto.subtle.sign("HMAC", cryptoKey, msgData);
-  
-  // Convert buffer to hex string
-  const hashArray = Array.from(new Uint8Array(signature));
-  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  // Convert hex HMAC to Uint8Array for constant-time verification
+  const hmacBytes = new Uint8Array(hmac.length / 2);
+  for (let i = 0; i < hmac.length; i += 2) {
+    hmacBytes[i / 2] = parseInt(hmac.substring(i, i + 2), 16);
+  }
 
-  return hashHex === hmac;
+  return await crypto.subtle.verify("HMAC", cryptoKey, hmacBytes, msgData);
 }
 
 /**

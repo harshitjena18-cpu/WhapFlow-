@@ -17,3 +17,8 @@
 **Vulnerability:** Shopify webhook HMAC verification was using direct string comparison (`===`) on Base64-encoded hashes.
 **Learning:** Manual string comparison of cryptographic hashes is susceptible to timing attacks, where an attacker can deduce the correct hash by measuring small differences in response times.
 **Prevention:** Always use constant-time comparison for cryptographic signatures. In web environments, prefer `crypto.subtle.verify` which is designed to be timing-attack resistant.
+
+## 2025-05-24 - OAuth Callback HMAC Timing Attack & SSRF Risk
+**Vulnerability:** The Shopify OAuth callback was using manual string comparison for hex-encoded HMACs and lacked domain validation for the `shop` parameter used in subsequent internal API calls.
+**Learning:** Cryptographic signatures in OAuth flows are just as sensitive to timing attacks as webhooks. Additionally, unvalidated tenant-provided domains can lead to SSRF or token leakage if used in server-side requests.
+**Prevention:** Enforce constant-time comparison for all signature checks. Strictly validate tenant identifiers (e.g., ensuring shop domains match expected patterns like `*.myshopify.com`) before using them in network requests.
