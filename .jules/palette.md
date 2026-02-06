@@ -5,3 +5,7 @@
 ## 2025-05-15 - [Global Search Accessibility and Shortcuts]
 **Learning:** Global search inputs often lack proper accessibility labels and quick-access shortcuts, which can hinder both screen-reader users and power users. Implementing a standard `Cmd/Ctrl + K` shortcut and a visible hint improves discoverability and speed of use.
 **Action:** Ensure all primary search inputs have an `id`, a corresponding `label` (even if `sr-only`), and a standardized keyboard shortcut listener. Use `<kbd>` elements to visually communicate shortcuts to users.
+
+## 2025-05-24 - [Clipboard Feedback and Actionable Tooltips]
+**Learning:** Copy-to-clipboard actions without visual feedback leave users uncertain. Using a temporary success state (e.g., swapping a "Copy" icon for a "Check" icon) provides immediate confirmation. Wrapping icon-only actions in tooltips ensures they are discoverable and accessible without cluttering the UI with text.
+**Action:** Always provide a visual "success" state for clipboard actions. Ensure all icon-only buttons have descriptive tooltips that explain the action on hover/focus.
