@@ -443,6 +443,7 @@ app.post("/make-server-c8eef56a/api/webhooks/shopify", async (c) => {
   try {
     const hmac = c.req.header('X-Shopify-Hmac-Sha256');
     const shop = c.req.header('X-Shopify-Shop-Domain');
+    const webhookId = c.req.header('X-Shopify-Webhook-Id');
     const rawBody = await c.req.text(); 
     
     // SECURITY: Verify HMAC
@@ -460,6 +461,17 @@ app.post("/make-server-c8eef56a/api/webhooks/shopify", async (c) => {
     if (!isValid) {
       console.error(`[Shopify Webhook] HMAC verification failed for ${shop}`);
       return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    // SECURITY: Deduplication (Prevent Replay Attacks)
+    // Only perform deduplication AFTER successful HMAC verification to prevent DoS via KV resource exhaustion
+    if (webhookId) {
+      const alreadyProcessed = await kv.get(`webhook_id:${webhookId}`);
+      if (alreadyProcessed) {
+        console.log(`[Shopify Webhook] Skipping duplicate webhook ${webhookId} for ${shop}`);
+        return c.json({ status: 'success', duplicate: true }, 200);
+      }
+      await kv.set(`webhook_id:${webhookId}`, { processed_at: new Date().toISOString() });
     }
 
     if (!shop) {
@@ -578,6 +590,7 @@ app.post("/make-server-c8eef56a/api/webhooks/app/uninstalled", async (c) => {
   try {
     const hmac = c.req.header('X-Shopify-Hmac-Sha256');
     const shop = c.req.header('X-Shopify-Shop-Domain');
+    const webhookId = c.req.header('X-Shopify-Webhook-Id');
     const rawBody = await c.req.text(); 
     
     console.log(`\n--- ⚠️ APP UNINSTALLED WEBHOOK RECEIVED [${shop}] ---`);
@@ -597,6 +610,17 @@ app.post("/make-server-c8eef56a/api/webhooks/app/uninstalled", async (c) => {
     if (!isValid) {
       console.error(`[Uninstall Webhook] HMAC verification failed for ${shop}`);
       return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    // SECURITY: Deduplication (Prevent Replay Attacks)
+    // Only perform deduplication AFTER successful HMAC verification to prevent DoS via KV resource exhaustion
+    if (webhookId) {
+      const alreadyProcessed = await kv.get(`webhook_id:${webhookId}`);
+      if (alreadyProcessed) {
+        console.log(`[Uninstall Webhook] Skipping duplicate webhook ${webhookId} for ${shop}`);
+        return c.json({ status: 'success', duplicate: true }, 200);
+      }
+      await kv.set(`webhook_id:${webhookId}`, { processed_at: new Date().toISOString() });
     }
 
     if (!shop) {

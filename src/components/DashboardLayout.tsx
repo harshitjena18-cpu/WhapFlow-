@@ -1,7 +1,6 @@
 import { Outlet } from 'react-router';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
-import { Toaster } from './ui/sonner';
 import { TooltipProvider } from './ui/tooltip';
 
 export function DashboardLayout() {
@@ -17,7 +16,6 @@ export function DashboardLayout() {
             <Outlet />
           </div>
         </main>
-        <Toaster />
       </div>
     </TooltipProvider>
   );
