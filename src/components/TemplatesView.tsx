@@ -13,7 +13,6 @@ import { Progress } from "./ui/progress";
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from "./ui/tooltip";
 import {
@@ -87,6 +86,20 @@ export function TemplatesView() {
 
   // Integration State
   const [integrations, setIntegrations] = useState<{ shopify_connected: boolean; whatsapp_connected: boolean } | null>(null);
+
+  // Copy State
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+      toast.error('Failed to copy to clipboard');
+    }
+  };
 
   // Validation State
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
@@ -357,8 +370,7 @@ export function TemplatesView() {
   const usagePercentage = aiUsage ? (aiUsage.ai_generations_used / aiUsage.ai_generations_limit) * 100 : 0;
 
   return (
-    <TooltipProvider delayDuration={400}>
-    <div className="space-y-8 max-w-6xl mx-auto">
+      <div className="space-y-8 max-w-6xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between pb-4 border-b border-gray-100">
         <div>
@@ -489,7 +501,9 @@ export function TemplatesView() {
                              <Trash2 className="w-4 h-4" />
                            </Button>
                          </TooltipTrigger>
-                         <TooltipContent><p>Delete template</p></TooltipContent>
+                         <TooltipContent>
+                           <p>Delete template</p>
+                         </TooltipContent>
                        </Tooltip>
                     </div>
                   </div>
@@ -516,17 +530,16 @@ export function TemplatesView() {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-8 w-8 text-gray-400 hover:text-[#25D366] transition-colors"
-                                  onClick={() => {
-                                    navigator.clipboard.writeText(selectedTemplate.template_name);
-                                    toast.success("Template ID copied");
-                                  }}
-                                  aria-label="Copy template ID"
+                                  className="h-8 w-8 text-gray-400 hover:text-gray-600"
+                                  onClick={() => handleCopy(selectedTemplate.template_name)}
+                                  aria-label="Copy template name"
                                 >
-                                  <_Copy className="w-3.5 h-3.5" />
+                                  {copied ? <_Check className="w-4 h-4 text-green-500" /> : <_Copy className="w-4 h-4" />}
                                 </Button>
                               </TooltipTrigger>
-                              <TooltipContent><p>Copy ID</p></TooltipContent>
+                              <TooltipContent>
+                                <p>{copied ? 'Copied!' : 'Copy to clipboard'}</p>
+                              </TooltipContent>
                             </Tooltip>
                           </div>
                           <p className="mt-1 text-xs text-gray-400">Must match WhatsApp Manager</p>
@@ -694,34 +707,34 @@ export function TemplatesView() {
                   />
                 </div>
 
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="w-full">
-                        <Button 
-                          onClick={handleGenerateAI} 
-                          disabled={aiGenerating || isLimitReached}
-                          className="w-full bg-purple-600 hover:bg-purple-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {aiGenerating ? (
-                            <>
-                              <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                              Generating...
-                            </>
-                          ) : (
-                            <>
-                              <Bot className="w-4 h-4 mr-2" />
-                              {isLimitReached ? "Limit Reached" : "Generate Drafts"}
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    </TooltipTrigger>
-                    {isLimitReached && (
-                      <TooltipContent>
-                        <p>You have used all your free AI credits for this month.</p>
-                      </TooltipContent>
-                    )}
-                  </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="w-full">
+                      <Button
+                        onClick={handleGenerateAI}
+                        disabled={aiGenerating || isLimitReached}
+                        className="w-full bg-purple-600 hover:bg-purple-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {aiGenerating ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                            Generating...
+                          </>
+                        ) : (
+                          <>
+                            <Bot className="w-4 h-4 mr-2" />
+                            {isLimitReached ? "Limit Reached" : "Generate Drafts"}
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </TooltipTrigger>
+                  {isLimitReached && (
+                    <TooltipContent>
+                      <p>You have used all your free AI credits for this month.</p>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
 
                 <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded border border-gray-100 flex gap-2">
                   <Info className="w-4 h-4 text-blue-400 flex-shrink-0" />
