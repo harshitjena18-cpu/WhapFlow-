@@ -582,7 +582,28 @@ export function TemplatesView() {
                     {selectedTemplate.content && (
                       <div className="bg-white rounded-lg border border-gray-200 p-5">
                         <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center justify-between">
-                          <span>Message Content</span>
+                          <div className="flex items-center gap-2">
+                            <span>Message Content</span>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-gray-400 hover:text-[#25D366] transition-colors"
+                                  onClick={() => {
+                                    if (selectedTemplate.content) {
+                                      navigator.clipboard.writeText(selectedTemplate.content);
+                                      toast.success("Content copied");
+                                    }
+                                  }}
+                                  aria-label="Copy message content"
+                                >
+                                  <_Copy className="w-3 h-3" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent><p>Copy content</p></TooltipContent>
+                            </Tooltip>
+                          </div>
                           {selectedTemplate.generated_by_ai && (
                             <span className="text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full flex items-center gap-1">
                               <Sparkles className="w-3 h-3" /> AI Generated ({selectedTemplate.ai_tone})
@@ -896,5 +917,6 @@ export function TemplatesView() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+    </TooltipProvider>
   );
 }
