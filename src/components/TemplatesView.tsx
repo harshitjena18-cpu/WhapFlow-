@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
-import { MessageCircle, Plus, Trash2, Save as _Save, Check as _Check, Loader2, Sparkles, Copy, AlertCircle, Bot, Zap, Info } from 'lucide-react';
+import { MessageCircle, Plus, Trash2, Check, Loader2, Sparkles, Copy, AlertCircle, Bot, Zap, Info } from 'lucide-react';
 import { toast } from "sonner";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -90,13 +90,16 @@ export function TemplatesView() {
   const [integrations, setIntegrations] = useState<{ shopify_connected: boolean; whatsapp_connected: boolean } | null>(null);
 
   // Copy State
-  const [copied, setCopied] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  const handleCopy = async (text: string) => {
+  const handleCopy = async (text: string, id: string) => {
     try {
       await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setCopiedId(id);
+      toast.success("Copied to clipboard");
+      setTimeout(() => {
+        setCopiedId(prev => prev === id ? null : prev);
+      }, 2000);
     } catch (err) {
       console.error('Failed to copy text: ', err);
       toast.error('Failed to copy to clipboard');
@@ -534,14 +537,14 @@ export function TemplatesView() {
                                   variant="ghost"
                                   size="icon"
                                   className="h-8 w-8 text-gray-400 hover:text-gray-600"
-                                  onClick={() => handleCopy(selectedTemplate.template_name)}
+                                  onClick={() => handleCopy(selectedTemplate.template_name, 'template_name')}
                                   aria-label="Copy template name"
                                 >
-                                  {copied ? <_Check className="w-4 h-4 text-green-500" /> : <_Copy className="w-4 h-4" />}
+                                  {copiedId === 'template_name' ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p>{copied ? 'Copied!' : 'Copy to clipboard'}</p>
+                                <p>{copiedId === 'template_name' ? 'Copied!' : 'Copy to clipboard'}</p>
                               </TooltipContent>
                             </Tooltip>
                           </div>
@@ -595,16 +598,17 @@ export function TemplatesView() {
                                   className="h-7 w-7 text-gray-400 hover:text-[#25D366] transition-colors"
                                   onClick={() => {
                                     if (selectedTemplate.content) {
-                                      navigator.clipboard.writeText(selectedTemplate.content);
-                                      toast.success("Content copied");
+                                      handleCopy(selectedTemplate.content, 'template_content');
                                     }
                                   }}
                                   aria-label="Copy message content"
                                 >
-                                  <_Copy className="w-3 h-3" />
+                                  {copiedId === 'template_content' ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
                                 </Button>
                               </TooltipTrigger>
-                              <TooltipContent><p>Copy content</p></TooltipContent>
+                              <TooltipContent>
+                                <p>{copiedId === 'template_content' ? 'Copied!' : 'Copy content'}</p>
+                              </TooltipContent>
                             </Tooltip>
                           </div>
                           {selectedTemplate.generated_by_ai && (
@@ -757,13 +761,30 @@ export function TemplatesView() {
                            <span className="bg-purple-100 text-purple-700 text-xs font-semibold px-2 py-0.5 rounded">Option {idx + 1}</span>
                            <span className="text-xs text-gray-400">{text.length} chars</span>
                          </div>
-                         <Button 
-                           size="sm" 
-                           onClick={() => handleOpenCreate(text)}
-                           className="bg-gray-900 text-white hover:bg-gray-800"
-                         >
-                           Use this Template
-                         </Button>
+                         <div className="flex items-center gap-2">
+                           <Tooltip>
+                             <TooltipTrigger asChild>
+                               <Button
+                                 variant="outline"
+                                 size="sm"
+                                 onClick={() => handleCopy(text, `ai-suggestion-${idx}`)}
+                                 aria-label="Copy suggestion"
+                               >
+                                 {copiedId === `ai-suggestion-${idx}` ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                               </Button>
+                             </TooltipTrigger>
+                             <TooltipContent>
+                               <p>{copiedId === `ai-suggestion-${idx}` ? 'Copied!' : 'Copy to clipboard'}</p>
+                             </TooltipContent>
+                           </Tooltip>
+                           <Button
+                             size="sm"
+                             onClick={() => handleOpenCreate(text)}
+                             className="bg-gray-900 text-white hover:bg-gray-800"
+                           >
+                             Use this Template
+                           </Button>
+                         </div>
                        </div>
                        <div className="bg-gray-50 p-4 rounded-lg text-gray-800 text-sm whitespace-pre-wrap font-sans border border-gray-100">
                          {text}

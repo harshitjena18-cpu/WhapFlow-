@@ -9,3 +9,7 @@
 ## 2025-05-24 - [Clipboard Feedback and Actionable Tooltips]
 **Learning:** Copy-to-clipboard actions without visual feedback leave users uncertain. Using a temporary success state (e.g., swapping a "Copy" icon for a "Check" icon) provides immediate confirmation. Wrapping icon-only actions in tooltips ensures they are discoverable and accessible without cluttering the UI with text.
 **Action:** Always provide a visual "success" state for clipboard actions. Ensure all icon-only buttons have descriptive tooltips that explain the action on hover/focus.
+
+## 2025-05-24 - [Granular Clipboard State Management]
+**Learning:** Using a single boolean state for multiple copy-to-clipboard buttons on a single page leads to a confusing UI where all buttons show a "copied" state simultaneously. Transitioning to an ID-based state (`copiedId`) allows for granular, independent feedback for each action, providing a much clearer and more intuitive experience.
+**Action:** When a page contains multiple independent clipboard triggers (e.g., in a list or table), use an ID-based state tracker instead of a boolean to ensure feedback is scoped to the specific element the user interacted with.
