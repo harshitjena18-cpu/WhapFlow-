@@ -57,6 +57,8 @@ interface AIUsage {
 const SERVER_URL = `https://${projectId}.supabase.co/functions/v1/make-server-c8eef56a`;
 
 export function TemplatesView() {
+  // SECURITY: Extract shop from URL to support multi-tenancy in API calls
+  const shop = new URLSearchParams(window.location.search).get('shop') || 'global';
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
@@ -109,7 +111,7 @@ export function TemplatesView() {
   const fetchTemplates = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${SERVER_URL}/api/templates`, {
+      const res = await fetch(`${SERVER_URL}/api/templates?shop=${shop}`, {
         headers: { 'Authorization': `Bearer ${publicAnonKey}` }
       });
       if (!res.ok) throw new Error('Failed to fetch templates');
@@ -130,7 +132,7 @@ export function TemplatesView() {
 
   const fetchAIUsage = async () => {
     try {
-      const res = await fetch(`${SERVER_URL}/api/ai/usage`, {
+      const res = await fetch(`${SERVER_URL}/api/ai/usage?shop=${shop}`, {
         headers: { 'Authorization': `Bearer ${publicAnonKey}` }
       });
       if (res.ok) {
@@ -144,7 +146,7 @@ export function TemplatesView() {
 
   const fetchIntegrations = async () => {
     try {
-      const res = await fetch(`${SERVER_URL}/api/integrations/status`, {
+      const res = await fetch(`${SERVER_URL}/api/integrations/status?shop=${shop}`, {
         headers: { 'Authorization': `Bearer ${publicAnonKey}` }
       });
       if (res.ok) {
@@ -255,7 +257,7 @@ export function TemplatesView() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${publicAnonKey}`
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({ ...formData, shop })
       });
       
       if (!res.ok) {
@@ -280,7 +282,7 @@ export function TemplatesView() {
 
   const handleDelete = async (id: string) => {
     try {
-      const res = await fetch(`${SERVER_URL}/api/templates/${id}`, {
+      const res = await fetch(`${SERVER_URL}/api/templates/${id}?shop=${shop}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${publicAnonKey}` }
       });
@@ -312,7 +314,7 @@ export function TemplatesView() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${publicAnonKey}`
         },
-        body: JSON.stringify({ enabled: checked })
+        body: JSON.stringify({ enabled: checked, shop })
       });
       
       if (!res.ok) throw new Error('Failed to update status');
@@ -341,7 +343,8 @@ export function TemplatesView() {
         body: JSON.stringify({
           tone: aiTone,
           brand_name: aiBrand,
-          discount: aiDiscount
+          discount: aiDiscount,
+          shop
         })
       });
 
@@ -382,7 +385,7 @@ export function TemplatesView() {
         <div className="flex gap-2">
             {/* Demo Button to Simulate Connection */}
             <Button variant="outline" size="sm" onClick={async () => {
-                const newStatus = { shopify_connected: true, whatsapp_connected: true };
+                const newStatus = { shopify_connected: true, whatsapp_connected: true, shop };
                 await fetch(`${SERVER_URL}/api/integrations/status`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${publicAnonKey}` },
@@ -917,6 +920,5 @@ export function TemplatesView() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
-    </TooltipProvider>
   );
 }
