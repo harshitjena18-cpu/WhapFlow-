@@ -68,13 +68,21 @@ export const mset = async (keys: string[], values: any[]): Promise<void> => {
 };
 
 // Gets multiple key-value pairs from the database.
+// Preserves the order of input keys and returns null for missing keys.
 export const mget = async (keys: string[]): Promise<any[]> => {
+  if (keys.length === 0) return [];
   const supabase = client()
-  const { data, error } = await supabase.from("kv_store_c8eef56a").select("value").in("key", keys);
+  // PERFORMANCE: Select both key and value to allow mapping results back to original order
+  const { data, error } = await supabase.from("kv_store_c8eef56a").select("key, value").in("key", keys);
   if (error) {
     throw new Error(error.message);
   }
-  return data?.map((d) => d.value) ?? [];
+
+  // Create a map for O(1) lookup of results by key
+  const resultsMap = new Map(data?.map((item) => [item.key, item.value]));
+
+  // Return results in the exact order of requested keys
+  return keys.map((key) => resultsMap.get(key) ?? null);
 };
 
 // Scan Queue (Efficient Range Query)

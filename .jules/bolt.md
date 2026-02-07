@@ -31,3 +31,7 @@
 ## 2026-02-05 - [Crypto Key Caching]
 **Learning:** In Edge Functions, cryptographic operations like `crypto.subtle.importKey` and `crypto.subtle.digest` have significant overhead (~2-5ms). Caching the derived `CryptoKey` in a module-level variable (scoped to the isolate) eliminates this overhead for subsequent calls.
 **Action:** Always cache derived keys or expensive static resources at the module level to benefit from isolate reuse in serverless environments. Ensure the cache is invalidated if the underlying secret changes (important for test suites).
+
+## 2025-05-15 - [KV Batching with mget/mset]
+**Learning:** The default `mget` implementation in `kv_store.tsx` was non-deterministic regarding result order and omitted missing keys. This prevented reliable destructuring of batch results.
+**Action:** Always ensure `mget` is "order-preserving" by mapping database results back to the input keys array and filling missing values with `null`. Use `mget` and `mset` to reduce O(N) database round-trips to O(1) in webhook handlers and configuration routes.

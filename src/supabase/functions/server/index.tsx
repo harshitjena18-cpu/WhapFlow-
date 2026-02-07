@@ -55,16 +55,21 @@ app.route("/make-server-c8eef56a/api/billing", billingApp);
 // Helper: Ensure only one template is enabled
 async function disableOtherTemplates(exceptId: string) {
   const allTemplates = await kv.getByPrefix("template:");
-  const updates = [];
+  const updateKeys = [];
+  const updateValues = [];
   
   for (const t of allTemplates) {
     if (t.id !== exceptId && t.enabled) {
       t.enabled = false;
-      updates.push(kv.set(`template:${t.id}`, t));
+      updateKeys.push(`template:${t.id}`);
+      updateValues.push(t);
     }
   }
   
-  await Promise.all(updates);
+  if (updateKeys.length > 0) {
+    // PERFORMANCE: Batch update all templates in a single request
+    await kv.mset(updateKeys, updateValues);
+  }
 }
 
 // Helper: Validate Template Content
@@ -75,32 +80,58 @@ function validateTemplateContent(content: string): string | null {
   return null;
 }
 
-// Helper: Process WhatsApp Status Updates
+// Helper: Process WhatsApp Status Updates in Batch
 // deno-lint-ignore no-explicit-any
-async function processWhatsAppStatus(status: any) {
-  const wamid = status.id;
-  const newStatus = status.status; // sent, delivered, read
+async function processWhatsAppStatuses(statuses: any[]) {
+  if (statuses.length === 0) return;
 
-  console.log(`[WhatsApp Status] Message ${wamid} is ${newStatus}`);
+  const wamids = statuses.map(s => s.id);
+  const msgMapKeys = wamids.map(id => `msg_map:${id}`);
 
-  // Find the cart associated with this message
-  // We need a mapping: msg_map:{wamid} -> cartId
-  const cartId = await kv.get(`msg_map:${wamid}`);
+  // PERFORMANCE: Batch fetch all cart ID mappings in a single request
+  const cartIds = await kv.mget(msgMapKeys);
 
-  if (!cartId) {
-    console.log(`[WhatsApp Status] No cart found for message ${wamid}`);
-    return;
+  const validUpdates: { cartId: string, newStatus: string }[] = [];
+  const cartKeys: string[] = [];
+
+  for (let i = 0; i < statuses.length; i++) {
+    const cartId = cartIds[i];
+    const wamid = statuses[i].id;
+    const newStatus = statuses[i].status;
+
+    if (cartId) {
+      validUpdates.push({ cartId, newStatus });
+      cartKeys.push(`abandoned_cart:${cartId}`);
+      console.log(`[WhatsApp Status] Message ${wamid} (${newStatus}) linked to cart ${cartId}`);
+    } else {
+      console.log(`[WhatsApp Status] No cart found for message ${wamid}`);
+    }
   }
 
-  // Update Cart Status
-  const cartKey = `abandoned_cart:${cartId}`;
-  const cart = await kv.get(cartKey);
+  if (cartKeys.length === 0) return;
 
-  if (cart) {
-    cart.delivery_status = newStatus;
-    cart.updated_at = new Date().toISOString();
-    await kv.set(cartKey, cart);
-    console.log(`[WhatsApp Status] Updated cart ${cartId} to ${newStatus}`);
+  // PERFORMANCE: Batch fetch all associated carts in a single request
+  const carts = await kv.mget(cartKeys);
+
+  const updateKeys: string[] = [];
+  const updateValues: any[] = [];
+  const now = new Date().toISOString();
+
+  for (let i = 0; i < validUpdates.length; i++) {
+    const cart = carts[i];
+    if (cart) {
+      cart.delivery_status = validUpdates[i].newStatus;
+      cart.updated_at = now;
+      updateKeys.push(`abandoned_cart:${validUpdates[i].cartId}`);
+      updateValues.push(cart);
+      console.log(`[WhatsApp Status] Prepared update for cart ${validUpdates[i].cartId} status: ${validUpdates[i].newStatus}`);
+    }
+  }
+
+  // PERFORMANCE: Batch persist all updated carts in a single request
+  if (updateKeys.length > 0) {
+    await kv.mset(updateKeys, updateValues);
+    console.log(`[WhatsApp Status] Successfully persisted ${updateKeys.length} cart updates.`);
   }
 }
 
@@ -122,25 +153,28 @@ const DEFAULT_CONFIG: IntegrationConfig = {
 // GET /api/integrations/status
 app.get("/make-server-c8eef56a/api/integrations/status", async (c) => {
   try {
-    // PERFORMANCE: Fetch configurations in parallel to reduce latency
-    let [shopifyConfig, whatsappConfig] = await Promise.all([
-      kv.get("config:shopify"),
-      kv.get("config:whatsapp")
+    // PERFORMANCE: Fetch configurations in a single batch to reduce round-trip latency
+    let [shopifyConfig, whatsappConfig] = await kv.mget([
+      "config:shopify",
+      "config:whatsapp"
     ]);
 
     // Initialize if missing
-    const initialSets = [];
+    const initialKeys = [];
+    const initialValues = [];
     if (!shopifyConfig) {
       shopifyConfig = { ...DEFAULT_CONFIG };
-      initialSets.push(kv.set("config:shopify", shopifyConfig));
+      initialKeys.push("config:shopify");
+      initialValues.push(shopifyConfig);
     }
     if (!whatsappConfig) {
       whatsappConfig = { ...DEFAULT_CONFIG };
-      initialSets.push(kv.set("config:whatsapp", whatsappConfig));
+      initialKeys.push("config:whatsapp");
+      initialValues.push(whatsappConfig);
     }
 
-    if (initialSets.length > 0) {
-      await Promise.all(initialSets);
+    if (initialKeys.length > 0) {
+      await kv.mset(initialKeys, initialValues);
     }
     
     // Derive simple status for frontend compatibility
@@ -164,13 +198,14 @@ app.post("/make-server-c8eef56a/api/integrations/status", async (c) => {
   try {
     const body = await c.req.json();
     
-    // PERFORMANCE: Fetch both configs in parallel instead of sequentially
-    let [shopifyConfig, whatsappConfig] = await Promise.all([
-      kv.get("config:shopify"),
-      kv.get("config:whatsapp")
+    // PERFORMANCE: Fetch both configs in a single batch to minimize latency
+    let [shopifyConfig, whatsappConfig] = await kv.mget([
+      "config:shopify",
+      "config:whatsapp"
     ]);
 
-    const updates = [];
+    const updateKeys = [];
+    const updateValues = [];
     const now = new Date().toISOString();
 
     // Update Shopify Config
@@ -178,7 +213,8 @@ app.post("/make-server-c8eef56a/api/integrations/status", async (c) => {
       shopifyConfig = shopifyConfig || { ...DEFAULT_CONFIG };
       shopifyConfig.connection_status = body.shopify_connected ? 'connected' : 'disconnected';
       shopifyConfig.connected_at = body.shopify_connected ? now : null;
-      updates.push(kv.set("config:shopify", shopifyConfig));
+      updateKeys.push("config:shopify");
+      updateValues.push(shopifyConfig);
     }
 
     // Update WhatsApp Config
@@ -186,12 +222,13 @@ app.post("/make-server-c8eef56a/api/integrations/status", async (c) => {
       whatsappConfig = whatsappConfig || { ...DEFAULT_CONFIG };
       whatsappConfig.connection_status = body.whatsapp_connected ? 'connected' : 'disconnected';
       whatsappConfig.connected_at = body.whatsapp_connected ? now : null;
-      updates.push(kv.set("config:whatsapp", whatsappConfig));
+      updateKeys.push("config:whatsapp");
+      updateValues.push(whatsappConfig);
     }
     
-    // PERFORMANCE: Persist updates in parallel
-    if (updates.length > 0) {
-      await Promise.all(updates);
+    // PERFORMANCE: Persist all updates in a single batch request
+    if (updateKeys.length > 0) {
+      await kv.mset(updateKeys, updateValues);
     }
     
     // PERFORMANCE: Return updated state directly from memory instead of re-fetching from KV
@@ -837,8 +874,8 @@ app.post("/make-server-c8eef56a/api/webhooks/whatsapp", async (c) => {
     // Check if it's a status update
     if (body.entry && body.entry[0]?.changes && body.entry[0]?.changes[0]?.value?.statuses) {
       const statuses = body.entry[0].changes[0].value.statuses;
-      // deno-lint-ignore no-explicit-any
-      await Promise.all(statuses.map((status: any) => processWhatsAppStatus(status)));
+      // PERFORMANCE: Process all status updates in a single optimized batch
+      await processWhatsAppStatuses(statuses);
     }
 
     return c.json({ status: 'ok' });

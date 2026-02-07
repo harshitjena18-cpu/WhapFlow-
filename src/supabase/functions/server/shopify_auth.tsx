@@ -134,11 +134,11 @@ app.get("/callback", async (c) => {
       updated_at: new Date().toISOString()
     };
 
-    // PERFORMANCE: Parallelize both KV set operations
-    await Promise.all([
-      kv.set("config:shopify", shopifyConfig),
-      kv.set(`merchant:${shop}`, merchantRecord)
-    ]);
+    // PERFORMANCE: Batch persist both configuration and merchant record in a single request
+    await kv.mset(
+      ["config:shopify", `merchant:${shop}`],
+      [shopifyConfig, merchantRecord]
+    );
     
     // Also set a mapping if needed, or just rely on the global config for the MVP demo.
 
