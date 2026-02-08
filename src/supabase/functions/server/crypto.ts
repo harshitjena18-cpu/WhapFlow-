@@ -1,56 +1,60 @@
 /**
  * Crypto utility for encrypting and decrypting sensitive data at rest.
- * Uses AES-GCM with a key derived from environment secrets.
+ * Uses AES-GCM with a key derived from environment secrets using PBKDF2.
  */
 
 const ALGORITHM = "AES-GCM";
-const PREFIX = "enc:v1:";
-
-// PERFORMANCE: Cache the derived CryptoKey to avoid redundant hashing and key import operations
-// across multiple encrypt/decrypt calls within the same isolate.
-// Estimated impact: Reduces key derivation overhead by ~2-5ms per encryption/decryption call.
-let _cachedKey: CryptoKey | null = null;
-let _cachedSecret: string | null = null;
+const PREFIX = "enc:v2:";
+const SALT_LENGTH = 16;
+const ITERATIONS = 100000;
+const KEY_LENGTH = 256;
+const DIGEST = "SHA-256";
 
 /**
- * Derives a CryptoKey from the environment secret.
+ * Derives a CryptoKey from the environment secret using PBKDF2 with a random salt.
  * Falls back to SHOPIFY_CLIENT_SECRET if ENCRYPTION_SECRET is not provided.
  */
-async function getKey(): Promise<CryptoKey> {
+async function getKey(salt: Uint8Array): Promise<CryptoKey> {
   const secret = Deno.env.get("ENCRYPTION_SECRET") || Deno.env.get("SHOPIFY_CLIENT_SECRET");
-
-  if (_cachedKey && _cachedSecret === secret) return _cachedKey;
 
   if (!secret) {
     throw new Error("Security Error: Missing ENCRYPTION_SECRET or SHOPIFY_CLIENT_SECRET environment variable.");
   }
 
   const encoder = new TextEncoder();
-  const rawKey = encoder.encode(secret);
-  // Hash the secret to ensure it's 256 bits
-  const hash = await crypto.subtle.digest("SHA-256", rawKey);
-
-  _cachedSecret = secret;
-  _cachedKey = await crypto.subtle.importKey(
+  const keyMaterial = await crypto.subtle.importKey(
     "raw",
-    hash,
-    { name: ALGORITHM },
+    encoder.encode(secret),
+    { name: "PBKDF2" },
+    false,
+    ["deriveKey"]
+  );
+
+  return await crypto.subtle.deriveKey(
+    {
+      name: "PBKDF2",
+      salt: salt,
+      iterations: ITERATIONS,
+      hash: DIGEST,
+    },
+    keyMaterial,
+    { name: ALGORITHM, length: KEY_LENGTH },
     false,
     ["encrypt", "decrypt"]
   );
-
-  return _cachedKey;
 }
 
 /**
  * Encrypts a plaintext string.
- * Returns the encrypted string with a versioned prefix and IV.
+ * Returns the encrypted string with a versioned prefix, salt, and IV.
+ * Format: enc:v2:<salt_base64>:<iv_base64>:<ciphertext_base64>
  */
 export async function encrypt(text: string | null | undefined): Promise<string | null | undefined> {
   if (!text) return text;
 
   try {
-    const key = await getKey();
+    const salt = crypto.getRandomValues(new Uint8Array(SALT_LENGTH));
+    const key = await getKey(salt);
     const iv = crypto.getRandomValues(new Uint8Array(12));
     const encoder = new TextEncoder();
     const encodedText = encoder.encode(text);
@@ -61,10 +65,12 @@ export async function encrypt(text: string | null | undefined): Promise<string |
       encodedText
     );
 
+    // Convert to base64
+    const saltBase64 = btoa(String.fromCharCode(...salt));
     const ivBase64 = btoa(String.fromCharCode(...iv));
     const ciphertextBase64 = btoa(String.fromCharCode(...new Uint8Array(ciphertext)));
 
-    return `${PREFIX}${ivBase64}:${ciphertextBase64}`;
+    return `${PREFIX}${saltBase64}:${ivBase64}:${ciphertextBase64}`;
   } catch (error) {
     console.error("[Crypto] Encryption failed:", error);
     throw new Error("Failed to encrypt sensitive data");
@@ -81,16 +87,18 @@ export async function decrypt(encryptedText: string | null | undefined): Promise
   }
 
   try {
-    const key = await getKey();
     const parts = encryptedText.slice(PREFIX.length).split(":");
-    if (parts.length !== 2) {
+    if (parts.length !== 3) {
       console.warn("[Crypto] Invalid encrypted format");
       return encryptedText;
     }
 
-    const [ivBase64, ciphertextBase64] = parts;
+    const [saltBase64, ivBase64, ciphertextBase64] = parts;
+    const salt = new Uint8Array(atob(saltBase64).split("").map((c) => c.charCodeAt(0)));
     const iv = new Uint8Array(atob(ivBase64).split("").map((c) => c.charCodeAt(0)));
     const ciphertext = new Uint8Array(atob(ciphertextBase64).split("").map((c) => c.charCodeAt(0)));
+
+    const key = await getKey(salt);
 
     const decrypted = await crypto.subtle.decrypt(
       { name: ALGORITHM, iv },
