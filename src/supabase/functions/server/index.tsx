@@ -433,12 +433,13 @@ app.post(`${SERVER_BASE_PATH}/api/templates/ai-generate`, async (c) => {
 
     // SECURITY: Simple Rate Limiting (Prevent OpenAI credit exhaustion)
     const ip = c.req.header("x-forwarded-for") || "anonymous";
-    const rateKey = `rate_limit:ai_gen:${shop}:${ip}`;
+    const currentHour = new Date().toISOString().slice(0, 13);
+    const rateKey = `rate_limit:ai_gen:${shop}:${ip}:${currentHour}`;
     const hits = (await kv.get(rateKey) || 0) as number;
-    if (hits > 10) { // Limit to 10 generations per hour per shop/ip
+    if (hits >= 10) { // Limit to 10 generations per hour per shop/ip
       return c.json({ error: "Rate limit exceeded. Please try again later." }, 429);
     }
-    await kv.set(rateKey, hits + 1); // Ideally this would expire, but we'll use a daily/hourly key suffix
+    await kv.set(rateKey, hits + 1);
 
     // 1. Check Billing Limits
     const limitCheck = await billing.checkLimit('ai', shop);
