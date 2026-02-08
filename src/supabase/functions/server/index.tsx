@@ -52,6 +52,23 @@ app.route(`${SERVER_BASE_PATH}/api/billing`, billingApp);
 // --- Whapflow API Foundation ---
 
 /**
+
+interface WhatsAppStatus {
+  id: string;
+  status: string;
+}
+
+interface AutomationTemplate {
+  id: string;
+  template_name: string;
+  display_name: string;
+  delay_minutes: number;
+  content: string;
+  generated_by_ai: boolean;
+  ai_tone?: string | null;
+  enabled: boolean;
+  created_at: string;
+}
  * TEMPLATES API
  * Manage WhatsApp Message Templates
  */
@@ -87,8 +104,7 @@ function validateTemplateContent(content: string): string | null {
 }
 
 // Helper: Process WhatsApp Status Updates in Batch
-// deno-lint-ignore no-explicit-any
-async function processWhatsAppStatuses(statuses: any[]) {
+async function processWhatsAppStatuses(statuses: WhatsAppStatus[]) {
   if (statuses.length === 0) return;
 
   const wamids = statuses.map(s => s.id);
@@ -637,8 +653,7 @@ app.post(`${SERVER_BASE_PATH}/api/webhooks/shopify`, async (c) => {
     }
     
     // FETCH ENABLED TEMPLATE
-    // deno-lint-ignore no-explicit-any
-    const enabledTemplate = templates.find((t: any) => t.enabled);
+    const enabledTemplate = (templates as AutomationTemplate[]).find(t => t.enabled);
 
     if (!enabledTemplate) {
         console.log("⏹️ AUTOMATION SKIPPED: No enabled template found.");
@@ -779,8 +794,7 @@ async function executeAutomation(payload: AutomationPayload) {
 
     // 1. Pre-checks (Status & Plan)
     const isPending = currentCart.status === 'pending';
-    // deno-lint-ignore no-explicit-any
-    const hasEnabledTemplate = templates.some((t: any) => t.enabled);
+    const hasEnabledTemplate = (templates as AutomationTemplate[]).some(t => t.enabled);
     const automationCheck = billing.checkLimitWithConfig('automation', billingConfig);
     const whatsappCheck = billing.checkLimitWithConfig('whatsapp', billingConfig);
 
@@ -972,8 +986,7 @@ app.get(`${SERVER_BASE_PATH}/api/dashboard/metrics`, async (c) => {
     
     // 2. Derive Stats
     const templatesCount = templates.length;
-    // deno-lint-ignore no-explicit-any
-    const hasEnabledTemplate = templates.some((t: any) => t.enabled);
+    const hasEnabledTemplate = (templates as AutomationTemplate[]).some(t => t.enabled);
     
     // 3. Billing Context
     const limits = billing.PLAN_LIMITS[billingConfig.plan];
