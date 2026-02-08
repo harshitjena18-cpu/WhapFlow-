@@ -69,6 +69,7 @@ export interface WhatsAppMessageRequest {
   phoneNumber: string;
   templateId: string;
   parameters?: Record<string, string>;
+  language?: string;
 }
 
 export interface DashboardMetrics {
