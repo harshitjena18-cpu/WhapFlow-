@@ -9,15 +9,7 @@
 
 import { z } from "zod";
 import { ShopifyCartPayload } from "../types/index.ts";
-
-
-const getEnv = (key: string): string | undefined => {
-  // @ts-ignore
-  if (typeof Deno !== "undefined") return Deno.env.get(key);
-  // @ts-ignore
-  if (typeof process !== "undefined") return process.env[key];
-  return undefined;
-};
+import { getEnv } from "./env";
 
 export const verifyShopifyWebhook = async (hmac: string, body: string): Promise<boolean> => {
   console.log('[Shopify] Verifying webhook signature...');

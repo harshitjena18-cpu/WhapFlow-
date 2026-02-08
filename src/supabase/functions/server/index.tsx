@@ -52,6 +52,23 @@ app.route(`${SERVER_BASE_PATH}/api/billing`, billingApp);
 // --- Whapflow API Foundation ---
 
 /**
+
+interface WhatsAppStatus {
+  id: string;
+  status: string;
+}
+
+interface AutomationTemplate {
+  id: string;
+  template_name: string;
+  display_name: string;
+  delay_minutes: number;
+  content: string;
+  generated_by_ai: boolean;
+  ai_tone?: string | null;
+  enabled: boolean;
+  created_at: string;
+}
  * TEMPLATES API
  * Manage WhatsApp Message Templates
  */
@@ -60,12 +77,17 @@ app.route(`${SERVER_BASE_PATH}/api/billing`, billingApp);
 async function disableOtherTemplates(exceptId: string, shop: string = "global") {
   // SECURITY: Scoping by shop prevents cross-merchant template disabling
   const prefix = `shop:${shop}:template:`;
-  const allTemplates = await kv.getByPrefix(prefix);
+
+  // PERFORMANCE: Fetch only enabled templates using DB-side filtering to avoid full table scan
+  // This reduces memory usage and network transfer compared to fetching all templates
+  const enabledTemplates = await kv.getByPrefixAndValue(prefix, "value->enabled", true);
+
   const updateKeys = [];
   const updateValues = [];
   
-  for (const t of allTemplates) {
-    if (t.id !== exceptId && t.enabled) {
+  for (const t of enabledTemplates) {
+    // Only process if it's not the one we want to keep enabled
+    if (t.id !== exceptId) {
       t.enabled = false;
       updateKeys.push(`${prefix}${t.id}`);
       updateValues.push(t);
@@ -87,8 +109,7 @@ function validateTemplateContent(content: string): string | null {
 }
 
 // Helper: Process WhatsApp Status Updates in Batch
-// deno-lint-ignore no-explicit-any
-async function processWhatsAppStatuses(statuses: any[]) {
+async function processWhatsAppStatuses(statuses: WhatsAppStatus[]) {
   if (statuses.length === 0) return;
 
   const wamids = statuses.map(s => s.id);
@@ -638,7 +659,7 @@ app.post(`${SERVER_BASE_PATH}/api/webhooks/shopify`, async (c) => {
     }
     
     // FETCH ENABLED TEMPLATE
-    const enabledTemplate = templates.find(t => t.enabled);
+    const enabledTemplate = (templates as AutomationTemplate[]).find(t => t.enabled);
 
     if (!enabledTemplate) {
         console.log("⏹️ AUTOMATION SKIPPED: No enabled template found.");
@@ -792,7 +813,7 @@ async function executeAutomation(payload: AutomationPayload) {
 
     // 1. Pre-checks (Status & Plan)
     const isPending = currentCart.status === 'pending';
-    const hasEnabledTemplate = templates.some(t => t.enabled);
+    const hasEnabledTemplate = (templates as AutomationTemplate[]).some(t => t.enabled);
     const automationCheck = billing.checkLimitWithConfig('automation', billingConfig);
     const whatsappCheck = billing.checkLimitWithConfig('whatsapp', billingConfig);
 
@@ -985,7 +1006,7 @@ app.get(`${SERVER_BASE_PATH}/api/dashboard/metrics`, async (c) => {
     
     // 2. Derive Stats
     const templatesCount = templates.length;
-    const hasEnabledTemplate = templates.some(t => t.enabled);
+    const hasEnabledTemplate = (templates as AutomationTemplate[]).some(t => t.enabled);
     
     // 3. Billing Context
     const limits = billing.PLAN_LIMITS[billingConfig.plan];
