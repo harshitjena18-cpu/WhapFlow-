@@ -63,6 +63,7 @@ async function runTests() {
 
   // Test 4: Different secret leads to decryption failure (returns input)
   console.log("Test 4: Decryption with wrong secret");
+  // Re-encrypt with known secret first
   const encryptedWithCorrect = await encrypt("secret_data");
   // Change secret
   process.env.ENCRYPTION_SECRET = "wrong-secret";

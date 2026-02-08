@@ -10,6 +10,14 @@ const ITERATIONS = 100000;
 const KEY_LENGTH = 256;
 const DIGEST = "SHA-256";
 
+function checkCacheInvalidation(secret: string) {
+  if (_cachedSecret !== secret) {
+    _cachedLegacyKey = null;
+    _cachedSecureKey = null;
+    _cachedSecret = secret;
+  }
+}
+
 /**
  * Derives a CryptoKey from the environment secret using PBKDF2 with a random salt.
  * Falls back to SHOPIFY_CLIENT_SECRET if ENCRYPTION_SECRET is not provided.
@@ -20,6 +28,9 @@ async function getKey(salt: Uint8Array): Promise<CryptoKey> {
   if (!secret) {
     throw new Error("Security Error: Missing ENCRYPTION_SECRET or SHOPIFY_CLIENT_SECRET environment variable.");
   }
+
+  checkCacheInvalidation(secret);
+  if (_cachedLegacyKey) return _cachedLegacyKey;
 
   const encoder = new TextEncoder();
   const keyMaterial = await crypto.subtle.importKey(
@@ -79,10 +90,11 @@ export async function encrypt(text: string | null | undefined): Promise<string |
 
 /**
  * Decrypts an encrypted string if it has the recognized prefix.
- * Otherwise returns the input as-is (for backward compatibility).
+ * Supports both V1 (legacy) and V2 (secure) formats.
+ * Otherwise returns the input as-is.
  */
 export async function decrypt(encryptedText: string | null | undefined): Promise<string | null | undefined> {
-  if (!encryptedText || !encryptedText.startsWith(PREFIX)) {
+  if (!encryptedText) {
     return encryptedText;
   }
 
@@ -109,8 +121,8 @@ export async function decrypt(encryptedText: string | null | undefined): Promise
     return new TextDecoder().decode(decrypted);
   } catch (error) {
     console.error("[Crypto] Decryption failed:", error);
-    // In case of decryption failure, we return the input to avoid breaking
-    // functionality if the key changed, though this is a security trade-off.
+    // Return input to allow graceful degradation if keys are rotated incorrectly,
+    // though strict security might prefer throwing.
     return encryptedText;
   }
 }
