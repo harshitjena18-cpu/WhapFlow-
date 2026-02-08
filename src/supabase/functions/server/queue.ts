@@ -1,10 +1,9 @@
-
 import * as kv from "./kv_store.tsx";
 
-export interface Job {
+export interface Job<T = unknown> {
   id: string;
   key: string;
-  payload: any;
+  payload: T;
   scheduled_for: string; // ISO Date
   created_at: string;
 }
@@ -12,7 +11,7 @@ export interface Job {
 /**
  * Add a job to the queue.
  */
-export async function enqueueJob(payload: any, delayMinutes: number) {
+export async function enqueueJob<T = unknown>(payload: T, delayMinutes: number) {
   const id = crypto.randomUUID();
   const now = new Date();
   const scheduledFor = new Date(now.getTime() + delayMinutes * 60 * 1000).toISOString();
@@ -22,7 +21,7 @@ export async function enqueueJob(payload: any, delayMinutes: number) {
   // but for now we'll just scan.
   const key = `queue:v1:${scheduledFor}:${id}`;
 
-  const job: Job = {
+  const job: Job<T> = {
     id,
     key,
     payload,
@@ -39,7 +38,7 @@ export async function enqueueJob(payload: any, delayMinutes: number) {
  * Process pending jobs.
  * @param handler Function to execute for each job.
  */
-export async function processPendingJobs(handler: (payload: any) => Promise<void>) {
+export async function processPendingJobs<T = unknown>(handler: (payload: T) => Promise<void>) {
   const now = new Date();
   const endKey = `queue:v1:${now.toISOString()}`; // Fetch anything scheduled up to "now"
 
@@ -52,7 +51,7 @@ export async function processPendingJobs(handler: (payload: any) => Promise<void
 
   // Process jobs concurrently with a limit to avoid overwhelming resources
   const CONCURRENCY_LIMIT = 5;
-  const jobQueue = [...dueJobs];
+  const jobQueue = [...(dueJobs as Job<T>[])];
 
   const worker = async () => {
     while (jobQueue.length > 0) {
