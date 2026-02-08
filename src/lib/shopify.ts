@@ -8,7 +8,8 @@
  */
 
 import { z } from "zod";
-import { ShopifyCartPayload } from "../types";
+import { ShopifyCartPayload } from "../types/index.ts";
+
 
 const getEnv = (key: string): string | undefined => {
   // @ts-ignore

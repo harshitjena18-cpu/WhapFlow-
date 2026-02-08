@@ -22,3 +22,8 @@
 **Vulnerability:** The Shopify OAuth callback was using manual string comparison for hex-encoded HMACs and lacked domain validation for the `shop` parameter used in subsequent internal API calls.
 **Learning:** Cryptographic signatures in OAuth flows are just as sensitive to timing attacks as webhooks. Additionally, unvalidated tenant-provided domains can lead to SSRF or token leakage if used in server-side requests.
 **Prevention:** Enforce constant-time comparison for all signature checks. Strictly validate tenant identifiers (e.g., ensuring shop domains match expected patterns like `*.myshopify.com`) before using them in network requests.
+
+## 2025-06-05 - Shopify Search Query Injection
+**Vulnerability:** User-provided inputs (email, phone) were directly interpolated into Shopify Admin API GraphQL search queries without sanitization, potentially allowing attackers to manipulate query logic.
+**Learning:** Even though Shopify's search syntax is not SQL, it still supports logical operators (AND, OR, NOT) and quoting that can be exploited if inputs contain special characters like double quotes or backslashes.
+**Prevention:** Always sanitize inputs used in structured search queries. Implement a dedicated utility to escape special characters (e.g., `escapeShopifySearch`) and apply it to all user-provided values before query construction.

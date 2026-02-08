@@ -2,10 +2,12 @@ import { Outlet } from 'react-router';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { TooltipProvider } from './ui/tooltip';
+import { Toaster } from './ui/sonner';
 
 export function DashboardLayout() {
   return (
     <TooltipProvider>
+      <Toaster position="top-right" richColors />
       <div className="min-h-screen premium-gradient-bg grain-texture font-sans relative">
         <Sidebar />
         <Header />
