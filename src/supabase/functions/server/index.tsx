@@ -558,11 +558,7 @@ app.post("/make-server-c8eef56a/api/webhooks/shopify", async (c) => {
 
     const payload = JSON.parse(rawBody);
     
-    // 1. Log reception
-    console.log(`\n--- 🛒 SHOPIFY WEBHOOK RECEIVED [${shop}] ---`);
-    console.log('Timestamp:', new Date().toISOString());
-
-    // 2. Extract key data points
+    // 1. Extract key data points
     const customerPhone = payload.customer?.phone || payload.phone || "No phone provided";
     const customerName = payload.customer ? `${payload.customer.first_name} ${payload.customer.last_name}` : "Guest";
     const customerEmail = payload.customer?.email || payload.email || "";
@@ -571,15 +567,13 @@ app.post("/make-server-c8eef56a/api/webhooks/shopify", async (c) => {
     const currency = payload.currency || "USD";
     const recoveryUrl = payload.abandoned_checkout_url || "No URL";
 
-    // 3. Log extracted data (PII Redacted for security)
-    console.log('\n📦 DATA EXTRACTED:');
-    console.log(`👤 Customer: [REDACTED]`);
-    console.log(`📱 Phone:    [REDACTED]`);
-    console.log(`🛍️ Product:  ${firstProduct} (and ${payload.line_items?.length - 1 || 0} others)`);
-    console.log(`💰 Value:    ${cartValue} ${currency}`);
-    console.log(`🔗 Recovery: [REDACTED]`);
-    
-    // 4. PERSISTENCE: Save to Database
+    // 2. Log reception (Structured & Redacted)
+    console.log(`[Shopify Webhook] Received for ${shop}`, {
+      timestamp: new Date().toISOString(),
+      product: `${firstProduct} (+${Math.max(0, (payload.line_items?.length || 0) - 1)} others)`,
+      value: `${cartValue} ${currency}`,
+    });
+    // 3. PERSISTENCE: Save to Database
     console.log('\n💾 PERSISTENCE: Saving abandoned cart to database...');
     
     const cartId = payload.id ? String(payload.id) : crypto.randomUUID();
@@ -606,7 +600,7 @@ app.post("/make-server-c8eef56a/api/webhooks/shopify", async (c) => {
     console.log('Status: "pending" (Waiting for automation trigger)');
     console.log('-----------------------------------\n');
 
-    // 5. AUTOMATION DELAY: Wait, then check logic
+    // 4. AUTOMATION DELAY: Wait, then check logic
     
     // CHECK INTEGRATIONS & LIMITS (Parallelized for performance)
     console.log('\n🔍 AUTOMATION CHECKS: Verifying integration status and limits...');
