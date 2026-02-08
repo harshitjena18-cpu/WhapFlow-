@@ -8,6 +8,7 @@ import { WhapflowLogo } from './WhapflowLogo';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
 import { supabase } from '../utils/supabase/client';
 import { toast } from "sonner@2.0.3";
+import { getErrorMessage } from '../lib/error';
 
 export function Signup() {
   const navigate = useNavigate();
@@ -106,10 +107,10 @@ export function Signup() {
       navigate('/dashboard');
       
     } catch (error) {
-      const err = error as any;
-      console.error('Signup error:', err);
-      toast.error(err.message || 'Failed to sign up');
-      setErrors(prev => ({ ...prev, form: err.message }));
+      const message = getErrorMessage(error);
+      console.error('Signup error:', error);
+      toast.error(message || 'Failed to sign up');
+      setErrors(prev => ({ ...prev, form: message }));
     } finally {
       setIsLoading(false);
     }
@@ -141,9 +142,9 @@ export function Signup() {
       if (error) throw error;
       
     } catch (error) {
-      const err = error as any;
-      console.error('Social signup error:', err);
-      toast.error(err.message || 'Failed to initiate social signup');
+      const message = getErrorMessage(error);
+      console.error('Social signup error:', error);
+      toast.error(message || 'Failed to initiate social signup');
     }
   };
 
