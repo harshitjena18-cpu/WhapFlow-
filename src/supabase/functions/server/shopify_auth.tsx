@@ -2,6 +2,7 @@ import { Hono } from "npm:hono";
 import { setCookie, getCookie } from "npm:hono/cookie";
 import * as kv from "./kv_store.tsx";
 import { encrypt } from "./crypto.ts";
+import { API_DOMAIN, APP_DOMAIN, SERVER_BASE_PATH } from "./constants.ts";
 
 const app = new Hono();
 
@@ -11,7 +12,7 @@ const SHOPIFY_DOMAIN_REGEX = /^[a-zA-Z0-9][a-zA-Z0-9-]*\.myshopify\.com$/;
 // Note: In production, strictly use the environment variable. 
 // For this environment, we default to the provided callback URL structure if not set, 
 // but the user MUST set SHOPIFY_CLIENT_ID and SHOPIFY_CLIENT_SECRET.
-const REDIRECT_URI = Deno.env.get("SHOPIFY_REDIRECT_URI") || "https://api.whapflow.com/auth/shopify/callback";
+const REDIRECT_URI = Deno.env.get("SHOPIFY_REDIRECT_URI") || `${API_DOMAIN}/auth/shopify/callback`;
 
 /**
  * STEP 2: OAUTH START ROUTE
@@ -149,7 +150,7 @@ app.get("/callback", async (c) => {
 
     // STEP 6: FINAL REDIRECT
     console.log(`[OAuth] Flow complete. Redirecting to Dashboard.`);
-    return c.redirect("https://app.whapflow.com/dashboard");
+    return c.redirect(`${APP_DOMAIN}/dashboard`);
 
   } catch (error) {
     console.error("[OAuth] Unexpected error:", error);
@@ -197,19 +198,19 @@ async function registerWebhooks(shop: string, accessToken: string) {
   const WEBHOOKS = [
     { 
       topic: "checkouts/create", 
-      address: "https://api.whapflow.com/make-server-c8eef56a/api/webhooks/shopify" 
+      address: `${API_DOMAIN}${SERVER_BASE_PATH}/api/webhooks/shopify`
     },
     { 
       topic: "checkouts/update", 
-      address: "https://api.whapflow.com/make-server-c8eef56a/api/webhooks/shopify" 
+      address: `${API_DOMAIN}${SERVER_BASE_PATH}/api/webhooks/shopify`
     },
     { 
       topic: "app/uninstalled", 
-      address: "https://api.whapflow.com/make-server-c8eef56a/api/webhooks/app/uninstalled" 
+      address: `${API_DOMAIN}${SERVER_BASE_PATH}/api/webhooks/app/uninstalled`
     },
     {
       topic: "app_subscriptions/update",
-      address: "https://api.whapflow.com/make-server-c8eef56a/api/billing/webhooks/billing/update"
+      address: `${API_DOMAIN}${SERVER_BASE_PATH}/api/billing/webhooks/billing/update`
     }
   ];
 
