@@ -609,12 +609,13 @@ app.post(`${SERVER_BASE_PATH}/api/webhooks/shopify`, async (c) => {
     // CHECK INTEGRATIONS & LIMITS (Parallelized for performance)
     console.log('\n🔍 AUTOMATION CHECKS: Verifying integration status and limits...');
     
-    const [merchant, whatsappConfig, billingConfig, templates] = await Promise.all([
+    const [merchant, whatsappConfig, billingConfig, rawTemplates] = await Promise.all([
       getMerchantCredentials(shop),
       kv.get(`shop:${shop}:config:whatsapp`),
       billing.getBillingConfig(shop),
       kv.getByPrefix(`shop:${shop}:template:`)
     ]);
+    const templates = (rawTemplates || []) as AutomationTemplate[];
 
     // Check if THIS shop is connected
     if (!merchant || !merchant.shopify_connected) {
@@ -637,8 +638,7 @@ app.post(`${SERVER_BASE_PATH}/api/webhooks/shopify`, async (c) => {
     }
     
     // FETCH ENABLED TEMPLATE
-    // deno-lint-ignore no-explicit-any
-    const enabledTemplate = templates.find((t: any) => t.enabled);
+    const enabledTemplate = templates.find(t => t.enabled);
 
     if (!enabledTemplate) {
         console.log("⏹️ AUTOMATION SKIPPED: No enabled template found.");
@@ -748,6 +748,18 @@ interface AutomationPayload {
   shop: string;
 }
 
+interface AutomationTemplate {
+  id: string;
+  template_name: string;
+  display_name: string;
+  delay_minutes: number;
+  content: string;
+  generated_by_ai: boolean;
+  ai_tone?: string | null;
+  enabled: boolean;
+  created_at: string;
+}
+
 async function scheduleAutomation(payload: AutomationPayload, delayMinutes: number) {
   console.log(`[Automation] Scheduling job for cart ${payload.cartId} in ${delayMinutes} minutes...`);
   await enqueueJob(payload, delayMinutes);
@@ -760,12 +772,13 @@ async function executeAutomation(payload: AutomationPayload) {
     console.log(`\n⏰ AUTOMATION: Executing job for cart [${cartId}]. Checking logic...`);
 
     // Fetch all required data in parallel to minimize latency and fix variable access order
-    const [currentCart, merchant, templates, billingConfig] = await Promise.all([
+    const [currentCart, merchant, rawTemplates, billingConfig] = await Promise.all([
       kv.get(cartKey),
       getMerchantCredentials(shop),
       kv.getByPrefix(`shop:${shop}:template:`),
       billing.getBillingConfig(shop)
     ]);
+    const templates = (rawTemplates || []) as AutomationTemplate[];
 
     if (!currentCart) {
       console.log(`❌ AUTOMATION SKIPPED: Cart [${cartId}] no longer exists.`);
@@ -779,8 +792,7 @@ async function executeAutomation(payload: AutomationPayload) {
 
     // 1. Pre-checks (Status & Plan)
     const isPending = currentCart.status === 'pending';
-    // deno-lint-ignore no-explicit-any
-    const hasEnabledTemplate = templates.some((t: any) => t.enabled);
+    const hasEnabledTemplate = templates.some(t => t.enabled);
     const automationCheck = billing.checkLimitWithConfig('automation', billingConfig);
     const whatsappCheck = billing.checkLimitWithConfig('whatsapp', billingConfig);
 
@@ -952,13 +964,14 @@ app.get(`${SERVER_BASE_PATH}/api/dashboard/metrics`, async (c) => {
     }
 
     // 1. PERFORMANCE: Fetch all dependencies including merchant in parallel to minimize round-trip latency
-    const [merchant, shopifyConfig, whatsappConfig, templates, billingConfig] = await Promise.all([
+    const [merchant, shopifyConfig, whatsappConfig, rawTemplates, billingConfig] = await Promise.all([
       kv.get(`merchant:${shop}`),
       kv.get(`shop:${shop}:config:shopify`),
       kv.get(`shop:${shop}:config:whatsapp`),
       kv.getByPrefix(`shop:${shop}:template:`),
       billing.getBillingConfig(shop)
     ]);
+    const templates = (rawTemplates || []) as AutomationTemplate[];
 
     // SECURITY: Verify merchant exists to prevent unauthorized data access
     if (!merchant && shop !== "global") {
@@ -972,8 +985,7 @@ app.get(`${SERVER_BASE_PATH}/api/dashboard/metrics`, async (c) => {
     
     // 2. Derive Stats
     const templatesCount = templates.length;
-    // deno-lint-ignore no-explicit-any
-    const hasEnabledTemplate = templates.some((t: any) => t.enabled);
+    const hasEnabledTemplate = templates.some(t => t.enabled);
     
     // 3. Billing Context
     const limits = billing.PLAN_LIMITS[billingConfig.plan];
