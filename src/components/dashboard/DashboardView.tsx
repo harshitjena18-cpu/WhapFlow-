@@ -33,6 +33,8 @@ interface ReadinessData {
   integrations: {
     shopify_connected: boolean;
     whatsapp_connected: boolean;
+    shopify?: { connection_status: string };
+    whatsapp?: { connection_status: string };
   };
   automation: {
     status: 'active' | 'paused';
@@ -152,7 +154,7 @@ export function DashboardView() {
                 <ShoppingBag className="w-5 h-5 text-gray-500" />
                 <span className="text-sm font-medium text-gray-700">Shopify</span>
               </div>
-              {data.integrations.shopify_connected ? (
+              {data.integrations.shopify?.connection_status === 'connected' ? (
                 <span className="text-xs font-medium text-green-700 bg-gradient-to-r from-green-100 to-emerald-100 px-2 py-1 rounded-full flex items-center gap-1 shadow-sm">
                   <CheckCircle2 className="w-3 h-3" /> Connected
                 </span>
@@ -168,7 +170,7 @@ export function DashboardView() {
                 <MessageSquare className="w-5 h-5 text-gray-500" />
                 <span className="text-sm font-medium text-gray-700">WhatsApp</span>
               </div>
-              {data.integrations.whatsapp_connected ? (
+              {data.integrations.whatsapp?.connection_status === 'connected' ? (
                 <span className="text-xs font-medium text-green-700 bg-gradient-to-r from-green-100 to-emerald-100 px-2 py-1 rounded-full flex items-center gap-1 shadow-sm">
                   <CheckCircle2 className="w-3 h-3" /> Connected
                 </span>
