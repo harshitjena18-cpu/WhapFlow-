@@ -108,6 +108,26 @@ function validateTemplateContent(content: string): string | null {
   return null;
 }
 
+// Helper: WhatsApp Status Interface
+interface WhatsAppStatus {
+  id: string;
+  status: string;
+  timestamp?: string;
+  recipient_id?: string;
+  conversation?: {
+    id: string;
+    origin: {
+      type: string;
+    }
+  };
+  pricing?: {
+    billable: boolean;
+    pricing_model: string;
+    category: string;
+  };
+  errors?: unknown[];
+}
+
 // Helper: Process WhatsApp Status Updates in Batch
 async function processWhatsAppStatuses(statuses: WhatsAppStatus[]) {
   if (statuses.length === 0) return;
