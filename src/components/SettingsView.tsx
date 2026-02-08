@@ -1,8 +1,29 @@
-import { Bell, Globe, Lock, User, CreditCard } from 'lucide-react';
+import { Bell, Globe, Lock, User, CreditCard, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router';
+import { useState } from 'react';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
+import { Switch } from './ui/switch';
+import { toast } from 'sonner';
 
 export function SettingsView() {
   const navigate = useNavigate();
+  const [isSaving, setIsSaving] = useState(false);
+  const [notifications, setNotifications] = useState({
+    'Email notifications': true,
+    'SMS notifications': true,
+    'Push notifications': true,
+    'Weekly reports': false,
+  });
+
+  const handleSave = () => {
+    setIsSaving(true);
+    setTimeout(() => {
+      setIsSaving(false);
+      toast.success("Settings saved successfully!");
+    }, 1000);
+  };
 
   return (
     <div className="space-y-10">
@@ -59,30 +80,37 @@ export function SettingsView() {
           </div>
           <div className="px-8 py-8 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+              <div className="space-y-3">
+                <Label htmlFor="full-name" className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
                   Full Name
-                </label>
-                <input
+                </Label>
+                <Input
+                  id="full-name"
                   type="text"
                   defaultValue="John Doe"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#25D366] transition-colors"
+                  className="px-4 py-6 border-gray-200 rounded-xl focus-visible:ring-[#25D366]/20 focus-visible:border-[#25D366]"
                 />
               </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+              <div className="space-y-3">
+                <Label htmlFor="email" className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
                   Email
-                </label>
-                <input
+                </Label>
+                <Input
+                  id="email"
                   type="email"
                   defaultValue="john@whapflow.com"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#25D366] transition-colors"
+                  className="px-4 py-6 border-gray-200 rounded-xl focus-visible:ring-[#25D366]/20 focus-visible:border-[#25D366]"
                 />
               </div>
             </div>
-            <button className="px-6 py-3 bg-[#25D366] text-white rounded-xl hover:bg-[#20BD5A] font-semibold text-sm transition-colors">
-              Save Changes
-            </button>
+            <Button
+              onClick={handleSave}
+              disabled={isSaving}
+              className="px-8 py-6 bg-[#25D366] text-white rounded-xl hover:bg-[#20BD5A] font-semibold text-sm transition-all shadow-sm active:scale-[0.98]"
+            >
+              {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              {isSaving ? 'Saving...' : 'Save Changes'}
+            </Button>
           </div>
         </div>
 
@@ -100,16 +128,22 @@ export function SettingsView() {
             </div>
           </div>
           <div className="px-8 py-8 space-y-5">
-            {['Email notifications', 'SMS notifications', 'Push notifications', 'Weekly reports'].map((item) => (
+            {Object.entries(notifications).map(([item, enabled]) => (
               <div key={item} className="flex items-center justify-between">
-                <span className="text-sm text-gray-700">{item}</span>
-                <button
-                  className="relative inline-flex h-6 w-11 items-center rounded-full bg-[#25D366]"
-                  role="switch"
-                  aria-checked="true"
+                <Label
+                  htmlFor={item.toLowerCase().replace(/\s+/g, '-')}
+                  className="text-sm text-gray-700 cursor-pointer"
                 >
-                  <span className="inline-block h-4 w-4 transform translate-x-6 rounded-full bg-white transition-transform" />
-                </button>
+                  {item}
+                </Label>
+                <Switch
+                  id={item.toLowerCase().replace(/\s+/g, '-')}
+                  checked={enabled}
+                  onCheckedChange={(checked) =>
+                    setNotifications((prev) => ({ ...prev, [item]: checked }))
+                  }
+                  className="data-[state=checked]:bg-[#25D366]"
+                />
               </div>
             ))}
           </div>
@@ -152,22 +186,28 @@ export function SettingsView() {
             </div>
           </div>
           <div className="px-8 py-8 space-y-6">
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+            <div className="space-y-3">
+              <Label htmlFor="language" className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
                 Language
-              </label>
-              <select className="w-full md:w-64 px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#25D366] transition-colors">
+              </Label>
+              <select
+                id="language"
+                className="w-full md:w-64 px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#25D366] transition-colors bg-white cursor-pointer"
+              >
                 <option>English</option>
                 <option>Spanish</option>
                 <option>French</option>
                 <option>German</option>
               </select>
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+            <div className="space-y-3">
+              <Label htmlFor="timezone" className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
                 Timezone
-              </label>
-              <select className="w-full md:w-64 px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#25D366] transition-colors">
+              </Label>
+              <select
+                id="timezone"
+                className="w-full md:w-64 px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#25D366] transition-colors bg-white cursor-pointer"
+              >
                 <option>UTC-8 (Pacific Time)</option>
                 <option>UTC-5 (Eastern Time)</option>
                 <option>UTC+0 (GMT)</option>

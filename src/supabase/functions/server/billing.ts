@@ -58,7 +58,7 @@ export const PLAN_LIMITS: Record<PlanLevel, PlanLimits> = {
   }
 };
 
-const BILLING_KEY_PREFIX = "billing:config:";
+export const BILLING_KEY_PREFIX = "billing:config:";
 
 // --- Methods ---
 

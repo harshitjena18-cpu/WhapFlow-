@@ -2,6 +2,14 @@ import * as kv from "./kv_store.tsx";
 import { decrypt } from "./crypto.ts";
 
 /**
+ * Utility to escape special characters in Shopify search queries to prevent injection.
+ * Escapes backslashes and double quotes.
+ */
+export function escapeShopifySearch(value: string): string {
+  return value.replace(/([\\"])/g, "\\$1");
+}
+
+/**
  * Retrieve merchant credentials from KV
  */
 export async function getMerchantCredentials(shop: string) {
@@ -34,9 +42,9 @@ export async function checkOrderExists(
     ];
 
     const contactClauses = [];
-    // Quote values to handle spaces/special chars safely
-    if (email) contactClauses.push(`email:"${email}"`);
-    if (phone) contactClauses.push(`phone:"${phone}"`);
+    // Quote and escape values to handle spaces and prevent injection
+    if (email) contactClauses.push(`email:"${escapeShopifySearch(email)}"`);
+    if (phone) contactClauses.push(`phone:"${escapeShopifySearch(phone)}"`);
 
     if (contactClauses.length > 0) {
         clauses.push(`(${contactClauses.join(' OR ')})`);
@@ -121,6 +129,11 @@ export async function shopifyGraphql(
   query: string,
   variables: Record<string, any> = {}
 ) {
+  // SECURITY: Defense-in-depth validation of shop domain to prevent SSRF
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9-]*\.myshopify\.com$/.test(shop)) {
+    throw new Error(`Invalid shop domain: ${shop}`);
+  }
+
   try {
     const response = await fetch(`https://${shop}/admin/api/2024-01/graphql.json`, {
       method: "POST",
