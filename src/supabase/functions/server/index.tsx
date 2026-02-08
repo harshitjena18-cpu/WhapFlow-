@@ -742,14 +742,20 @@ app.post("/make-server-c8eef56a/api/webhooks/app/uninstalled", async (c) => {
 /**
  * AUTOMATION ENGINE
  */
-// deno-lint-ignore no-explicit-any
-async function scheduleAutomation(payload: any, delayMinutes: number) {
+
+interface AutomationPayload {
+  cartId: string;
+  cartKey: string;
+  templateName: string;
+  shop: string;
+}
+
+async function scheduleAutomation(payload: AutomationPayload, delayMinutes: number) {
   console.log(`[Automation] Scheduling job for cart ${payload.cartId} in ${delayMinutes} minutes...`);
   await enqueueJob(payload, delayMinutes);
 }
 
-// deno-lint-ignore no-explicit-any
-async function executeAutomation(payload: any) {
+async function executeAutomation(payload: AutomationPayload) {
   const { cartId, cartKey, templateName, shop } = payload;
   
   try {
