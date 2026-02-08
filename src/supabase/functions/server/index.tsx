@@ -11,6 +11,7 @@ import authApp from "./auth.tsx";
 import dashboardApp from "./dashboard.tsx";
 import shopifyAuthApp from "./shopify_auth.tsx"; // Import Shopify Auth
 import billingApp from "./billing_routes.tsx"; // Import Billing Routes
+import { SERVER_BASE_PATH } from "./constants.ts";
 
 const app = new Hono();
 
@@ -40,10 +41,10 @@ app.onError((err, c) => {
 });
 
 // Mount auth routes
-app.route("/make-server-c8eef56a", authApp);
-app.route("/make-server-c8eef56a/dashboard", dashboardApp);
-app.route("/make-server-c8eef56a/auth/shopify", shopifyAuthApp);
-app.route("/make-server-c8eef56a/api/billing", billingApp);
+app.route(SERVER_BASE_PATH, authApp);
+app.route(`${SERVER_BASE_PATH}/dashboard`, dashboardApp);
+app.route(`${SERVER_BASE_PATH}/auth/shopify`, shopifyAuthApp);
+app.route(`${SERVER_BASE_PATH}/api/billing`, billingApp);
 
 // --- Whapflow API Foundation ---
 
@@ -153,7 +154,7 @@ const DEFAULT_CONFIG: IntegrationConfig = {
 };
 
 // GET /api/integrations/status
-app.get("/make-server-c8eef56a/api/integrations/status", async (c) => {
+app.get(`${SERVER_BASE_PATH}/api/integrations/status`, async (c) => {
   try {
     const shop = c.req.query("shop") || "global";
     // SECURITY: Scoping configurations by shop to prevent multi-tenancy leaks
@@ -201,7 +202,7 @@ app.get("/make-server-c8eef56a/api/integrations/status", async (c) => {
 });
 
 // POST /api/integrations/status (For demo/testing purposes)
-app.post("/make-server-c8eef56a/api/integrations/status", async (c) => {
+app.post(`${SERVER_BASE_PATH}/api/integrations/status`, async (c) => {
   try {
     const body = await c.req.json();
     const shop = body.shop || c.req.query("shop") || "global";
@@ -257,7 +258,7 @@ app.post("/make-server-c8eef56a/api/integrations/status", async (c) => {
 });
 
 // GET /api/templates
-app.get("/make-server-c8eef56a/api/templates", async (c) => {
+app.get(`${SERVER_BASE_PATH}/api/templates`, async (c) => {
   try {
     const shop = c.req.query("shop") || "global";
     // SECURITY: Validate shop domain
@@ -276,7 +277,7 @@ app.get("/make-server-c8eef56a/api/templates", async (c) => {
 });
 
 // POST /api/templates
-app.post("/make-server-c8eef56a/api/templates", async (c) => {
+app.post(`${SERVER_BASE_PATH}/api/templates`, async (c) => {
   try {
     const body = await c.req.json();
     const shop = body.shop || c.req.query("shop") || "global";
@@ -326,7 +327,7 @@ app.post("/make-server-c8eef56a/api/templates", async (c) => {
 });
 
 // PUT /api/templates/:id
-app.put("/make-server-c8eef56a/api/templates/:id", async (c) => {
+app.put(`${SERVER_BASE_PATH}/api/templates/:id`, async (c) => {
   try {
     const id = c.req.param("id");
     const body = await c.req.json();
@@ -363,7 +364,7 @@ app.put("/make-server-c8eef56a/api/templates/:id", async (c) => {
 });
 
 // DELETE /api/templates/:id
-app.delete("/make-server-c8eef56a/api/templates/:id", async (c) => {
+app.delete(`${SERVER_BASE_PATH}/api/templates/:id`, async (c) => {
   try {
     const id = c.req.param("id");
     const shop = c.req.query("shop") || "global";
@@ -376,7 +377,7 @@ app.delete("/make-server-c8eef56a/api/templates/:id", async (c) => {
 });
 
 // GET /api/ai/usage
-app.get("/make-server-c8eef56a/api/ai/usage", async (c) => {
+app.get(`${SERVER_BASE_PATH}/api/ai/usage`, async (c) => {
   try {
     const shop = c.req.query("shop");
     if (!shop) return c.json({ error: "Shop parameter required" }, 400);
@@ -396,7 +397,7 @@ app.get("/make-server-c8eef56a/api/ai/usage", async (c) => {
 });
 
 // POST /api/templates/ai-generate
-app.post("/make-server-c8eef56a/api/templates/ai-generate", async (c) => {
+app.post(`${SERVER_BASE_PATH}/api/templates/ai-generate`, async (c) => {
   try {
     const body = await c.req.json();
     const { tone, brand_name, discount, shop } = body;
@@ -516,7 +517,7 @@ Generate 3 different variations.`;
  * Shopify Webhook Receiver (CHECKOUTS)
  * Path: /api/webhooks/shopify
  */
-app.post("/make-server-c8eef56a/api/webhooks/shopify", async (c) => {
+app.post(`${SERVER_BASE_PATH}/api/webhooks/shopify`, async (c) => {
   try {
     const hmac = c.req.header('X-Shopify-Hmac-Sha256');
     const shop = c.req.header('X-Shopify-Shop-Domain');
@@ -663,7 +664,7 @@ app.post("/make-server-c8eef56a/api/webhooks/shopify", async (c) => {
  * Shopify Webhook Receiver (APP UNINSTALL)
  * Path: /api/webhooks/app/uninstalled
  */
-app.post("/make-server-c8eef56a/api/webhooks/app/uninstalled", async (c) => {
+app.post(`${SERVER_BASE_PATH}/api/webhooks/app/uninstalled`, async (c) => {
   try {
     const hmac = c.req.header('X-Shopify-Hmac-Sha256');
     const shop = c.req.header('X-Shopify-Shop-Domain');
@@ -860,7 +861,7 @@ Deno.cron("Process Queue", "* * * * *", async () => {
  * WhatsApp Sender
  * Path: /app/api/whatsapp/send/route.ts (Simulated)
  */
-app.post("/make-server-c8eef56a/api/whatsapp/send", async (c) => {
+app.post(`${SERVER_BASE_PATH}/api/whatsapp/send`, async (c) => {
   try {
     const { phoneNumber, templateId } = await c.req.json();
     // SECURITY: Redact phoneNumber from logs
@@ -889,7 +890,7 @@ app.post("/make-server-c8eef56a/api/whatsapp/send", async (c) => {
  * Path: /app/api/webhooks/whatsapp/route.ts
  */
 // GET: Verification Challenge
-app.get("/make-server-c8eef56a/api/webhooks/whatsapp", (c) => {
+app.get(`${SERVER_BASE_PATH}/api/webhooks/whatsapp`, (c) => {
   const mode = c.req.query("hub.mode");
   const token = c.req.query("hub.verify_token");
   const challenge = c.req.query("hub.challenge");
@@ -907,7 +908,7 @@ app.get("/make-server-c8eef56a/api/webhooks/whatsapp", (c) => {
 });
 
 // POST: Status Updates & Messages
-app.post("/make-server-c8eef56a/api/webhooks/whatsapp", async (c) => {
+app.post(`${SERVER_BASE_PATH}/api/webhooks/whatsapp`, async (c) => {
   try {
     const body = await c.req.json();
 
@@ -926,7 +927,7 @@ app.post("/make-server-c8eef56a/api/webhooks/whatsapp", async (c) => {
 });
 
 // GET /api/dashboard/metrics
-app.get("/make-server-c8eef56a/api/dashboard/metrics", async (c) => {
+app.get(`${SERVER_BASE_PATH}/api/dashboard/metrics`, async (c) => {
   try {
     const shop = c.req.query("shop");
     if (!shop) {
@@ -1018,7 +1019,7 @@ app.get("/make-server-c8eef56a/api/dashboard/metrics", async (c) => {
 });
 
 // Health check endpoint
-app.get("/make-server-c8eef56a/health", (c) => {
+app.get(`${SERVER_BASE_PATH}/health`, (c) => {
   return c.json({ status: "ok" });
 });
 
