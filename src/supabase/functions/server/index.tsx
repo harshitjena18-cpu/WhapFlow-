@@ -6,6 +6,7 @@ import { enqueueJob, processPendingJobs } from "./queue.ts";
 import * as kv from "./kv_store.tsx";
 import { sendWhatsAppTemplate } from "./whatsapp.ts";
 import * as billing from "./billing.ts"; // Import Billing Service
+import { BILLING_KEY_PREFIX } from "./billing.ts";
 import { checkOrderExists, getMerchantCredentials, verifyWebhookHmac } from "./shopify_client.ts";
 import authApp from "./auth.tsx";
 import dashboardApp from "./dashboard.tsx";
@@ -815,19 +816,33 @@ async function executeAutomation(payload: any) {
       });
 
       if (result.success) {
-        // Increment Usage
-        await billing.incrementUsage('whatsapp', shop);
+        // PERFORMANCE: Batch all updates (Billing, Message Map, Cart) in a single request
+        const updateKeys = [];
+        const updateValues = [];
 
+        // 1. Increment Usage (manually since we already have the config)
+        billingConfig.whatsapp_conversations_used += 1;
+        updateKeys.push(`${BILLING_KEY_PREFIX}${shop}`);
+        updateValues.push(billingConfig);
+
+        // 2. Update Cart Status
         currentCart.status = 'messaged';
         currentCart.messaged_at = new Date().toISOString();
 
         if (result.wamid) {
              currentCart.wamid = result.wamid;
-             await kv.set(`msg_map:${result.wamid}`, cartId);
+             // 3. Map message ID to cart for status tracking
+             updateKeys.push(`msg_map:${result.wamid}`);
+             updateValues.push(cartId);
              console.log(`🔗 Mapped message ${result.wamid} to cart ${cartId}`);
         }
 
-        await kv.set(cartKey, currentCart);
+        updateKeys.push(cartKey);
+        updateValues.push(currentCart);
+
+        // Atomic batch update
+        await kv.mset(updateKeys, updateValues);
+        console.log(`⚡ [Automation] Optimized: Persisted ${updateKeys.length} updates in a single batch.`);
 
       } else {
         console.error(`❌ AUTOMATION FAILED: WhatsApp API Error for cart ${cartId}`, result.error);
@@ -933,19 +948,19 @@ app.get("/make-server-c8eef56a/api/dashboard/metrics", async (c) => {
       return c.json({ error: "Missing shop parameter" }, 400);
     }
 
-    // SECURITY: Verify merchant exists to prevent unauthorized data access
-    const merchant = await kv.get(`merchant:${shop}`);
-    if (!merchant && shop !== "global") {
-      return c.json({ error: "Unauthorized: Merchant not found" }, 401);
-    }
-
-    // 1. Fetch all dependencies in parallel to minimize round-trip latency
-    const [shopifyConfig, whatsappConfig, templates, billingConfig] = await Promise.all([
+    // 1. PERFORMANCE: Fetch all dependencies including merchant in parallel to minimize round-trip latency
+    const [merchant, shopifyConfig, whatsappConfig, templates, billingConfig] = await Promise.all([
+      kv.get(`merchant:${shop}`),
       kv.get(`shop:${shop}:config:shopify`),
       kv.get(`shop:${shop}:config:whatsapp`),
       kv.getByPrefix(`shop:${shop}:template:`),
       billing.getBillingConfig(shop)
     ]);
+
+    // SECURITY: Verify merchant exists to prevent unauthorized data access
+    if (!merchant && shop !== "global") {
+      return c.json({ error: "Unauthorized: Merchant not found" }, 401);
+    }
 
     const status = {
       shopify_connected: shopifyConfig?.connection_status === 'connected',
