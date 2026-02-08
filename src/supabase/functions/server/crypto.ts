@@ -25,11 +25,6 @@ async function getKey(): Promise<CryptoKey> {
     throw new Error("Security Error: Missing ENCRYPTION_SECRET or SHOPIFY_CLIENT_SECRET environment variable.");
   }
 
-  // Use cached key if the secret hasn't changed
-  if (cachedKey && cachedKey.secret === secret) {
-    return cachedKey.key;
-  }
-
   const encoder = new TextEncoder();
   const rawKey = encoder.encode(secret);
   // Hash the secret to ensure it's 256 bits
