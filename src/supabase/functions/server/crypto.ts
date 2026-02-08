@@ -1,16 +1,14 @@
 /**
  * Crypto utility for encrypting and decrypting sensitive data at rest.
- * Uses AES-GCM with a key derived from environment secrets.
+ * Uses AES-GCM with a key derived from environment secrets using PBKDF2.
  */
 
 const ALGORITHM = "AES-GCM";
-const PREFIX_V1 = "enc:v1:";
-const PREFIX_V2 = "enc:v2:";
-
-// PERFORMANCE: Cache the derived CryptoKey to avoid redundant hashing and key import operations
-let _cachedLegacyKey: CryptoKey | null = null;
-let _cachedSecureKey: CryptoKey | null = null;
-let _cachedSecret: string | null = null;
+const PREFIX = "enc:v2:";
+const SALT_LENGTH = 16;
+const ITERATIONS = 100000;
+const KEY_LENGTH = 256;
+const DIGEST = "SHA-256";
 
 function checkCacheInvalidation(secret: string) {
   if (_cachedSecret !== secret) {
@@ -21,10 +19,10 @@ function checkCacheInvalidation(secret: string) {
 }
 
 /**
- * Derives a Legacy CryptoKey (V1) using SHA-256 hashing (Vulnerable).
- * Kept for backward compatibility.
+ * Derives a CryptoKey from the environment secret using PBKDF2 with a random salt.
+ * Falls back to SHOPIFY_CLIENT_SECRET if ENCRYPTION_SECRET is not provided.
  */
-async function getLegacyKey(): Promise<CryptoKey> {
+async function getKey(salt: Uint8Array): Promise<CryptoKey> {
   const secret = Deno.env.get("ENCRYPTION_SECRET") || Deno.env.get("SHOPIFY_CLIENT_SECRET");
 
   if (!secret) {
@@ -35,68 +33,39 @@ async function getLegacyKey(): Promise<CryptoKey> {
   if (_cachedLegacyKey) return _cachedLegacyKey;
 
   const encoder = new TextEncoder();
-  const rawKey = encoder.encode(secret);
-  const hash = await crypto.subtle.digest("SHA-256", rawKey);
-
-  _cachedLegacyKey = await crypto.subtle.importKey(
-    "raw",
-    hash,
-    { name: ALGORITHM },
-    false,
-    ["decrypt"] // Legacy only needs decrypt
-  );
-
-  return _cachedLegacyKey;
-}
-
-/**
- * Derives a Secure CryptoKey (V2) using HKDF.
- * Ensures key separation and proper derivation.
- */
-async function getSecureKey(): Promise<CryptoKey> {
-  const secret = Deno.env.get("ENCRYPTION_SECRET") || Deno.env.get("SHOPIFY_CLIENT_SECRET");
-
-  if (!secret) {
-    throw new Error("Security Error: Missing ENCRYPTION_SECRET or SHOPIFY_CLIENT_SECRET environment variable.");
-  }
-
-  checkCacheInvalidation(secret);
-  if (_cachedSecureKey) return _cachedSecureKey;
-
-  const encoder = new TextEncoder();
   const keyMaterial = await crypto.subtle.importKey(
     "raw",
     encoder.encode(secret),
-    { name: "HKDF" },
+    { name: "PBKDF2" },
     false,
     ["deriveKey"]
   );
 
-  _cachedSecureKey = await crypto.subtle.deriveKey(
+  return await crypto.subtle.deriveKey(
     {
-      name: "HKDF",
-      salt: new Uint8Array(), // Relying on high-entropy secret; adding randomness would require storage migration
-      info: encoder.encode("Supabase-Encryption-V2-Key-Derivation"),
-      hash: "SHA-256",
+      name: "PBKDF2",
+      salt: salt,
+      iterations: ITERATIONS,
+      hash: DIGEST,
     },
     keyMaterial,
-    { name: ALGORITHM, length: 256 },
+    { name: ALGORITHM, length: KEY_LENGTH },
     false,
     ["encrypt", "decrypt"]
   );
-
-  return _cachedSecureKey;
 }
 
 /**
- * Encrypts a plaintext string using the secure V2 format.
- * Returns the encrypted string with a versioned prefix and IV.
+ * Encrypts a plaintext string.
+ * Returns the encrypted string with a versioned prefix, salt, and IV.
+ * Format: enc:v2:<salt_base64>:<iv_base64>:<ciphertext_base64>
  */
 export async function encrypt(text: string | null | undefined): Promise<string | null | undefined> {
   if (!text) return text;
 
   try {
-    const key = await getSecureKey();
+    const salt = crypto.getRandomValues(new Uint8Array(SALT_LENGTH));
+    const key = await getKey(salt);
     const iv = crypto.getRandomValues(new Uint8Array(12));
     const encoder = new TextEncoder();
     const encodedText = encoder.encode(text);
@@ -107,10 +76,12 @@ export async function encrypt(text: string | null | undefined): Promise<string |
       encodedText
     );
 
+    // Convert to base64
+    const saltBase64 = btoa(String.fromCharCode(...salt));
     const ivBase64 = btoa(String.fromCharCode(...iv));
     const ciphertextBase64 = btoa(String.fromCharCode(...new Uint8Array(ciphertext)));
 
-    return `${PREFIX_V2}${ivBase64}:${ciphertextBase64}`;
+    return `${PREFIX}${saltBase64}:${ivBase64}:${ciphertextBase64}`;
   } catch (error) {
     console.error("[Crypto] Encryption failed:", error);
     throw new Error("Failed to encrypt sensitive data");
@@ -128,29 +99,18 @@ export async function decrypt(encryptedText: string | null | undefined): Promise
   }
 
   try {
-    let key: CryptoKey;
-    let prefixLength: number;
-
-    if (encryptedText.startsWith(PREFIX_V2)) {
-      key = await getSecureKey();
-      prefixLength = PREFIX_V2.length;
-    } else if (encryptedText.startsWith(PREFIX_V1)) {
-      key = await getLegacyKey();
-      prefixLength = PREFIX_V1.length;
-    } else {
-      // Not encrypted or unknown prefix
-      return encryptedText;
-    }
-
-    const parts = encryptedText.slice(prefixLength).split(":");
-    if (parts.length !== 2) {
+    const parts = encryptedText.slice(PREFIX.length).split(":");
+    if (parts.length !== 3) {
       console.warn("[Crypto] Invalid encrypted format");
       return encryptedText;
     }
 
-    const [ivBase64, ciphertextBase64] = parts;
+    const [saltBase64, ivBase64, ciphertextBase64] = parts;
+    const salt = new Uint8Array(atob(saltBase64).split("").map((c) => c.charCodeAt(0)));
     const iv = new Uint8Array(atob(ivBase64).split("").map((c) => c.charCodeAt(0)));
     const ciphertext = new Uint8Array(atob(ciphertextBase64).split("").map((c) => c.charCodeAt(0)));
+
+    const key = await getKey(salt);
 
     const decrypted = await crypto.subtle.decrypt(
       { name: ALGORITHM, iv },

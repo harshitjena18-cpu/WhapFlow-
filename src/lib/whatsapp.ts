@@ -7,15 +7,8 @@
  * - Process delivery receipts (webhooks)
  */
 
-import { WhatsAppMessageRequest } from "../types";
-
-const getEnv = (key: string): string | undefined => {
-  // @ts-ignore
-  if (typeof Deno !== "undefined") return Deno.env.get(key);
-  // @ts-ignore
-  if (typeof process !== "undefined") return process.env[key];
-  return undefined;
-};
+import type { WhatsAppMessageRequest } from "../types/index.ts";
+import { getEnv } from "./env.ts";
 
 export const sendWhatsAppMessage = async (request: WhatsAppMessageRequest): Promise<boolean> => {
   const phoneNumberId = getEnv("WHATSAPP_PHONE_NUMBER_ID");
@@ -59,7 +52,7 @@ export const sendWhatsAppMessage = async (request: WhatsAppMessageRequest): Prom
     template: {
       name: request.templateId,
       language: {
-        code: "en_US" // Default language, could be parameterized if needed
+        code: request.language || "en_US"
       },
       components: components
     }
@@ -91,9 +84,10 @@ export const sendWhatsAppMessage = async (request: WhatsAppMessageRequest): Prom
   }
 };
 
-export const getTemplateStatus = async (templateId: string, accessTokenOverride?: string): Promise<string | null> => {
+export const getTemplateStatus = async (templateId: string, accessTokenOverride?: string, language?: string): Promise<string | null> => {
   const accessToken = accessTokenOverride || getEnv("WHATSAPP_ACCESS_TOKEN");
   const businessAccountId = getEnv("WHATSAPP_BUSINESS_ACCOUNT_ID");
+  const targetLanguage = language || "en_US";
 
   if (!accessToken) {
     console.error("[WhatsApp] Missing access token");
@@ -123,13 +117,13 @@ export const getTemplateStatus = async (templateId: string, accessTokenOverride?
 
     const data = await response.json();
 
-    // Find the template with 'en_US' language, or fallback to the first one if only one exists
-    const template = data.data.find((t: any) => t.language === "en_US") || data.data[0];
+    // Find the template with the target language, or fallback to the first one if only one exists
+    const template = data.data.find((t: any) => t.language === targetLanguage) || data.data[0];
 
     if (template) {
       return template.status;
     } else {
-       console.warn(`[WhatsApp] Template '${templateId}' not found.`);
+       console.warn(`[WhatsApp] Template '${templateId}' not found for language '${targetLanguage}'.`);
        return null;
     }
 

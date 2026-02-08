@@ -26,6 +26,8 @@ interface ReadinessData {
   integrations: {
     shopify_connected: boolean;
     whatsapp_connected: boolean;
+    shopify?: { connection_status: string };
+    whatsapp?: { connection_status: string };
   };
   automation: {
     status: 'active' | 'paused';
@@ -49,8 +51,8 @@ export function OnboardingChecklist({ data, onRefresh }: OnboardingChecklistProp
       
       // Get current status to preserve the other one
       const currentStatus = {
-        shopify_connected: data.integrations.shopify_connected,
-        whatsapp_connected: data.integrations.whatsapp_connected
+        shopify_connected: data.integrations.shopify?.connection_status === 'connected',
+        whatsapp_connected: data.integrations.whatsapp?.connection_status === 'connected'
       };
       
       const newStatus = {
@@ -108,7 +110,7 @@ export function OnboardingChecklist({ data, onRefresh }: OnboardingChecklistProp
       id: 3,
       title: "Connect WhatsApp",
       description: "Link your Meta Business account to send messages.",
-      isCompleted: data.integrations.whatsapp_connected,
+      isCompleted: data.integrations.whatsapp?.connection_status === 'connected',
       isBlocked: !data.templates.has_enabled,
       blockedReason: "Complete previous steps to proceed.",
       action: {
@@ -121,8 +123,8 @@ export function OnboardingChecklist({ data, onRefresh }: OnboardingChecklistProp
       id: 4,
       title: "Connect Shopify",
       description: "Sync your store to detect abandoned carts.",
-      isCompleted: data.integrations.shopify_connected,
-      isBlocked: !data.integrations.whatsapp_connected,
+      isCompleted: data.integrations.shopify?.connection_status === 'connected',
+      isBlocked: !(data.integrations.whatsapp?.connection_status === 'connected'),
       blockedReason: "Connect WhatsApp first.",
       action: {
         label: "Connect Shopify",
@@ -135,7 +137,7 @@ export function OnboardingChecklist({ data, onRefresh }: OnboardingChecklistProp
       title: "Activate Automation",
       description: "System will automatically start recovering carts.",
       isCompleted: data.automation.status === 'active',
-      isBlocked: !data.integrations.shopify_connected || !data.billing.automation_enabled,
+      isBlocked: !(data.integrations.shopify?.connection_status === 'connected') || !data.billing.automation_enabled,
       blockedReason: !data.billing.automation_enabled 
         ? `Upgrade from ${data.billing.plan_name} to enable` 
         : "Connect all integrations to activate.",

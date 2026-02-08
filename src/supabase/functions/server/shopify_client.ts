@@ -156,10 +156,11 @@ export async function shopifyGraphql(
     
     // Check for userErrors (common in mutations) but don't throw, let caller handle
     // However, if there are top-level "errors", we should probably throw or return them.
-    if (result.errors) {
+    if (result.errors && result.errors.length > 0) {
        console.error(`[ShopifyGraphQL] GraphQL Errors:`, result.errors);
-       // We'll throw the first error message to simplify handling
-       throw new Error(result.errors[0]?.message || "GraphQL Error");
+       // Aggregate all error messages
+       const errorMessages = result.errors.map((e: any) => e.message || JSON.stringify(e)).join("; ");
+       throw new Error(`GraphQL Error: ${errorMessages}`);
     }
 
     return result.data;
