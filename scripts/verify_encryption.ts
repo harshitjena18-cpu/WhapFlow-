@@ -1,4 +1,3 @@
-
 import { encrypt, decrypt } from "../src/supabase/functions/server/crypto.ts";
 import { webcrypto } from "node:crypto";
 
@@ -29,8 +28,8 @@ async function runTests() {
   const encrypted = await encrypt(originalText);
   console.log(`Encrypted: ${encrypted}`);
 
-  if (!encrypted?.startsWith("enc:v1:")) {
-    console.error("❌ Test 1 Failed: Encrypted text should start with 'enc:v1:'");
+  if (!encrypted?.startsWith("enc:v2:")) {
+    console.error("❌ Test 1 Failed: Encrypted text should start with 'enc:v2:'");
     process.exit(1);
   }
 
@@ -70,7 +69,9 @@ async function runTests() {
 
   // Test 4: Different secret leads to decryption failure (returns input)
   console.log("Test 4: Decryption with wrong secret");
+  // Re-encrypt with known secret first
   const encryptedWithCorrect = await encrypt("secret_data");
+
   process.env.ENCRYPTION_SECRET = "wrong-secret";
 
   const decryptedWithWrong = await decrypt(encryptedWithCorrect);
