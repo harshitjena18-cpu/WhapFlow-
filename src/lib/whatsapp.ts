@@ -8,14 +8,7 @@
  */
 
 import { WhatsAppMessageRequest } from "../types";
-
-const getEnv = (key: string): string | undefined => {
-  // @ts-ignore
-  if (typeof Deno !== "undefined") return Deno.env.get(key);
-  // @ts-ignore
-  if (typeof process !== "undefined") return process.env[key];
-  return undefined;
-};
+import { getEnv } from "./env";
 
 export const sendWhatsAppMessage = async (request: WhatsAppMessageRequest): Promise<boolean> => {
   const phoneNumberId = getEnv("WHATSAPP_PHONE_NUMBER_ID");
