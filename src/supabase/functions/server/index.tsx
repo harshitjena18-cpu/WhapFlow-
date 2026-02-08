@@ -60,12 +60,17 @@ app.route(`${SERVER_BASE_PATH}/api/billing`, billingApp);
 async function disableOtherTemplates(exceptId: string, shop: string = "global") {
   // SECURITY: Scoping by shop prevents cross-merchant template disabling
   const prefix = `shop:${shop}:template:`;
-  const allTemplates = await kv.getByPrefix(prefix);
+
+  // PERFORMANCE: Fetch only enabled templates using DB-side filtering to avoid full table scan
+  // This reduces memory usage and network transfer compared to fetching all templates
+  const enabledTemplates = await kv.getByPrefixAndValue(prefix, "value->enabled", true);
+
   const updateKeys = [];
   const updateValues = [];
   
-  for (const t of allTemplates) {
-    if (t.id !== exceptId && t.enabled) {
+  for (const t of enabledTemplates) {
+    // Only process if it's not the one we want to keep enabled
+    if (t.id !== exceptId) {
       t.enabled = false;
       updateKeys.push(`${prefix}${t.id}`);
       updateValues.push(t);

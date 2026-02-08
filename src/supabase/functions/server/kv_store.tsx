@@ -26,7 +26,7 @@ const client = () => {
 
 // Set stores a key-value pair in the database.
 export const set = async (key: string, value: any): Promise<void> => {
-  const supabase = client()
+  const supabase = client();
   const { error } = await supabase.from("kv_store_c8eef56a").upsert({
     key,
     value
@@ -38,7 +38,7 @@ export const set = async (key: string, value: any): Promise<void> => {
 
 // Get retrieves a key-value pair from the database.
 export const get = async (key: string): Promise<any> => {
-  const supabase = client()
+  const supabase = client();
   const { data, error } = await supabase.from("kv_store_c8eef56a").select("value").eq("key", key).maybeSingle();
   if (error) {
     throw new Error(error.message);
@@ -49,7 +49,7 @@ export const get = async (key: string): Promise<any> => {
 // Delete deletes a key-value pair from the database.
 // Returns true if the key was found and deleted, false otherwise.
 export const del = async (key: string): Promise<boolean> => {
-  const supabase = client()
+  const supabase = client();
   // select() is needed to get the count
   const { error, count } = await supabase.from("kv_store_c8eef56a").delete({ count: "exact" }).eq("key", key);
   if (error) {
@@ -60,7 +60,7 @@ export const del = async (key: string): Promise<boolean> => {
 
 // Sets multiple key-value pairs in the database.
 export const mset = async (keys: string[], values: any[]): Promise<void> => {
-  const supabase = client()
+  const supabase = client();
   const { error } = await supabase.from("kv_store_c8eef56a").upsert(keys.map((k, i) => ({ key: k, value: values[i] })));
   if (error) {
     throw new Error(error.message);
@@ -71,7 +71,7 @@ export const mset = async (keys: string[], values: any[]): Promise<void> => {
 // Preserves the order of input keys and returns null for missing keys.
 export const mget = async (keys: string[]): Promise<any[]> => {
   if (keys.length === 0) return [];
-  const supabase = client()
+  const supabase = client();
   // PERFORMANCE: Select both key and value to allow mapping results back to original order
   const { data, error } = await supabase.from("kv_store_c8eef56a").select("key, value").in("key", keys);
   if (error) {
@@ -88,7 +88,7 @@ export const mget = async (keys: string[]): Promise<any[]> => {
 // Scan Queue (Efficient Range Query)
 // Fetches keys starting with "queue:v1:" and less than or equal to endKey
 export const scanQueue = async (endKey: string): Promise<any[]> => {
-  const supabase = client()
+  const supabase = client();
   const { data, error } = await supabase.from("kv_store_c8eef56a")
     .select("key, value")
     .like("key", "queue:v1:%")
@@ -102,7 +102,7 @@ export const scanQueue = async (endKey: string): Promise<any[]> => {
 
 // Deletes multiple key-value pairs from the database.
 export const mdel = async (keys: string[]): Promise<void> => {
-  const supabase = client()
+  const supabase = client();
   const { error } = await supabase.from("kv_store_c8eef56a").delete().in("key", keys);
   if (error) {
     throw new Error(error.message);
@@ -111,8 +111,27 @@ export const mdel = async (keys: string[]): Promise<void> => {
 
 // Search for key-value pairs by prefix.
 export const getByPrefix = async (prefix: string, limit?: number): Promise<any[]> => {
-  const supabase = client()
+  const supabase = client();
   let query = supabase.from("kv_store_c8eef56a").select("key, value").like("key", prefix + "%");
+
+  if (limit) {
+    query = query.limit(limit);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    throw new Error(error.message);
+  }
+  return data?.map((d) => d.value) ?? [];
+};
+// Search for key-value pairs by prefix and value (JSONB column query)
+// Uses Supabase's arrow operators for JSONB filtering (e.g., 'value->enabled')
+export const getByPrefixAndValue = async (prefix: string, jsonPath: string, value: any, limit?: number): Promise<any[]> => {
+  const supabase = client();
+  let query = supabase.from("kv_store_c8eef56a")
+    .select("key, value")
+    .like("key", prefix + "%")
+    .eq(jsonPath, value);
 
   if (limit) {
     query = query.limit(limit);
