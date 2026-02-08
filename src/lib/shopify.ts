@@ -10,28 +10,6 @@
 import { z } from "zod";
 import { ShopifyCartPayload } from "../types";
 
-const ShopifyCartSchema = z.object({
-  id: z.coerce.string(),
-  token: z.string(),
-  line_items: z.array(
-    z.object({
-      id: z.number(),
-      title: z.string(),
-      quantity: z.number(),
-      price: z.coerce.string(),
-    })
-  ),
-  currency: z.string(),
-  customer: z.object({
-    first_name: z.string(),
-    last_name: z.string(),
-    email: z.string(),
-    phone: z.string().optional(),
-  }),
-  abandoned_checkout_url: z.string(),
-  created_at: z.string(),
-});
-
 const getEnv = (key: string): string | undefined => {
   // @ts-ignore
   if (typeof Deno !== "undefined") return Deno.env.get(key);
