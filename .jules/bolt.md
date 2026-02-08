@@ -35,3 +35,7 @@
 ## 2025-05-15 - [KV Batching with mget/mset]
 **Learning:** The default `mget` implementation in `kv_store.tsx` was non-deterministic regarding result order and omitted missing keys. This prevented reliable destructuring of batch results.
 **Action:** Always ensure `mget` is "order-preserving" by mapping database results back to the input keys array and filling missing values with `null`. Use `mget` and `mset` to reduce O(N) database round-trips to O(1) in webhook handlers and configuration routes.
+
+## 2025-05-15 - [Critical Path Batching & Parallelization]
+**Learning:** Core automation paths (like `executeAutomation`) and high-traffic dashboard routes often suffer from "sequential await creep" where independent KV operations are added over time. Manual object updates followed by a single `kv.mset` can reduce latency by ~150ms per request in Edge environments.
+**Action:** Audit core functions for multiple `kv.set` calls or sequential `kv.get` calls. Parallelize fetches with `Promise.all` and batch updates with `kv.mset` even if it requires manually updating state objects usually handled by service methods.

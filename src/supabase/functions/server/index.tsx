@@ -6,6 +6,7 @@ import { enqueueJob, processPendingJobs } from "./queue.ts";
 import * as kv from "./kv_store.tsx";
 import { sendWhatsAppTemplate } from "./whatsapp.ts";
 import * as billing from "./billing.ts"; // Import Billing Service
+import { BILLING_KEY_PREFIX } from "./billing.ts";
 import { checkOrderExists, getMerchantCredentials, verifyWebhookHmac } from "./shopify_client.ts";
 import authApp from "./auth.tsx";
 import dashboardApp from "./dashboard.tsx";
@@ -13,6 +14,8 @@ import shopifyAuthApp from "./shopify_auth.tsx"; // Import Shopify Auth
 import billingApp from "./billing_routes.tsx"; // Import Billing Routes
 
 const app = new Hono();
+
+const SHOPIFY_DOMAIN_REGEX = /^[a-zA-Z0-9][a-zA-Z0-9-]*\.myshopify\.com$/;
 
 // Enable logger
 app.use('*', logger(console.log));
@@ -261,7 +264,7 @@ app.get("/make-server-c8eef56a/api/templates", async (c) => {
   try {
     const shop = c.req.query("shop") || "global";
     // SECURITY: Validate shop domain
-    if (shop !== "global" && !shop.endsWith(".myshopify.com")) {
+    if (shop !== "global" && !SHOPIFY_DOMAIN_REGEX.test(shop)) {
       return c.json({ error: "Invalid shop domain" }, 400);
     }
     // SECURITY: Scoping templates by shop to prevent multi-tenancy leaks
@@ -281,7 +284,7 @@ app.post("/make-server-c8eef56a/api/templates", async (c) => {
     const body = await c.req.json();
     const shop = body.shop || c.req.query("shop") || "global";
     // SECURITY: Validate shop domain
-    if (shop !== "global" && !shop.endsWith(".myshopify.com")) {
+    if (shop !== "global" && !SHOPIFY_DOMAIN_REGEX.test(shop)) {
       return c.json({ error: "Invalid shop domain" }, 400);
     }
     const { template_name, display_name, delay_minutes } = body;
@@ -402,7 +405,7 @@ app.post("/make-server-c8eef56a/api/templates/ai-generate", async (c) => {
     const { tone, brand_name, discount, shop } = body;
 
     // SECURITY: Validate shop domain and presence
-    if (!shop || !shop.endsWith(".myshopify.com")) {
+    if (!shop || !SHOPIFY_DOMAIN_REGEX.test(shop)) {
       return c.json({ error: "Invalid or missing shop parameter" }, 400);
     }
 
@@ -558,11 +561,7 @@ app.post("/make-server-c8eef56a/api/webhooks/shopify", async (c) => {
 
     const payload = JSON.parse(rawBody);
     
-    // 1. Log reception
-    console.log(`\n--- 🛒 SHOPIFY WEBHOOK RECEIVED [${shop}] ---`);
-    console.log('Timestamp:', new Date().toISOString());
-
-    // 2. Extract key data points
+    // 1. Extract key data points
     const customerPhone = payload.customer?.phone || payload.phone || "No phone provided";
     const customerName = payload.customer ? `${payload.customer.first_name} ${payload.customer.last_name}` : "Guest";
     const customerEmail = payload.customer?.email || payload.email || "";
@@ -571,15 +570,13 @@ app.post("/make-server-c8eef56a/api/webhooks/shopify", async (c) => {
     const currency = payload.currency || "USD";
     const recoveryUrl = payload.abandoned_checkout_url || "No URL";
 
-    // 3. Log extracted data (PII Redacted for security)
-    console.log('\n📦 DATA EXTRACTED:');
-    console.log(`👤 Customer: [REDACTED]`);
-    console.log(`📱 Phone:    [REDACTED]`);
-    console.log(`🛍️ Product:  ${firstProduct} (and ${payload.line_items?.length - 1 || 0} others)`);
-    console.log(`💰 Value:    ${cartValue} ${currency}`);
-    console.log(`🔗 Recovery: [REDACTED]`);
-    
-    // 4. PERSISTENCE: Save to Database
+    // 2. Log reception (Structured & Redacted)
+    console.log(`[Shopify Webhook] Received for ${shop}`, {
+      timestamp: new Date().toISOString(),
+      product: `${firstProduct} (+${Math.max(0, (payload.line_items?.length || 0) - 1)} others)`,
+      value: `${cartValue} ${currency}`,
+    });
+    // 3. PERSISTENCE: Save to Database
     console.log('\n💾 PERSISTENCE: Saving abandoned cart to database...');
     
     const cartId = payload.id ? String(payload.id) : crypto.randomUUID();
@@ -606,7 +603,7 @@ app.post("/make-server-c8eef56a/api/webhooks/shopify", async (c) => {
     console.log('Status: "pending" (Waiting for automation trigger)');
     console.log('-----------------------------------\n');
 
-    // 5. AUTOMATION DELAY: Wait, then check logic
+    // 4. AUTOMATION DELAY: Wait, then check logic
     
     // CHECK INTEGRATIONS & LIMITS (Parallelized for performance)
     console.log('\n🔍 AUTOMATION CHECKS: Verifying integration status and limits...');
@@ -742,14 +739,20 @@ app.post("/make-server-c8eef56a/api/webhooks/app/uninstalled", async (c) => {
 /**
  * AUTOMATION ENGINE
  */
-// deno-lint-ignore no-explicit-any
-async function scheduleAutomation(payload: any, delayMinutes: number) {
+
+interface AutomationPayload {
+  cartId: string;
+  cartKey: string;
+  templateName: string;
+  shop: string;
+}
+
+async function scheduleAutomation(payload: AutomationPayload, delayMinutes: number) {
   console.log(`[Automation] Scheduling job for cart ${payload.cartId} in ${delayMinutes} minutes...`);
   await enqueueJob(payload, delayMinutes);
 }
 
-// deno-lint-ignore no-explicit-any
-async function executeAutomation(payload: any) {
+async function executeAutomation(payload: AutomationPayload) {
   const { cartId, cartKey, templateName, shop } = payload;
   
   try {
@@ -815,19 +818,33 @@ async function executeAutomation(payload: any) {
       });
 
       if (result.success) {
-        // Increment Usage
-        await billing.incrementUsage('whatsapp', shop);
+        // PERFORMANCE: Batch all updates (Billing, Message Map, Cart) in a single request
+        const updateKeys = [];
+        const updateValues = [];
 
+        // 1. Increment Usage (manually since we already have the config)
+        billingConfig.whatsapp_conversations_used += 1;
+        updateKeys.push(`${BILLING_KEY_PREFIX}${shop}`);
+        updateValues.push(billingConfig);
+
+        // 2. Update Cart Status
         currentCart.status = 'messaged';
         currentCart.messaged_at = new Date().toISOString();
 
         if (result.wamid) {
              currentCart.wamid = result.wamid;
-             await kv.set(`msg_map:${result.wamid}`, cartId);
+             // 3. Map message ID to cart for status tracking
+             updateKeys.push(`msg_map:${result.wamid}`);
+             updateValues.push(cartId);
              console.log(`🔗 Mapped message ${result.wamid} to cart ${cartId}`);
         }
 
-        await kv.set(cartKey, currentCart);
+        updateKeys.push(cartKey);
+        updateValues.push(currentCart);
+
+        // Atomic batch update
+        await kv.mset(updateKeys, updateValues);
+        console.log(`⚡ [Automation] Optimized: Persisted ${updateKeys.length} updates in a single batch.`);
 
       } else {
         console.error(`❌ AUTOMATION FAILED: WhatsApp API Error for cart ${cartId}`, result.error);
@@ -933,19 +950,19 @@ app.get("/make-server-c8eef56a/api/dashboard/metrics", async (c) => {
       return c.json({ error: "Missing shop parameter" }, 400);
     }
 
-    // SECURITY: Verify merchant exists to prevent unauthorized data access
-    const merchant = await kv.get(`merchant:${shop}`);
-    if (!merchant && shop !== "global") {
-      return c.json({ error: "Unauthorized: Merchant not found" }, 401);
-    }
-
-    // 1. Fetch all dependencies in parallel to minimize round-trip latency
-    const [shopifyConfig, whatsappConfig, templates, billingConfig] = await Promise.all([
+    // 1. PERFORMANCE: Fetch all dependencies including merchant in parallel to minimize round-trip latency
+    const [merchant, shopifyConfig, whatsappConfig, templates, billingConfig] = await Promise.all([
+      kv.get(`merchant:${shop}`),
       kv.get(`shop:${shop}:config:shopify`),
       kv.get(`shop:${shop}:config:whatsapp`),
       kv.getByPrefix(`shop:${shop}:template:`),
       billing.getBillingConfig(shop)
     ]);
+
+    // SECURITY: Verify merchant exists to prevent unauthorized data access
+    if (!merchant && shop !== "global") {
+      return c.json({ error: "Unauthorized: Merchant not found" }, 401);
+    }
 
     const status = {
       shopify_connected: shopifyConfig?.connection_status === 'connected',

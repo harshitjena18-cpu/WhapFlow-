@@ -7,6 +7,7 @@ const app = new Hono();
 
 // Configuration
 const SHOPIFY_SCOPES = "read_checkouts,read_orders";
+const SHOPIFY_DOMAIN_REGEX = /^[a-zA-Z0-9][a-zA-Z0-9-]*\.myshopify\.com$/;
 // Note: In production, strictly use the environment variable. 
 // For this environment, we default to the provided callback URL structure if not set, 
 // but the user MUST set SHOPIFY_CLIENT_ID and SHOPIFY_CLIENT_SECRET.
@@ -25,7 +26,7 @@ app.get("/", (c) => {
   }
 
   // 1. Validate shop parameter
-  if (!shop || !shop.endsWith(".myshopify.com")) {
+  if (!shop || !SHOPIFY_DOMAIN_REGEX.test(shop)) {
     return c.text("Error: Invalid or missing 'shop' parameter. Expected format: my-store.myshopify.com", 400);
   }
 
@@ -65,7 +66,7 @@ app.get("/callback", async (c) => {
   if (!shop || !code || !state || !hmac) {
     return c.text("Error: Missing required parameters", 400);
   }
-  if (!shop.endsWith(".myshopify.com")) {
+  if (!SHOPIFY_DOMAIN_REGEX.test(shop)) {
     return c.text("Error: Invalid shop domain", 400);
   }
 
