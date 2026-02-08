@@ -95,6 +95,6 @@ export const ShopifyCartSchema = z.object({
   created_at: z.string(),
 });
 
-export const parseShopifyCart = (payload: any): ShopifyCartPayload => {
+export const parseShopifyCart = (payload: unknown): ShopifyCartPayload => {
   return ShopifyCartSchema.parse(payload);
 };
