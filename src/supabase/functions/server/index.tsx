@@ -14,6 +14,8 @@ import billingApp from "./billing_routes.tsx"; // Import Billing Routes
 
 const app = new Hono();
 
+const SHOPIFY_DOMAIN_REGEX = /^[a-zA-Z0-9][a-zA-Z0-9-]*\.myshopify\.com$/;
+
 // Enable logger
 app.use('*', logger(console.log));
 
@@ -261,7 +263,7 @@ app.get("/make-server-c8eef56a/api/templates", async (c) => {
   try {
     const shop = c.req.query("shop") || "global";
     // SECURITY: Validate shop domain
-    if (shop !== "global" && !shop.endsWith(".myshopify.com")) {
+    if (shop !== "global" && !SHOPIFY_DOMAIN_REGEX.test(shop)) {
       return c.json({ error: "Invalid shop domain" }, 400);
     }
     // SECURITY: Scoping templates by shop to prevent multi-tenancy leaks
@@ -281,7 +283,7 @@ app.post("/make-server-c8eef56a/api/templates", async (c) => {
     const body = await c.req.json();
     const shop = body.shop || c.req.query("shop") || "global";
     // SECURITY: Validate shop domain
-    if (shop !== "global" && !shop.endsWith(".myshopify.com")) {
+    if (shop !== "global" && !SHOPIFY_DOMAIN_REGEX.test(shop)) {
       return c.json({ error: "Invalid shop domain" }, 400);
     }
     const { template_name, display_name, delay_minutes } = body;
@@ -402,7 +404,7 @@ app.post("/make-server-c8eef56a/api/templates/ai-generate", async (c) => {
     const { tone, brand_name, discount, shop } = body;
 
     // SECURITY: Validate shop domain and presence
-    if (!shop || !shop.endsWith(".myshopify.com")) {
+    if (!shop || !SHOPIFY_DOMAIN_REGEX.test(shop)) {
       return c.json({ error: "Invalid or missing shop parameter" }, 400);
     }
 

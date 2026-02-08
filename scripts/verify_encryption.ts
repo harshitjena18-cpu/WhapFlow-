@@ -1,5 +1,5 @@
 
-import { encrypt, decrypt } from "../src/supabase/functions/server/crypto";
+import { encrypt, decrypt } from "../src/supabase/functions/server/crypto.ts";
 import { webcrypto } from "node:crypto";
 
 // Mock Deno global for Node.js environment
