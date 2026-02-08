@@ -1,5 +1,5 @@
 
-import { parseShopifyCart } from '../src/lib/shopify';
+import { parseShopifyCart } from '../src/lib/shopify.ts';
 
 const validPayload: any = {
   id: "123456",

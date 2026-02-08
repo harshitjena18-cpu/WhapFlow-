@@ -1,6 +1,6 @@
 
-import { sendWhatsAppMessage } from "../src/lib/whatsapp";
-import { WhatsAppMessageRequest } from "../src/types";
+import { sendWhatsAppMessage } from "../src/lib/whatsapp.ts";
+import { WhatsAppMessageRequest } from "../src/types/index.ts";
 
 // Mock fetch
 const originalFetch = global.fetch;
