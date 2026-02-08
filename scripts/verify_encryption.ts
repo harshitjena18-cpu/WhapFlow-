@@ -1,6 +1,5 @@
-
 import { encrypt, decrypt } from "../src/supabase/functions/server/crypto.ts";
-import { webcrypto } from "node:crypto";
+// import { webcrypto } from "node:crypto"; // Not needed in Node 22+ with global crypto
 
 // Mock Deno global for Node.js environment
 // @ts-ignore: Mocking Deno
@@ -9,12 +8,6 @@ global.Deno = {
     get: (key: string) => process.env[key]
   }
 };
-
-// Ensure crypto is available (Node 19+ has global crypto, but for older versions we mock it)
-if (!global.crypto) {
-    // @ts-ignore: Mocking crypto
-    global.crypto = webcrypto;
-}
 
 // Set test secret
 process.env.ENCRYPTION_SECRET = "test-encryption-secret-key-12345";
@@ -29,8 +22,8 @@ async function runTests() {
   const encrypted = await encrypt(originalText);
   console.log(`Encrypted: ${encrypted}`);
 
-  if (!encrypted?.startsWith("enc:v1:")) {
-    console.error("❌ Test 1 Failed: Encrypted text should start with 'enc:v1:'");
+  if (!encrypted?.startsWith("enc:v2:")) {
+    console.error("❌ Test 1 Failed: Encrypted text should start with 'enc:v2:'");
     process.exit(1);
   }
 
@@ -71,6 +64,7 @@ async function runTests() {
   // Test 4: Different secret leads to decryption failure (returns input)
   console.log("Test 4: Decryption with wrong secret");
   const encryptedWithCorrect = await encrypt("secret_data");
+  // Change secret
   process.env.ENCRYPTION_SECRET = "wrong-secret";
 
   const decryptedWithWrong = await decrypt(encryptedWithCorrect);
