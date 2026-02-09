@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
 import { MessageCircle, Plus, Trash2, Check, Loader2, Sparkles, Copy, AlertCircle, Bot, Zap, Info } from 'lucide-react';
 import { toast } from "sonner";
@@ -91,6 +91,7 @@ export function TemplatesView() {
 
   // Copy State
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const contentRef = useRef<HTMLTextAreaElement>(null);
 
   const handleCopy = async (text: string, id: string) => {
     try {
@@ -104,6 +105,20 @@ export function TemplatesView() {
       console.error('Failed to copy text: ', err);
       toast.error('Failed to copy to clipboard');
     }
+  };
+
+  const insertVariable = (variable: string) => {
+    const textarea = contentRef.current;
+    const { content = '' } = formData;
+    if (!textarea) return setFormData(prev => ({ ...prev, content: content + variable }));
+
+    const { selectionStart: start, selectionEnd: end } = textarea;
+    setFormData(prev => ({ ...prev, content: content.slice(0, start) + variable + content.slice(end) }));
+
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + variable.length, start + variable.length);
+    }, 0);
   };
 
   // Validation State
@@ -422,12 +437,12 @@ export function TemplatesView() {
             <div className="lg:col-span-1 bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
               <div className="bg-gray-50/50 px-4 py-3 border-b border-gray-100 flex justify-between items-center">
                 <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">All Templates</span>
-                <span className="text-xs text-gray-400">{templates.length} total</span>
+                <span className="text-xs text-gray-500">{templates.length} total</span>
               </div>
               
               <div className="divide-y divide-gray-100 max-h-[600px] overflow-y-auto">
                 {loading ? (
-                  <div className="p-8 flex justify-center text-gray-400">
+                  <div className="p-8 flex justify-center text-gray-500">
                     <Loader2 className="w-6 h-6 animate-spin" />
                   </div>
                 ) : templates.length === 0 ? (
@@ -467,7 +482,7 @@ export function TemplatesView() {
                         <p className="text-xs text-gray-500 mt-1 truncate font-mono">
                           {template.template_name}
                         </p>
-                        <p className="text-[10px] text-gray-400 mt-1 flex items-center gap-1">
+                        <p className="text-[10px] text-gray-500 mt-1 flex items-center gap-1">
                           Wait: {template.delay_minutes} mins
                           {template.generated_by_ai && <span className="text-purple-400 flex items-center gap-0.5 ml-1"><Sparkles className="w-2 h-2" /> AI</span>}
                         </p>
@@ -536,9 +551,9 @@ export function TemplatesView() {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-8 w-8 text-gray-400 hover:text-gray-600"
+                                  className="h-8 w-8 text-gray-500 hover:text-gray-600"
                                   onClick={() => handleCopy(selectedTemplate.template_name, 'template_name')}
-                                  aria-label="Copy template name"
+                                  aria-label={copiedId === 'template_name' ? "Copied template name" : "Copy template name"}
                                 >
                                   {copiedId === 'template_name' ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
                                 </Button>
@@ -548,7 +563,7 @@ export function TemplatesView() {
                               </TooltipContent>
                             </Tooltip>
                           </div>
-                          <p className="mt-1 text-xs text-gray-400">Must match WhatsApp Manager</p>
+                          <p className="mt-1 text-xs text-gray-500">Must match WhatsApp Manager</p>
                         </div>
                         
                         <div>
@@ -556,7 +571,7 @@ export function TemplatesView() {
                           <p className="mt-1 text-sm text-gray-900">
                             {selectedTemplate.delay_minutes} minutes
                           </p>
-                          <p className="mt-1 text-xs text-gray-400">Time to wait after cart abandonment</p>
+                          <p className="mt-1 text-xs text-gray-500">Time to wait after cart abandonment</p>
                         </div>
 
                         <div className="md:col-span-2 pt-2 border-t border-gray-200 mt-2">
@@ -595,13 +610,13 @@ export function TemplatesView() {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-7 w-7 text-gray-400 hover:text-[#25D366] transition-colors"
+                                  className="h-7 w-7 text-gray-500 hover:text-[#25D366] transition-colors"
                                   onClick={() => {
                                     if (selectedTemplate.content) {
                                       handleCopy(selectedTemplate.content, 'template_content');
                                     }
                                   }}
-                                  aria-label="Copy message content"
+                                  aria-label={copiedId === 'template_content' ? "Copied message content" : "Copy message content"}
                                 >
                                   {copiedId === 'template_content' ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
                                 </Button>
@@ -636,7 +651,7 @@ export function TemplatesView() {
                   </div>
                 </div>
               ) : (
-                 <div className="h-full flex flex-col items-center justify-center p-12 text-center text-gray-400 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                 <div className="h-full flex flex-col items-center justify-center p-12 text-center text-gray-500 bg-gray-50 rounded-xl border border-dashed border-gray-200">
                    <MessageCircle className="w-12 h-12 mb-4 opacity-20" />
                    <p className="text-lg font-medium text-gray-500">Select a template</p>
                    <p className="text-sm mt-1">or create a new one to get started</p>
@@ -759,7 +774,7 @@ export function TemplatesView() {
                        <div className="flex justify-between items-start mb-4">
                          <div className="flex items-center gap-2">
                            <span className="bg-purple-100 text-purple-700 text-xs font-semibold px-2 py-0.5 rounded">Option {idx + 1}</span>
-                           <span className="text-xs text-gray-400">{text.length} chars</span>
+                           <span className="text-xs text-gray-500">{text.length} chars</span>
                          </div>
                          <div className="flex items-center gap-2">
                            <Tooltip>
@@ -768,7 +783,7 @@ export function TemplatesView() {
                                  variant="outline"
                                  size="sm"
                                  onClick={() => handleCopy(text, `ai-suggestion-${idx}`)}
-                                 aria-label="Copy suggestion"
+                                 aria-label={copiedId === `ai-suggestion-${idx}` ? "Copied suggestion" : "Copy suggestion"}
                                >
                                  {copiedId === `ai-suggestion-${idx}` ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
                                </Button>
@@ -793,7 +808,7 @@ export function TemplatesView() {
                    ))}
                  </div>
                ) : (
-                 <div className="h-full min-h-[400px] flex flex-col items-center justify-center text-center text-gray-400 bg-gray-50/50 rounded-xl border border-dashed border-gray-200">
+                 <div className="h-full min-h-[400px] flex flex-col items-center justify-center text-center text-gray-500 bg-gray-50/50 rounded-xl border border-dashed border-gray-200">
                    {aiGenerating ? (
                       <div className="space-y-4">
                         <Loader2 className="w-12 h-12 animate-spin text-purple-400 mx-auto" />
@@ -863,12 +878,32 @@ export function TemplatesView() {
               <div className="space-y-2 h-full flex flex-col">
                 <div className="flex justify-between items-center">
                   <Label htmlFor="content">Template Content (Reference Only)</Label>
-                  <span className={`text-[10px] ${formData.content && formData.content.length > 1024 ? 'text-red-500 font-bold' : 'text-gray-400'}`}>
+                  <span className={`text-[10px] ${
+                    (formData.content?.length || 0) > 1024
+                      ? 'text-red-500 font-bold'
+                      : (formData.content?.length || 0) > 900
+                        ? 'text-orange-500 font-semibold'
+                        : 'text-gray-500'
+                  }`}>
                     {formData.content?.length || 0} / 1024 chars
                   </span>
                 </div>
+                <div className="flex flex-wrap gap-1.5 mt-1 mb-1">
+                  {['{{customer_name}}', '{{product_name}}', '{{checkout_link}}'].map(variable => (
+                    <button
+                      key={variable}
+                      type="button"
+                      onClick={() => insertVariable(variable)}
+                      className="text-[10px] bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded border border-gray-200 transition-colors flex items-center gap-1 active:scale-95"
+                      title={`Insert ${variable}`}
+                    >
+                      <Plus className="w-2.5 h-2.5" /> {variable}
+                    </button>
+                  ))}
+                </div>
                 <Textarea 
                   id="content"
+                  ref={contentRef}
                   placeholder="Paste your template content here... e.g. Hi {{customer_name}}, you left {{product_name}} in your cart. Check out here: {{checkout_link}}" 
                   className={`flex-1 min-h-[150px] font-mono text-sm resize-none bg-gray-50 ${validationErrors.length > 0 ? 'border-red-300 focus:ring-red-200' : ''}`}
                   value={formData.content}
