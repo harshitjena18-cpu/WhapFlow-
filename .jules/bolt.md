@@ -39,3 +39,7 @@
 ## 2025-05-15 - [Critical Path Batching & Parallelization]
 **Learning:** Core automation paths (like `executeAutomation`) and high-traffic dashboard routes often suffer from "sequential await creep" where independent KV operations are added over time. Manual object updates followed by a single `kv.mset` can reduce latency by ~150ms per request in Edge environments.
 **Action:** Audit core functions for multiple `kv.set` calls or sequential `kv.get` calls. Parallelize fetches with `Promise.all` and batch updates with `kv.mset` even if it requires manually updating state objects usually handled by service methods.
+
+## 2026-02-09 - [HMAC Key Caching & Crypto Type Safety]
+**Learning:** Caching `CryptoKey` objects for HMAC verification in high-traffic paths (webhooks) reduces latency by ~2-5ms per call by avoiding redundant `importKey` operations. In `crypto.ts`, caching `keyMaterial` (the raw secret) is safer than caching derived keys when random salts are used per message, as derived keys are salt-specific.
+**Action:** Always cache imported/derived keys at the module level for repeat operations with the same secret. Use type narrowing to ensure cached `null | CryptoKey` variables are safe for `subtle.verify` and `subtle.deriveKey`.

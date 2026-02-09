@@ -6,6 +6,10 @@ import { API_DOMAIN, APP_DOMAIN, SERVER_BASE_PATH } from "./constants.ts";
 
 const app = new Hono();
 
+// Module-level cache for HMAC CryptoKeys to minimize import overhead
+let _cachedHmacKey: CryptoKey | null = null;
+let _cachedHmacSecret: string | null = null;
+
 // Configuration
 const SHOPIFY_SCOPES = "read_checkouts,read_orders";
 const SHOPIFY_DOMAIN_REGEX = /^[a-zA-Z0-9][a-zA-Z0-9-]*\.myshopify\.com$/;
@@ -170,16 +174,20 @@ async function verifyHmac(query: Record<string, string>, secret: string) {
   const message = keys.map(key => `${key}=${rest[key]}`).join("&");
 
   const encoder = new TextEncoder();
-  const keyData = encoder.encode(secret);
   const msgData = encoder.encode(message);
 
-  const cryptoKey = await crypto.subtle.importKey(
-    "raw",
-    keyData,
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["verify"]
-  );
+  // PERFORMANCE: Cache the imported CryptoKey to avoid overhead during OAuth callback
+  if (_cachedHmacSecret !== secret || !_cachedHmacKey) {
+    const keyData = encoder.encode(secret);
+    _cachedHmacKey = await crypto.subtle.importKey(
+      "raw",
+      keyData,
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["verify"]
+    );
+    _cachedHmacSecret = secret;
+  }
 
   // Convert hex HMAC to Uint8Array for constant-time verification
   const hmacBytes = new Uint8Array(hmac.length / 2);
@@ -187,7 +195,12 @@ async function verifyHmac(query: Record<string, string>, secret: string) {
     hmacBytes[i / 2] = parseInt(hmac.substring(i, i + 2), 16);
   }
 
-  return await crypto.subtle.verify("HMAC", cryptoKey, hmacBytes, msgData);
+  // Type narrowing for TypeScript safety
+  if (!_cachedHmacKey) {
+    throw new Error("HMAC Key initialization failed");
+  }
+
+  return await crypto.subtle.verify("HMAC", _cachedHmacKey, hmacBytes, msgData);
 }
 
 /**

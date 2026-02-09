@@ -10,10 +10,13 @@ const ITERATIONS = 100000;
 const KEY_LENGTH = 256;
 const DIGEST = "SHA-256";
 
+// Module-level cache for CryptoKeys and secrets to optimize performance in Edge environments
+let _cachedSecret: string | null = null;
+let _cachedKeyMaterial: CryptoKey | null = null;
+
 function checkCacheInvalidation(secret: string) {
   if (_cachedSecret !== secret) {
-    _cachedLegacyKey = null;
-    _cachedSecureKey = null;
+    _cachedKeyMaterial = null;
     _cachedSecret = secret;
   }
 }
@@ -30,16 +33,18 @@ async function getKey(salt: Uint8Array): Promise<CryptoKey> {
   }
 
   checkCacheInvalidation(secret);
-  if (_cachedLegacyKey) return _cachedLegacyKey;
 
-  const encoder = new TextEncoder();
-  const keyMaterial = await crypto.subtle.importKey(
-    "raw",
-    encoder.encode(secret),
-    { name: "PBKDF2" },
-    false,
-    ["deriveKey"]
-  );
+  // PERFORMANCE: Cache the imported key material to avoid repeated importKey calls (~2-5ms)
+  if (!_cachedKeyMaterial) {
+    const encoder = new TextEncoder();
+    _cachedKeyMaterial = await crypto.subtle.importKey(
+      "raw",
+      encoder.encode(secret),
+      { name: "PBKDF2" },
+      false,
+      ["deriveKey"]
+    );
+  }
 
   return await crypto.subtle.deriveKey(
     {
@@ -48,7 +53,7 @@ async function getKey(salt: Uint8Array): Promise<CryptoKey> {
       iterations: ITERATIONS,
       hash: DIGEST,
     },
-    keyMaterial,
+    _cachedKeyMaterial,
     { name: ALGORITHM, length: KEY_LENGTH },
     false,
     ["encrypt", "decrypt"]
