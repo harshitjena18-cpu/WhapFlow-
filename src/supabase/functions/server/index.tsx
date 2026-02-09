@@ -12,6 +12,7 @@ import authApp from "./auth.tsx";
 import dashboardApp from "./dashboard.tsx";
 import shopifyAuthApp from "./shopify_auth.tsx"; // Import Shopify Auth
 import billingApp from "./billing_routes.tsx"; // Import Billing Routes
+import { getEnv } from "../../../lib/env.ts";
 import { SERVER_BASE_PATH } from "./constants.ts";
 
 const app = new Hono();
@@ -473,7 +474,7 @@ app.post(`${SERVER_BASE_PATH}/api/templates/ai-generate`, async (c) => {
       }, 429);
     }
 
-    const apiKey = Deno.env.get("OPENAI_API_KEY");
+    const apiKey = getEnv("OPENAI_API_KEY");
 
     if (!apiKey) {
       return c.json({ error: "OpenAI API key not configured" }, 500);
@@ -572,7 +573,7 @@ app.post(`${SERVER_BASE_PATH}/api/webhooks/shopify`, async (c) => {
     const rawBody = await c.req.text(); 
     
     // SECURITY: Verify HMAC
-    const secret = Deno.env.get('SHOPIFY_CLIENT_SECRET');
+    const secret = getEnv('SHOPIFY_CLIENT_SECRET');
     if (!secret) {
       console.error("[Shopify Webhook] Critical Error: SHOPIFY_CLIENT_SECRET not configured");
       return c.json({ error: 'Server configuration error' }, 500);
@@ -715,7 +716,7 @@ app.post(`${SERVER_BASE_PATH}/api/webhooks/app/uninstalled`, async (c) => {
     console.log(`\n--- ⚠️ APP UNINSTALLED WEBHOOK RECEIVED [${shop}] ---`);
 
     // SECURITY: Verify HMAC
-    const secret = Deno.env.get('SHOPIFY_CLIENT_SECRET');
+    const secret = getEnv('SHOPIFY_CLIENT_SECRET');
     if (!secret) {
       console.error("[Uninstall Webhook] Critical Error: SHOPIFY_CLIENT_SECRET not configured");
       return c.json({ error: 'Server configuration error' }, 500);
@@ -968,7 +969,7 @@ app.get(`${SERVER_BASE_PATH}/api/webhooks/whatsapp`, (c) => {
   const token = c.req.query("hub.verify_token");
   const challenge = c.req.query("hub.challenge");
 
-  const verifyToken = Deno.env.get("WHATSAPP_VERIFY_TOKEN");
+  const verifyToken = getEnv("WHATSAPP_VERIFY_TOKEN");
 
   // SECURITY: Ensure verifyToken is configured and matches the request token
   if (mode === "subscribe" && verifyToken && token === verifyToken) {

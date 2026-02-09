@@ -3,12 +3,18 @@
  * Uses AES-GCM with a key derived from environment secrets using PBKDF2.
  */
 
+import { getEnv } from "../../../lib/env.ts";
+
 const ALGORITHM = "AES-GCM";
 const PREFIX = "enc:v2:";
 const SALT_LENGTH = 16;
 const ITERATIONS = 100000;
 const KEY_LENGTH = 256;
 const DIGEST = "SHA-256";
+
+let _cachedSecret: string | undefined;
+let _cachedLegacyKey: CryptoKey | null = null;
+let _cachedSecureKey: CryptoKey | null = null;
 
 function checkCacheInvalidation(secret: string) {
   if (_cachedSecret !== secret) {
@@ -23,7 +29,7 @@ function checkCacheInvalidation(secret: string) {
  * Falls back to SHOPIFY_CLIENT_SECRET if ENCRYPTION_SECRET is not provided.
  */
 async function getKey(salt: Uint8Array): Promise<CryptoKey> {
-  const secret = Deno.env.get("ENCRYPTION_SECRET") || Deno.env.get("SHOPIFY_CLIENT_SECRET");
+  const secret = getEnv("ENCRYPTION_SECRET") || getEnv("SHOPIFY_CLIENT_SECRET");
 
   if (!secret) {
     throw new Error("Security Error: Missing ENCRYPTION_SECRET or SHOPIFY_CLIENT_SECRET environment variable.");
