@@ -18,7 +18,7 @@ const DIGEST = "SHA-256";
 let _cachedSecret: string | null = null;
 let _cachedV3Key: CryptoKey | null = null;
 
-async function getSecret() {
+function getSecret() {
   const secret = Deno.env.get("ENCRYPTION_SECRET") || Deno.env.get("SHOPIFY_CLIENT_SECRET");
   if (!secret) throw new Error("Security Error: Missing encryption secrets.");
   return secret;
@@ -26,7 +26,7 @@ async function getSecret() {
 
 /** Derives a cached master key using HKDF (V3) */
 async function getV3Key(): Promise<CryptoKey> {
-  const secret = await getSecret();
+  const secret = getSecret();
   if (secret !== _cachedSecret) { _cachedV3Key = null; _cachedSecret = secret; }
   if (_cachedV3Key) return _cachedV3Key;
 
@@ -39,7 +39,7 @@ async function getV3Key(): Promise<CryptoKey> {
 
 /** Derives a legacy key using PBKDF2 (V2) - Not cached as it depends on salt */
 async function getV2Key(salt: Uint8Array): Promise<CryptoKey> {
-  const km = await crypto.subtle.importKey("raw", new TextEncoder().encode(await getSecret()), "PBKDF2", false, ["deriveKey"]);
+  const km = await crypto.subtle.importKey("raw", new TextEncoder().encode(getSecret()), "PBKDF2", false, ["deriveKey"]);
   return await crypto.subtle.deriveKey(
     { name: "PBKDF2", salt, iterations: ITERATIONS_V2, hash: DIGEST },
     km, { name: ALGORITHM, length: KEY_LENGTH }, false, ["encrypt", "decrypt"]
