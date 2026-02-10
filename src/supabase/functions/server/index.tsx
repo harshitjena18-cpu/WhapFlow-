@@ -3,6 +3,7 @@ import { cors } from "npm:hono/cors";
 import { logger } from "npm:hono/logger";
 import { secureHeaders } from "npm:hono/secure-headers";
 import { enqueueJob, processPendingJobs } from "./queue.ts";
+import { encrypt, decrypt } from "./crypto.ts";
 import * as kv from "./kv_store.tsx";
 import { sendWhatsAppTemplate } from "./whatsapp.ts";
 import * as billing from "./billing.ts"; // Import Billing Service
@@ -12,6 +13,7 @@ import authApp from "./auth.tsx";
 import dashboardApp from "./dashboard.tsx";
 import shopifyAuthApp from "./shopify_auth.tsx"; // Import Shopify Auth
 import billingApp from "./billing_routes.tsx"; // Import Billing Routes
+import { getEnv } from "../../../lib/env.ts";
 import { SERVER_BASE_PATH } from "./constants.ts";
 
 const app = new Hono();
@@ -473,7 +475,7 @@ app.post(`${SERVER_BASE_PATH}/api/templates/ai-generate`, async (c) => {
       }, 429);
     }
 
-    const apiKey = Deno.env.get("OPENAI_API_KEY");
+    const apiKey = getEnv("OPENAI_API_KEY");
 
     if (!apiKey) {
       return c.json({ error: "OpenAI API key not configured" }, 500);
@@ -572,7 +574,7 @@ app.post(`${SERVER_BASE_PATH}/api/webhooks/shopify`, async (c) => {
     const rawBody = await c.req.text(); 
     
     // SECURITY: Verify HMAC
-    const secret = Deno.env.get('SHOPIFY_CLIENT_SECRET');
+    const secret = getEnv('SHOPIFY_CLIENT_SECRET');
     if (!secret) {
       console.error("[Shopify Webhook] Critical Error: SHOPIFY_CLIENT_SECRET not configured");
       return c.json({ error: 'Server configuration error' }, 500);
@@ -610,6 +612,14 @@ app.post(`${SERVER_BASE_PATH}/api/webhooks/shopify`, async (c) => {
     const customerPhone = payload.customer?.phone || payload.phone || "No phone provided";
     const customerName = payload.customer ? `${payload.customer.first_name} ${payload.customer.last_name}` : "Guest";
     const customerEmail = payload.customer?.email || payload.email || "";
+
+    // SECURITY: Encrypt PII at rest
+    const [encName, encEmail, encPhone] = await Promise.all([
+      encrypt(customerName),
+      encrypt(customerEmail),
+      encrypt(customerPhone)
+    ]);
+
     const firstProduct = payload.line_items?.[0]?.title || "Unknown Product";
     const cartValue = payload.total_price || "0.00";
     const currency = payload.currency || "USD";
@@ -630,9 +640,9 @@ app.post(`${SERVER_BASE_PATH}/api/webhooks/shopify`, async (c) => {
     const abandonedCartData = {
       id: cartId,
       shop: shop, // CRITICAL: Link cart to store
-      customer_name: customerName,
-      customer_email: customerEmail,
-      phone: customerPhone,
+      customer_name: encName,
+      customer_email: encEmail,
+      phone: encPhone,
       product_title: firstProduct,
       total_price: cartValue,
       currency: currency,
@@ -715,7 +725,7 @@ app.post(`${SERVER_BASE_PATH}/api/webhooks/app/uninstalled`, async (c) => {
     console.log(`\n--- ⚠️ APP UNINSTALLED WEBHOOK RECEIVED [${shop}] ---`);
 
     // SECURITY: Verify HMAC
-    const secret = Deno.env.get('SHOPIFY_CLIENT_SECRET');
+    const secret = getEnv('SHOPIFY_CLIENT_SECRET');
     if (!secret) {
       console.error("[Uninstall Webhook] Critical Error: SHOPIFY_CLIENT_SECRET not configured");
       return c.json({ error: 'Server configuration error' }, 500);
@@ -828,6 +838,16 @@ async function executeAutomation(payload: AutomationPayload) {
       console.log(`❌ AUTOMATION SKIPPED: Cart [${cartId}] no longer exists.`);
       return;
     }
+
+    // SECURITY: Decrypt PII before use
+    const [name, email, phone] = await Promise.all([
+      decrypt(currentCart.customer_name),
+      decrypt(currentCart.customer_email),
+      decrypt(currentCart.phone)
+    ]);
+    currentCart.customer_name = name;
+    currentCart.customer_email = email;
+    currentCart.phone = phone;
 
     if (!merchant || !merchant.access_token) {
       console.error(`❌ AUTOMATION FAILED: No credentials found for ${shop}`);
@@ -968,7 +988,7 @@ app.get(`${SERVER_BASE_PATH}/api/webhooks/whatsapp`, (c) => {
   const token = c.req.query("hub.verify_token");
   const challenge = c.req.query("hub.challenge");
 
-  const verifyToken = Deno.env.get("WHATSAPP_VERIFY_TOKEN");
+  const verifyToken = getEnv("WHATSAPP_VERIFY_TOKEN");
 
   // SECURITY: Ensure verifyToken is configured and matches the request token
   if (mode === "subscribe" && verifyToken && token === verifyToken) {

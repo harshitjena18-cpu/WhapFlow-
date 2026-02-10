@@ -2,6 +2,7 @@ import { Hono } from "npm:hono";
 import { setCookie, getCookie } from "npm:hono/cookie";
 import * as kv from "./kv_store.tsx";
 import { encrypt } from "./crypto.ts";
+import { getEnv } from "../../../lib/env.ts";
 import { API_DOMAIN, APP_DOMAIN, SERVER_BASE_PATH } from "./constants.ts";
 
 const app = new Hono();
@@ -16,7 +17,7 @@ const SHOPIFY_DOMAIN_REGEX = /^[a-zA-Z0-9][a-zA-Z0-9-]*\.myshopify\.com$/;
 // Note: In production, strictly use the environment variable. 
 // For this environment, we default to the provided callback URL structure if not set, 
 // but the user MUST set SHOPIFY_CLIENT_ID and SHOPIFY_CLIENT_SECRET.
-const REDIRECT_URI = Deno.env.get("SHOPIFY_REDIRECT_URI") || `${API_DOMAIN}/auth/shopify/callback`;
+const REDIRECT_URI = getEnv("SHOPIFY_REDIRECT_URI") || `${API_DOMAIN}/auth/shopify/callback`;
 
 /**
  * STEP 2: OAUTH START ROUTE
@@ -24,7 +25,7 @@ const REDIRECT_URI = Deno.env.get("SHOPIFY_REDIRECT_URI") || `${API_DOMAIN}/auth
  */
 app.get("/", (c) => {
   const shop = c.req.query("shop");
-  const clientId = Deno.env.get("SHOPIFY_CLIENT_ID");
+  const clientId = getEnv("SHOPIFY_CLIENT_ID");
 
   if (!clientId) {
     return c.text("Error: SHOPIFY_CLIENT_ID not configured", 500);
@@ -64,8 +65,8 @@ app.get("/", (c) => {
  */
 app.get("/callback", async (c) => {
   const { shop, code, state, hmac } = c.req.query();
-  const clientId = Deno.env.get("SHOPIFY_CLIENT_ID");
-  const clientSecret = Deno.env.get("SHOPIFY_CLIENT_SECRET");
+  const clientId = getEnv("SHOPIFY_CLIENT_ID");
+  const clientSecret = getEnv("SHOPIFY_CLIENT_SECRET");
 
   // 1. Basic Validation & SSRF Protection
   if (!shop || !code || !state || !hmac) {

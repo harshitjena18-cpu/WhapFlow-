@@ -155,30 +155,26 @@ const defaultAutomations = [
   },
 ];
 
-// Helper: Verify shop and merchant existence
-async function getValidatedShop(c: any) {
-  const shop = c.req.query("shop");
-  if (!shop) return { error: "Missing shop parameter", status: 400 };
-
-  const merchant = await kv.get(`merchant:${shop}`);
-  if (!merchant) return { error: "Unauthorized: Merchant not found", status: 401 };
-
-  return { shop };
-}
-
 // GET /dashboard/data
 dashboardApp.get("/data", async (c) => {
-  const { shop, error, status } = await getValidatedShop(c);
-  if (error) return c.json({ error }, status as any);
+  const shop = c.req.query("shop");
+  if (!shop) return c.json({ error: "Missing shop parameter" }, 400);
 
   // Try to get data from KV store
   try {
-    // SECURITY: Keys are now scoped by shop to prevent multi-tenancy leaks
-    const [metrics, revenue, activity] = await Promise.all([
+    // PERFORMANCE: Fetch all dependencies including merchant in parallel to minimize round-trip latency
+    // This eliminates a sequential database round-trip previously caused by getValidatedShop
+    const [merchant, metrics, revenue, activity] = await Promise.all([
+      kv.get(`merchant:${shop}`),
       kv.get(`shop:${shop}:metrics`),
       kv.get(`shop:${shop}:revenue`),
       kv.get(`shop:${shop}:activity`)
     ]);
+
+    // SECURITY: Verify merchant exists to prevent unauthorized data access
+    if (!merchant) {
+      return c.json({ error: "Unauthorized: Merchant not found" }, 401);
+    }
 
     if (metrics && revenue && activity) {
       return c.json({
@@ -213,11 +209,21 @@ dashboardApp.get("/data", async (c) => {
 
 // GET /dashboard/automations
 dashboardApp.get("/automations", async (c) => {
-  const { shop, error, status } = await getValidatedShop(c);
-  if (error) return c.json({ error }, status as any);
+  const shop = c.req.query("shop");
+  if (!shop) return c.json({ error: "Missing shop parameter" }, 400);
 
   try {
-    const automations = await kv.get(`shop:${shop}:automations`);
+    // PERFORMANCE: Parallelize merchant validation and automations fetch
+    const [merchant, automations] = await Promise.all([
+      kv.get(`merchant:${shop}`),
+      kv.get(`shop:${shop}:automations`)
+    ]);
+
+    // SECURITY: Verify merchant existence
+    if (!merchant) {
+      return c.json({ error: "Unauthorized: Merchant not found" }, 401);
+    }
+
     if (automations) {
       return c.json({ automations });
     }
@@ -230,13 +236,24 @@ dashboardApp.get("/automations", async (c) => {
 
 // POST /dashboard/automations/:id/toggle
 dashboardApp.post("/automations/:id/toggle", async (c) => {
-  const { shop, error, status } = await getValidatedShop(c);
-  if (error) return c.json({ error }, status as any);
+  const shop = c.req.query("shop");
+  if (!shop) return c.json({ error: "Missing shop parameter" }, 400);
 
   const id = c.req.param("id");
   try {
+    // PERFORMANCE: Parallelize merchant validation and automations fetch
+    const [merchant, rawAutomations] = await Promise.all([
+      kv.get(`merchant:${shop}`),
+      kv.get(`shop:${shop}:automations`)
+    ]);
+
+    // SECURITY: Verify merchant existence
+    if (!merchant) {
+      return c.json({ error: "Unauthorized: Merchant not found" }, 401);
+    }
+
     // deno-lint-ignore no-explicit-any
-    let automations: any[] = (await kv.get(`shop:${shop}:automations`)) || defaultAutomations;
+    let automations: any[] = rawAutomations || defaultAutomations;
     
     // deno-lint-ignore no-explicit-any
     automations = automations.map((a: any) =>
