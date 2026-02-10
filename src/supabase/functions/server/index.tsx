@@ -3,6 +3,7 @@ import { cors } from "npm:hono/cors";
 import { logger } from "npm:hono/logger";
 import { secureHeaders } from "npm:hono/secure-headers";
 import { enqueueJob, processPendingJobs } from "./queue.ts";
+import { encrypt, decrypt } from "./crypto.ts";
 import * as kv from "./kv_store.tsx";
 import { sendWhatsAppTemplate } from "./whatsapp.ts";
 import * as billing from "./billing.ts"; // Import Billing Service
@@ -610,6 +611,14 @@ app.post(`${SERVER_BASE_PATH}/api/webhooks/shopify`, async (c) => {
     const customerPhone = payload.customer?.phone || payload.phone || "No phone provided";
     const customerName = payload.customer ? `${payload.customer.first_name} ${payload.customer.last_name}` : "Guest";
     const customerEmail = payload.customer?.email || payload.email || "";
+
+    // SECURITY: Encrypt PII at rest
+    const [encName, encEmail, encPhone] = await Promise.all([
+      encrypt(customerName),
+      encrypt(customerEmail),
+      encrypt(customerPhone)
+    ]);
+
     const firstProduct = payload.line_items?.[0]?.title || "Unknown Product";
     const cartValue = payload.total_price || "0.00";
     const currency = payload.currency || "USD";
@@ -630,9 +639,9 @@ app.post(`${SERVER_BASE_PATH}/api/webhooks/shopify`, async (c) => {
     const abandonedCartData = {
       id: cartId,
       shop: shop, // CRITICAL: Link cart to store
-      customer_name: customerName,
-      customer_email: customerEmail,
-      phone: customerPhone,
+      customer_name: encName,
+      customer_email: encEmail,
+      phone: encPhone,
       product_title: firstProduct,
       total_price: cartValue,
       currency: currency,
@@ -828,6 +837,16 @@ async function executeAutomation(payload: AutomationPayload) {
       console.log(`❌ AUTOMATION SKIPPED: Cart [${cartId}] no longer exists.`);
       return;
     }
+
+    // SECURITY: Decrypt PII before use
+    const [name, email, phone] = await Promise.all([
+      decrypt(currentCart.customer_name),
+      decrypt(currentCart.customer_email),
+      decrypt(currentCart.phone)
+    ]);
+    currentCart.customer_name = name;
+    currentCart.customer_email = email;
+    currentCart.phone = phone;
 
     if (!merchant || !merchant.access_token) {
       console.error(`❌ AUTOMATION FAILED: No credentials found for ${shop}`);
