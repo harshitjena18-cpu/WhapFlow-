@@ -30,10 +30,10 @@
 
 ## 2025-06-12 - Faulty Crypto Key Caching & Version Fragmentation
 **Vulnerability:** The `crypto.ts` module had missing variable declarations causing `ReferenceError` and a critical logic bug where a derived `CryptoKey` from PBKDF2 (salt-dependent) was being cached and reused for all subsequent operations regardless of salt.
-**Learning:** Performance-driven caching in cryptographic modules is extremely dangerous if the cache key (the secret) does not represent all entropy used in derivation (the salt). Reusing a key with the wrong salt leads to decryption failures and return corrupted data. Reusing a key with the wrong salt leads to decryption failures and potential security undefined behavior.
+**Learning:** Performance-driven caching in cryptographic modules is extremely dangerous if the cache key (the secret) does not represent all entropy used in derivation (the salt). Reusing a key with the wrong salt leads to decryption failures, returning corrupted data, and potential security undefined behavior.
 **Prevention:** Use HKDF (Hash-based Key Derivation Function) to derive a stable master key from secrets for caching. For schemes requiring per-encryption entropy (PBKDF2), ensure the cache accounts for the salt or disable caching. When upgrading algorithms, always increment the version prefix (e.g., `enc:v3:`) to prevent breaking existing data.
 
 ## 2025-06-19 - PII Encryption at Rest and Graceful Degradation
-**Vulnerability:** Customer Personally Identifiable Information (PII) like names, emails, and phone numbers were stored in plaintext in the KV store, posing a risk in case of database unauthorized access.
+**Vulnerability:** Customer Personally Identifiable Information (PII) like names, emails, and phone numbers were stored in plaintext in the KV store, posing a risk in case of unauthorized database access.
 **Learning:** Implementing encryption at rest for PII in a legacy system requires a "fail-safe" or "graceful degradation" approach to decryption. If the decryption utility doesn't handle plaintext inputs by returning them as-is, the application will break for all existing records.
 **Prevention:** Ensure the `decrypt` utility is designed to identify encrypted formats (e.g., via prefixes like `enc:v3:`) and return the input unchanged if no known prefix is found. This allows for a rolling migration where new data is encrypted while old data remains accessible until rotated or purged.
