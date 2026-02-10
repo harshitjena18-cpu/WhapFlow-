@@ -43,3 +43,7 @@
 ## 2026-02-09 - [HMAC Key Caching & Crypto Type Safety]
 **Learning:** Caching `CryptoKey` objects for HMAC verification in high-traffic paths (webhooks) reduces latency by ~2-5ms per call by avoiding redundant `importKey` operations. In `crypto.ts`, caching `keyMaterial` (the raw secret) is safer than caching derived keys when random salts are used per message, as derived keys are salt-specific.
 **Action:** Always cache imported/derived keys at the module level for repeat operations with the same secret. Use type narrowing to ensure cached `null | CryptoKey` variables are safe for `subtle.verify` and `subtle.deriveKey`.
+
+## 2026-02-14 - [Parallel Merchant Validation in Dashboard Routes]
+**Learning:** Sequential await calls for merchant validation before fetching dashboard data create an unnecessary latency bottleneck. Parallelizing the merchant existence check with the primary data fetch using `Promise.all` reduces latency by approximately one full KV round-trip (~50-150ms).
+**Action:** Identify routes using sequential validation helpers (like `getValidatedShop`) and refactor them to use `Promise.all` for all independent I/O operations, ensuring security checks are still performed on the results.
