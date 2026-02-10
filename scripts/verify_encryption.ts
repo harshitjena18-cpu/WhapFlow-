@@ -1,4 +1,5 @@
 import { encrypt, decrypt } from "../src/supabase/functions/server/crypto.ts";
+// import { webcrypto } from "node:crypto"; // Not needed in Node 22+ with global crypto
 
 // Mock Deno global for Node.js environment
 // @ts-ignore: Mocking Deno
@@ -14,15 +15,15 @@ process.env.ENCRYPTION_SECRET = "test-encryption-secret-key-12345";
 async function runTests() {
   console.log("Running Encryption/Decryption Verification Tests...");
 
-  // Test 1: Successful encryption and decryption (V3)
+  // Test 1: Successful encryption and decryption
   const originalText = "shpat_1234567890abcdef";
   console.log(`Test 1: Encrypting '${originalText}'`);
 
   const encrypted = await encrypt(originalText);
   console.log(`Encrypted: ${encrypted}`);
 
-  if (!encrypted?.startsWith("enc:v3:")) {
-    console.error("❌ Test 1 Failed: Encrypted text should start with 'enc:v3:'");
+  if (!encrypted?.startsWith("enc:v2:")) {
+    console.error("❌ Test 1 Failed: Encrypted text should start with 'enc:v2:'");
     process.exit(1);
   }
 
