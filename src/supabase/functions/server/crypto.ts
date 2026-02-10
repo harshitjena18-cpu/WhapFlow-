@@ -3,6 +3,7 @@
  * V3 (Latest): HKDF + AES-GCM (Preferred for performance and security)
  * V2 (Legacy): PBKDF2 + AES-GCM
  */
+import { getEnv } from "../../../lib/env.ts";
 
 import { getEnv } from "../../../lib/env.ts";
 
