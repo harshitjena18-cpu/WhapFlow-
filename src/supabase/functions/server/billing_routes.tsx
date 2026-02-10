@@ -3,6 +3,7 @@ import * as _kv from "./kv_store.tsx";
 import * as billing from "./billing.ts";
 import { getMerchantCredentials, shopifyGraphql, verifyWebhookHmac } from "./shopify_client.ts";
 import { PlanLevel, PLAN_LIMITS } from "./billing.ts";
+import { getEnv } from "../../../lib/env.ts";
 import { API_DOMAIN, APP_DOMAIN, SERVER_BASE_PATH } from "./constants.ts";
 
 const app = new Hono();
@@ -238,7 +239,7 @@ async function processBillingWebhook(c: any, action: 'update' | 'cancel') {
   const rawBody = await c.req.text();
   
   // Security: Verify HMAC
-  const secret = Deno.env.get('SHOPIFY_CLIENT_SECRET');
+  const secret = getEnv('SHOPIFY_CLIENT_SECRET');
   if (!secret) {
     console.error("[Billing Webhook] Critical Error: SHOPIFY_CLIENT_SECRET not configured");
     return c.json({ error: 'Server configuration error' }, 500);

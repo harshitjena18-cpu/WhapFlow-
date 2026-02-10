@@ -4,6 +4,8 @@
  * V2 (Legacy): PBKDF2 + AES-GCM
  */
 
+import { getEnv } from "../../../lib/env.ts";
+
 const ALGORITHM = "AES-GCM";
 const PREFIX_V3 = "enc:v3:";
 const PREFIX_V2 = "enc:v2:";
