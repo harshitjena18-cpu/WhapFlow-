@@ -3,15 +3,20 @@ import { useState, useEffect, useRef } from 'react';
 
 export function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
+  const [modifierKey, setModifierKey] = useState('⌘');
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    // Detect platform for keyboard shortcut hint
+    const isMac = /Mac|iPod|iPhone|iPad/.test(navigator.userAgent || '');
+    setModifierKey(isMac ? '⌘' : 'Ctrl');
+
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 10);
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         searchInputRef.current?.focus();
       }
@@ -41,7 +46,7 @@ export function Header() {
           />
           <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none hidden sm:flex items-center gap-1">
             <kbd className="px-1.5 py-0.5 text-[10px] font-medium text-gray-400 bg-gray-100/50 border border-gray-200/50 rounded flex items-center gap-0.5">
-              <span className="text-xs">⌘</span>K
+              <span className={modifierKey === '⌘' ? "text-xs" : "text-[9px]"}>{modifierKey}</span>K
             </kbd>
           </div>
         </div>
