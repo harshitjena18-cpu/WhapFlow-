@@ -1,3 +1,4 @@
+import { getEnv } from "../../../lib/env.ts";
 import { Hono } from "npm:hono";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -6,8 +7,8 @@ const authApp = new Hono();
 authApp.post("/signup", async (c) => {
   const { email, password, user_metadata } = await c.req.json();
 
-  const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const supabaseUrl = getEnv("SUPABASE_URL");
+  const supabaseServiceKey = getEnv("SUPABASE_SERVICE_ROLE_KEY");
 
   if (!supabaseUrl || !supabaseServiceKey) {
     return c.json({ error: "Server configuration error: Missing Supabase credentials" }, 500);

@@ -5,6 +5,8 @@
  */
 import { getEnv } from "../../../lib/env.ts";
 
+import { getEnv } from "../../../lib/env.ts";
+
 const ALGORITHM = "AES-GCM";
 const PREFIX_V3 = "enc:v3:";
 const PREFIX_V2 = "enc:v2:";
@@ -18,7 +20,7 @@ let _cachedSecret: string | null = null;
 let _cachedV3Key: CryptoKey | null = null;
 
 function getSecret() {
-  const secret = getEnv("ENCRYPTION_SECRET") || getEnv("SHOPIFY_CLIENT_SECRET");
+  const secret = Deno.env.get("ENCRYPTION_SECRET") || Deno.env.get("SHOPIFY_CLIENT_SECRET");
   if (!secret) throw new Error("Security Error: Missing encryption secrets.");
   return secret;
 }
