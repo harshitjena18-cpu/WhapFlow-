@@ -2,9 +2,14 @@ import { Hono } from "npm:hono";
 import { setCookie, getCookie } from "npm:hono/cookie";
 import * as kv from "./kv_store.tsx";
 import { encrypt } from "./crypto.ts";
+import { getEnv } from "../../../lib/env.ts";
 import { API_DOMAIN, APP_DOMAIN, SERVER_BASE_PATH } from "./constants.ts";
 
 const app = new Hono();
+
+// Module-level cache for HMAC CryptoKeys to minimize import overhead
+let _cachedHmacKey: CryptoKey | null = null;
+let _cachedHmacSecret: string | null = null;
 
 // Configuration
 const SHOPIFY_SCOPES = "read_checkouts,read_orders";
@@ -12,7 +17,7 @@ const SHOPIFY_DOMAIN_REGEX = /^[a-zA-Z0-9][a-zA-Z0-9-]*\.myshopify\.com$/;
 // Note: In production, strictly use the environment variable. 
 // For this environment, we default to the provided callback URL structure if not set, 
 // but the user MUST set SHOPIFY_CLIENT_ID and SHOPIFY_CLIENT_SECRET.
-const REDIRECT_URI = Deno.env.get("SHOPIFY_REDIRECT_URI") || `${API_DOMAIN}/auth/shopify/callback`;
+const REDIRECT_URI = getEnv("SHOPIFY_REDIRECT_URI") || `${API_DOMAIN}/auth/shopify/callback`;
 
 /**
  * STEP 2: OAUTH START ROUTE
@@ -20,7 +25,7 @@ const REDIRECT_URI = Deno.env.get("SHOPIFY_REDIRECT_URI") || `${API_DOMAIN}/auth
  */
 app.get("/", (c) => {
   const shop = c.req.query("shop");
-  const clientId = Deno.env.get("SHOPIFY_CLIENT_ID");
+  const clientId = getEnv("SHOPIFY_CLIENT_ID");
 
   if (!clientId) {
     return c.text("Error: SHOPIFY_CLIENT_ID not configured", 500);
@@ -60,8 +65,8 @@ app.get("/", (c) => {
  */
 app.get("/callback", async (c) => {
   const { shop, code, state, hmac } = c.req.query();
-  const clientId = Deno.env.get("SHOPIFY_CLIENT_ID");
-  const clientSecret = Deno.env.get("SHOPIFY_CLIENT_SECRET");
+  const clientId = getEnv("SHOPIFY_CLIENT_ID");
+  const clientSecret = getEnv("SHOPIFY_CLIENT_SECRET");
 
   // 1. Basic Validation & SSRF Protection
   if (!shop || !code || !state || !hmac) {
@@ -170,16 +175,20 @@ async function verifyHmac(query: Record<string, string>, secret: string) {
   const message = keys.map(key => `${key}=${rest[key]}`).join("&");
 
   const encoder = new TextEncoder();
-  const keyData = encoder.encode(secret);
   const msgData = encoder.encode(message);
 
-  const cryptoKey = await crypto.subtle.importKey(
-    "raw",
-    keyData,
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["verify"]
-  );
+  // PERFORMANCE: Cache the imported CryptoKey to avoid overhead during OAuth callback
+  if (_cachedHmacSecret !== secret || !_cachedHmacKey) {
+    const keyData = encoder.encode(secret);
+    _cachedHmacKey = await crypto.subtle.importKey(
+      "raw",
+      keyData,
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["verify"]
+    );
+    _cachedHmacSecret = secret;
+  }
 
   // Convert hex HMAC to Uint8Array for constant-time verification
   const hmacBytes = new Uint8Array(hmac.length / 2);
@@ -187,7 +196,12 @@ async function verifyHmac(query: Record<string, string>, secret: string) {
     hmacBytes[i / 2] = parseInt(hmac.substring(i, i + 2), 16);
   }
 
-  return await crypto.subtle.verify("HMAC", cryptoKey, hmacBytes, msgData);
+  // Type narrowing for TypeScript safety
+  if (!_cachedHmacKey) {
+    throw new Error("HMAC Key initialization failed");
+  }
+
+  return await crypto.subtle.verify("HMAC", _cachedHmacKey, hmacBytes, msgData);
 }
 
 /**

@@ -3,6 +3,8 @@
  * Handles interaction with Meta's Graph API for sending messages.
  */
 
+import { getEnv } from "../../../lib/env.ts";
+
 interface SendMessageParams {
   to: string;
   templateName: string;
@@ -16,8 +18,8 @@ export const sendWhatsAppTemplate = async ({
   languageCode = "en_US",
   components = []
 }: SendMessageParams) => {
-  const token = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
-  const phoneId = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
+  const token = getEnv("WHATSAPP_ACCESS_TOKEN");
+  const phoneId = getEnv("WHATSAPP_PHONE_NUMBER_ID");
 
   if (!token || !phoneId) {
     console.error("❌ Missing WhatsApp configuration (WHATSAPP_ACCESS_TOKEN or WHATSAPP_PHONE_NUMBER_ID)");
