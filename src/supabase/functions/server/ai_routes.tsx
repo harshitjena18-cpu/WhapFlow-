@@ -1,10 +1,10 @@
 import { Hono } from "npm:hono";
 import * as billing from "./billing.ts";
 
-const aiApp = new Hono();
+const app = new Hono();
 
-// GET /usage (mounted at /api/ai)
-aiApp.get("/usage", async (c) => {
+// GET /api/ai/usage
+app.get("/usage", async (c) => {
   try {
     const shop = c.req.query("shop");
     if (!shop) return c.json({ error: "Shop parameter required" }, 400);
@@ -23,4 +23,4 @@ aiApp.get("/usage", async (c) => {
   }
 });
 
-export default aiApp;
+export default app;

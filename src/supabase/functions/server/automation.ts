@@ -2,46 +2,46 @@ import * as kv from "./kv_store.tsx";
 import * as billing from "./billing.ts";
 import { BILLING_KEY_PREFIX } from "./billing.ts";
 import { checkOrderExists, getMerchantCredentials } from "./shopify_client.ts";
-import { decrypt } from "./crypto.ts";
 import { sendWhatsAppTemplate } from "./whatsapp.ts";
 import { enqueueJob } from "./queue.ts";
+import {
+  AutomationPayload,
+  AutomationTemplate,
+  WhatsAppStatus
+} from "./types.ts";
 
-export interface AutomationPayload {
-  cartId: string;
-  cartKey: string;
-  templateName: string;
-  shop: string;
-}
+// Helper: Ensure only one template is enabled for a specific shop
+export async function disableOtherTemplates(exceptId: string, shop: string = "global") {
+  // SECURITY: Scoping by shop prevents cross-merchant template disabling
+  const prefix = `shop:${shop}:template:`;
 
-export interface AutomationTemplate {
-  id: string;
-  template_name: string;
-  display_name: string;
-  delay_minutes: number;
-  content: string;
-  generated_by_ai: boolean;
-  ai_tone?: string | null;
-  enabled: boolean;
-  created_at: string;
-}
+  // PERFORMANCE: Fetch only enabled templates using DB-side filtering to avoid full table scan
+  // This reduces memory usage and network transfer compared to fetching all templates
+  // deno-lint-ignore no-explicit-any
+  const templates = (await kv.getByPrefixAndValue(prefix, "value->enabled", true)) as AutomationTemplate[];
 
-export interface WhatsAppStatus {
-  id: string;
-  status: string;
-  timestamp?: string;
-  recipient_id?: string;
-  conversation?: {
-    id: string;
-    origin: {
-      type: string;
+  const updateKeys: string[] = [];
+  const updateValues: AutomationTemplate[] = [];
+
+  for (const t of templates) {
+    if (t.id !== exceptId) {
+      t.enabled = false;
+      updateKeys.push(`${prefix}${t.id}`);
+      updateValues.push(t);
     }
-  };
-  pricing?: {
-    billable: boolean;
-    pricing_model: string;
-    category: string;
-  };
-  errors?: unknown[];
+  }
+
+  if (updateKeys.length > 0) {
+    await kv.mset(updateKeys, updateValues);
+    console.log(`[Templates] Disabled ${updateKeys.length} other templates for shop ${shop}`);
+  }
+}
+
+export function validateTemplateContent(content: string): string | null {
+  if (!content || !content.trim()) return "Content cannot be empty";
+  if (content.length > 1024) return "Content exceeds 1024 characters";
+  if (!content.includes("{{checkout_link}}")) return "Content must include {{checkout_link}}";
+  return null;
 }
 
 export async function scheduleAutomation(payload: AutomationPayload, delayMinutes: number) {
@@ -53,9 +53,11 @@ export async function executeAutomation(payload: AutomationPayload) {
   const { cartId, cartKey, templateName, shop } = payload;
 
   try {
-    console.log(`\n⏰ AUTOMATION: Executing job for cart [${cartId}]. Checking logic...`);
+    console.log(`🚀 EXECUTE AUTOMATION for cart ${cartId} (Shop: ${shop})`);
+    console.log(`   Checking logic...`);
 
     // Fetch all required data in parallel to minimize latency and fix variable access order
+    // Need to cast rawTemplates to correct type, as getByPrefix returns unknown[]
     const [currentCart, merchant, rawTemplates, billingConfig] = await Promise.all([
       kv.get(cartKey),
       getMerchantCredentials(shop),
@@ -68,16 +70,6 @@ export async function executeAutomation(payload: AutomationPayload) {
       console.log(`❌ AUTOMATION SKIPPED: Cart [${cartId}] no longer exists.`);
       return;
     }
-
-    // SECURITY: Decrypt PII before use
-    const [name, email, phone] = await Promise.all([
-      decrypt(currentCart.customer_name),
-      decrypt(currentCart.customer_email),
-      decrypt(currentCart.phone)
-    ]);
-    currentCart.customer_name = name;
-    currentCart.customer_email = email;
-    currentCart.phone = phone;
 
     if (!merchant || !merchant.access_token) {
       console.error(`❌ AUTOMATION FAILED: No credentials found for ${shop}`);

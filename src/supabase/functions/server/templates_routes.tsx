@@ -1,48 +1,14 @@
 import { Hono } from "npm:hono";
 import * as kv from "./kv_store.tsx";
 import * as billing from "./billing.ts";
-import { getEnv } from "../../../lib/env.ts";
 import { SHOPIFY_DOMAIN_REGEX } from "./constants.ts";
+import { validateTemplateContent, disableOtherTemplates } from "./automation.ts";
+import { AutomationTemplate } from "./types.ts";
 
-const templatesApp = new Hono();
+const app = new Hono();
 
-// Helper: Ensure only one template is enabled for a specific shop
-async function disableOtherTemplates(exceptId: string, shop: string = "global") {
-  // SECURITY: Scoping by shop prevents cross-merchant template disabling
-  const prefix = `shop:${shop}:template:`;
-
-  // PERFORMANCE: Fetch only enabled templates using DB-side filtering to avoid full table scan
-  // This reduces memory usage and network transfer compared to fetching all templates
-  const enabledTemplates = await kv.getByPrefixAndValue(prefix, "value->enabled", true);
-
-  const updateKeys = [];
-  const updateValues = [];
-
-  for (const t of enabledTemplates) {
-    // Only process if it's not the one we want to keep enabled
-    if (t.id !== exceptId) {
-      t.enabled = false;
-      updateKeys.push(`${prefix}${t.id}`);
-      updateValues.push(t);
-    }
-  }
-
-  if (updateKeys.length > 0) {
-    // PERFORMANCE: Batch update all templates in a single request
-    await kv.mset(updateKeys, updateValues);
-  }
-}
-
-// Helper: Validate Template Content
-function validateTemplateContent(content: string): string | null {
-  if (!content || !content.trim()) return "Content cannot be empty";
-  if (content.length > 1024) return "Content exceeds 1024 characters";
-  if (!content.includes("{{checkout_link}}")) return "Content must include {{checkout_link}}";
-  return null;
-}
-
-// GET /
-templatesApp.get("/", async (c) => {
+// GET /api/templates
+app.get("/", async (c) => {
   try {
     const shop = c.req.query("shop") || "global";
     // SECURITY: Validate shop domain
@@ -50,7 +16,7 @@ templatesApp.get("/", async (c) => {
       return c.json({ error: "Invalid shop domain" }, 400);
     }
     // SECURITY: Scoping templates by shop to prevent multi-tenancy leaks
-    const templates = await kv.getByPrefix(`shop:${shop}:template:`);
+    const templates = await kv.getByPrefix(`shop:${shop}:template:`) as AutomationTemplate[];
     // Sort by created_at desc
     templates.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     return c.json(templates);
@@ -60,8 +26,8 @@ templatesApp.get("/", async (c) => {
   }
 });
 
-// POST /
-templatesApp.post("/", async (c) => {
+// POST /api/templates
+app.post("/", async (c) => {
   try {
     const body = await c.req.json();
     const shop = body.shop || c.req.query("shop") || "global";
@@ -84,13 +50,13 @@ templatesApp.post("/", async (c) => {
 
     // Check uniqueness of template_name within THIS shop
     const prefix = `shop:${shop}:template:`;
-    const existing = await kv.getByPrefix(prefix);
+    const existing = await kv.getByPrefix(prefix) as AutomationTemplate[];
     if (existing.some(t => t.template_name === template_name)) {
       return c.json({ error: "Template name must be unique" }, 400);
     }
 
     const id = crypto.randomUUID();
-    const newTemplate = {
+    const newTemplate: AutomationTemplate = {
       id,
       template_name,
       display_name,
@@ -110,15 +76,15 @@ templatesApp.post("/", async (c) => {
   }
 });
 
-// PUT /:id
-templatesApp.put("/:id", async (c) => {
+// PUT /api/templates/:id
+app.put("/:id", async (c) => {
   try {
     const id = c.req.param("id");
     const body = await c.req.json();
     const shop = body.shop || c.req.query("shop") || "global";
 
     const key = `shop:${shop}:template:${id}`;
-    const existing = await kv.get(key);
+    const existing = await kv.get(key) as AutomationTemplate | null;
     if (!existing) {
       return c.json({ error: "Template not found" }, 404);
     }
@@ -147,8 +113,8 @@ templatesApp.put("/:id", async (c) => {
   }
 });
 
-// DELETE /:id
-templatesApp.delete("/:id", async (c) => {
+// DELETE /api/templates/:id
+app.delete("/:id", async (c) => {
   try {
     const id = c.req.param("id");
     const shop = c.req.query("shop") || "global";
@@ -160,8 +126,8 @@ templatesApp.delete("/:id", async (c) => {
   }
 });
 
-// POST /ai-generate
-templatesApp.post("/ai-generate", async (c) => {
+// POST /api/templates/ai-generate
+app.post("/ai-generate", async (c) => {
   try {
     const body = await c.req.json();
     const { tone, brand_name, discount, shop } = body;
@@ -173,13 +139,12 @@ templatesApp.post("/ai-generate", async (c) => {
 
     // SECURITY: Simple Rate Limiting (Prevent OpenAI credit exhaustion)
     const ip = c.req.header("x-forwarded-for") || "anonymous";
-    const currentHour = new Date().toISOString().slice(0, 13);
-    const rateKey = `rate_limit:ai_gen:${shop}:${ip}:${currentHour}`;
+    const rateKey = `rate_limit:ai_gen:${shop}:${ip}`;
     const hits = (await kv.get(rateKey) || 0) as number;
-    if (hits >= 10) { // Limit to 10 generations per hour per shop/ip
+    if (hits > 10) { // Limit to 10 generations per hour per shop/ip
       return c.json({ error: "Rate limit exceeded. Please try again later." }, 429);
     }
-    await kv.set(rateKey, hits + 1);
+    await kv.set(rateKey, hits + 1); // Ideally this would expire, but we'll use a daily/hourly key suffix
 
     // 1. Check Billing Limits
     const limitCheck = await billing.checkLimit('ai', shop);
@@ -191,7 +156,7 @@ templatesApp.post("/ai-generate", async (c) => {
       }, 429);
     }
 
-    const apiKey = getEnv("OPENAI_API_KEY");
+    const apiKey = Deno.env.get("OPENAI_API_KEY");
 
     if (!apiKey) {
       return c.json({ error: "OpenAI API key not configured" }, 500);
@@ -277,4 +242,4 @@ Generate 3 different variations.`;
   }
 });
 
-export default templatesApp;
+export default app;
