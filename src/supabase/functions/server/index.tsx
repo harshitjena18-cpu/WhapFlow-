@@ -75,6 +75,21 @@ Deno.cron("Process Queue", "* * * * *", async () => {
  */
 app.post(`${SERVER_BASE_PATH}/api/whatsapp/send`, async (c) => {
   try {
+    const authHeader = c.req.header("Authorization");
+    const shop = c.req.query("shop") || "global";
+
+    // SECURITY: Protect demo endpoint from unauthorized use
+    // Verify against service role key for internal/admin access
+    const serviceKey = getEnv("SUPABASE_SERVICE_ROLE_KEY");
+    if (!serviceKey || !authHeader || authHeader !== `Bearer ${serviceKey}`) {
+      return c.json({ error: "Unauthorized: Invalid or missing token" }, 401);
+    }
+
+    // SECURITY: Validate shop domain
+    if (shop !== "global" && !SHOPIFY_DOMAIN_REGEX.test(shop)) {
+      return c.json({ error: "Invalid shop domain" }, 400);
+    }
+
     const { phoneNumber, templateId } = await c.req.json();
     // SECURITY: Redact phoneNumber from logs
     console.log(`[WhatsApp] Intent to send template "${templateId}" to [REDACTED]`);
