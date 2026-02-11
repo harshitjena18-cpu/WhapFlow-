@@ -18,8 +18,6 @@ import { SERVER_BASE_PATH } from "./constants.ts";
 
 const app = new Hono();
 
-const SHOPIFY_DOMAIN_REGEX = /^[a-zA-Z0-9][a-zA-Z0-9-]*\.myshopify\.com$/;
-
 // Enable logger
 app.use('*', logger(console.log));
 
@@ -45,7 +43,7 @@ app.onError((err, c) => {
   return c.json({ error: "Internal Server Error" }, 500);
 });
 
-// Mount auth routes
+// Mount Routes
 app.route(SERVER_BASE_PATH, authApp);
 app.route(`${SERVER_BASE_PATH}/dashboard`, dashboardApp);
 app.route(`${SERVER_BASE_PATH}/auth/shopify`, shopifyAuthApp);
