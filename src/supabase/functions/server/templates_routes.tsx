@@ -1,0 +1,246 @@
+import { Hono } from "npm:hono";
+import * as kv from "./kv_store.tsx";
+import * as billing from "./billing.ts";
+import { getEnv } from "../../../lib/env.ts";
+import { validateTemplateContent, disableOtherTemplates } from "./automation.ts";
+
+const templatesApp = new Hono();
+const SHOPIFY_DOMAIN_REGEX = /^[a-zA-Z0-9][a-zA-Z0-9-]*\.myshopify\.com$/;
+
+// GET /
+templatesApp.get("/", async (c) => {
+  try {
+    const shop = c.req.query("shop") || "global";
+    // SECURITY: Validate shop domain
+    if (shop !== "global" && !SHOPIFY_DOMAIN_REGEX.test(shop)) {
+      return c.json({ error: "Invalid shop domain" }, 400);
+    }
+    // SECURITY: Scoping templates by shop to prevent multi-tenancy leaks
+    const templates = await kv.getByPrefix(`shop:${shop}:template:`);
+    // Sort by created_at desc
+    templates.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    return c.json(templates);
+  } catch (error) {
+    console.error("Error fetching templates:", error);
+    return c.json({ error: "Failed to fetch templates" }, 500);
+  }
+});
+
+// POST /
+templatesApp.post("/", async (c) => {
+  try {
+    const body = await c.req.json();
+    const shop = body.shop || c.req.query("shop") || "global";
+    // SECURITY: Validate shop domain
+    if (shop !== "global" && !SHOPIFY_DOMAIN_REGEX.test(shop)) {
+      return c.json({ error: "Invalid shop domain" }, 400);
+    }
+    const { template_name, display_name, delay_minutes } = body;
+
+    if (!template_name || !display_name) {
+      return c.json({ error: "Missing required fields" }, 400);
+    }
+
+    // Validate Content
+    const content = body.content || "";
+    const validationError = validateTemplateContent(content);
+    if (validationError) {
+      return c.json({ error: validationError }, 400);
+    }
+
+    // Check uniqueness of template_name within THIS shop
+    const prefix = `shop:${shop}:template:`;
+    const existing = await kv.getByPrefix(prefix);
+    if (existing.some(t => t.template_name === template_name)) {
+      return c.json({ error: "Template name must be unique" }, 400);
+    }
+
+    const id = crypto.randomUUID();
+    const newTemplate = {
+      id,
+      template_name,
+      display_name,
+      delay_minutes: delay_minutes || 30,
+      content,
+      generated_by_ai: body.generated_by_ai || false,
+      ai_tone: body.ai_tone || null,
+      enabled: false, // Default to disabled
+      created_at: new Date().toISOString()
+    };
+
+    await kv.set(`${prefix}${id}`, newTemplate);
+    return c.json(newTemplate, 201);
+  } catch (error) {
+    console.error("Error creating template:", error);
+    return c.json({ error: "Failed to create template" }, 500);
+  }
+});
+
+// PUT /:id
+templatesApp.put("/:id", async (c) => {
+  try {
+    const id = c.req.param("id");
+    const body = await c.req.json();
+    const shop = body.shop || c.req.query("shop") || "global";
+
+    const key = `shop:${shop}:template:${id}`;
+    const existing = await kv.get(key);
+    if (!existing) {
+      return c.json({ error: "Template not found" }, 404);
+    }
+
+    // Validate Content if it's being updated
+    if (body.content !== undefined) {
+      const validationError = validateTemplateContent(body.content);
+      if (validationError) {
+        return c.json({ error: validationError }, 400);
+      }
+    }
+
+    // Update fields
+    const updated = { ...existing, ...body };
+
+    // If enabling, disable others for THIS shop
+    if (body.enabled === true && !existing.enabled) {
+      await disableOtherTemplates(id, shop);
+    }
+
+    await kv.set(key, updated);
+    return c.json(updated);
+  } catch (error) {
+    console.error("Error updating template:", error);
+    return c.json({ error: "Failed to update template" }, 500);
+  }
+});
+
+// DELETE /:id
+templatesApp.delete("/:id", async (c) => {
+  try {
+    const id = c.req.param("id");
+    const shop = c.req.query("shop") || "global";
+    await kv.del(`shop:${shop}:template:${id}`);
+    return c.json({ success: true });
+  } catch (error) {
+    console.error("Error deleting template:", error);
+    return c.json({ error: "Failed to delete template" }, 500);
+  }
+});
+
+// POST /ai-generate
+templatesApp.post("/ai-generate", async (c) => {
+  try {
+    const body = await c.req.json();
+    const { tone, brand_name, discount, shop } = body;
+
+    // SECURITY: Validate shop domain and presence
+    if (!shop || !SHOPIFY_DOMAIN_REGEX.test(shop)) {
+      return c.json({ error: "Invalid or missing shop parameter" }, 400);
+    }
+
+    // SECURITY: Simple Rate Limiting (Prevent OpenAI credit exhaustion)
+    const ip = c.req.header("x-forwarded-for") || "anonymous";
+    const currentHour = new Date().toISOString().slice(0, 13);
+    const rateKey = `rate_limit:ai_gen:${shop}:${ip}:${currentHour}`;
+    const hits = (await kv.get(rateKey) || 0) as number;
+    if (hits >= 10) { // Limit to 10 generations per hour per shop/ip
+      return c.json({ error: "Rate limit exceeded. Please try again later." }, 429);
+    }
+    await kv.set(rateKey, hits + 1);
+
+    // 1. Check Billing Limits
+    const limitCheck = await billing.checkLimit('ai', shop);
+    if (!limitCheck.allowed) {
+      console.warn("AI Limit Reached:", limitCheck.error);
+      return c.json({
+        error: limitCheck.error,
+        limit_reached: true
+      }, 429);
+    }
+
+    const apiKey = getEnv("OPENAI_API_KEY");
+
+    if (!apiKey) {
+      return c.json({ error: "OpenAI API key not configured" }, 500);
+    }
+
+    const systemPrompt = `You are an expert WhatsApp marketing copywriter.
+Write abandoned cart reminder messages for an eCommerce store.
+
+Rules:
+- Use the selected tone: ${tone || 'Friendly'}
+- Be polite and conversion-focused
+- Avoid spammy language
+- Keep message under WhatsApp limits (1024 chars, but aim for <300)
+- Include a clear call-to-action
+- Do NOT promise unrealistic offers
+- Do NOT use excessive emojis
+- Format the output as a JSON array of strings, e.g. ["message 1", "message 2"]
+
+Use placeholders only:
+{{customer_name}}
+{{product_name}}
+{{checkout_link}}
+
+Context:
+Brand Name: ${brand_name || 'Our Store'}
+Discount Offer: ${discount || 'None'}
+
+Generate 3 different variations.`;
+
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: "Generate the templates now." }
+        ],
+        response_format: { type: "json_object" }
+      })
+    });
+
+    const data = await response.json();
+
+    if (data.error) {
+      console.error("OpenAI Error:", data.error);
+      throw new Error(data.error.message);
+    }
+
+    // Increment Usage
+    await billing.incrementUsage('ai', shop);
+
+    // Get updated config for response
+    const config = await billing.getBillingConfig(shop);
+    const limits = billing.PLAN_LIMITS[config.plan];
+
+    const content = data.choices[0].message.content;
+    let suggestions;
+    try {
+        // Handle case where AI returns { "templates": [...] } or just the array
+        const parsed = JSON.parse(content);
+        suggestions = Array.isArray(parsed) ? parsed : (parsed.templates || parsed.messages || []);
+    } catch (_e) {
+        console.error("Failed to parse AI response:", content);
+        return c.json({ error: "Failed to parse AI suggestions" }, 500);
+    }
+
+    return c.json({
+      suggestions,
+      usage: {
+        ai_generations_used: config.ai_generations_used,
+        ai_generations_limit: limits.ai_generations
+      }
+    }); // Return updated usage to frontend
+
+  } catch (error) {
+    console.error("Error generating templates:", error);
+    // SECURITY: Do not leak internal OpenAI or Database errors to the client
+    return c.json({ error: "An error occurred while generating templates. Please try again." }, 500);
+  }
+});
+
+export default templatesApp;
