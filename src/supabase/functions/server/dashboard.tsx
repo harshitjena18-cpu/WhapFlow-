@@ -1,5 +1,6 @@
 import { Hono } from "npm:hono";
 import * as kv from "./kv_store.tsx";
+import { SHOPIFY_DOMAIN_REGEX } from "./constants.ts";
 
 const dashboardApp = new Hono();
 
@@ -160,6 +161,11 @@ dashboardApp.get("/data", async (c) => {
   const shop = c.req.query("shop");
   if (!shop) return c.json({ error: "Missing shop parameter" }, 400);
 
+  // SECURITY: Validate shop domain to prevent multi-tenancy leaks
+  if (shop !== "global" && !SHOPIFY_DOMAIN_REGEX.test(shop)) {
+    return c.json({ error: "Invalid shop domain" }, 400);
+  }
+
   // Try to get data from KV store
   try {
     // PERFORMANCE: Fetch all dependencies including merchant in parallel to minimize round-trip latency
@@ -212,6 +218,11 @@ dashboardApp.get("/automations", async (c) => {
   const shop = c.req.query("shop");
   if (!shop) return c.json({ error: "Missing shop parameter" }, 400);
 
+  // SECURITY: Validate shop domain to prevent multi-tenancy leaks
+  if (shop !== "global" && !SHOPIFY_DOMAIN_REGEX.test(shop)) {
+    return c.json({ error: "Invalid shop domain" }, 400);
+  }
+
   try {
     // PERFORMANCE: Parallelize merchant validation and automations fetch
     const [merchant, automations] = await Promise.all([
@@ -238,6 +249,11 @@ dashboardApp.get("/automations", async (c) => {
 dashboardApp.post("/automations/:id/toggle", async (c) => {
   const shop = c.req.query("shop");
   if (!shop) return c.json({ error: "Missing shop parameter" }, 400);
+
+  // SECURITY: Validate shop domain to prevent multi-tenancy leaks
+  if (shop !== "global" && !SHOPIFY_DOMAIN_REGEX.test(shop)) {
+    return c.json({ error: "Invalid shop domain" }, 400);
+  }
 
   const id = c.req.param("id");
   try {

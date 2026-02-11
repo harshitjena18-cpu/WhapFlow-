@@ -14,7 +14,7 @@ import dashboardApp from "./dashboard.tsx";
 import shopifyAuthApp from "./shopify_auth.tsx"; // Import Shopify Auth
 import billingApp from "./billing_routes.tsx"; // Import Billing Routes
 import { getEnv } from "../../../lib/env.ts";
-import { SERVER_BASE_PATH } from "./constants.ts";
+import { SERVER_BASE_PATH, SHOPIFY_DOMAIN_REGEX } from "./constants.ts";
 
 const app = new Hono();
 
@@ -379,6 +379,11 @@ app.put(`${SERVER_BASE_PATH}/api/templates/:id`, async (c) => {
     const body = await c.req.json();
     const shop = body.shop || c.req.query("shop") || "global";
     
+    // SECURITY: Validate shop domain to prevent IDOR attacks
+    if (shop !== "global" && !SHOPIFY_DOMAIN_REGEX.test(shop)) {
+      return c.json({ error: "Invalid shop domain" }, 400);
+    }
+
     const key = `shop:${shop}:template:${id}`;
     const existing = await kv.get(key);
     if (!existing) {
@@ -414,6 +419,12 @@ app.delete(`${SERVER_BASE_PATH}/api/templates/:id`, async (c) => {
   try {
     const id = c.req.param("id");
     const shop = c.req.query("shop") || "global";
+
+    // SECURITY: Validate shop domain to prevent IDOR attacks
+    if (shop !== "global" && !SHOPIFY_DOMAIN_REGEX.test(shop)) {
+      return c.json({ error: "Invalid shop domain" }, 400);
+    }
+
     await kv.del(`shop:${shop}:template:${id}`);
     return c.json({ success: true });
   } catch (error) {
@@ -954,6 +965,21 @@ Deno.cron("Process Queue", "* * * * *", async () => {
  */
 app.post(`${SERVER_BASE_PATH}/api/whatsapp/send`, async (c) => {
   try {
+    const authHeader = c.req.header("Authorization");
+    const shop = c.req.query("shop") || "global";
+
+    // SECURITY: Protect demo endpoint from unauthorized use
+    // Verify against service role key for internal/admin access
+    const serviceKey = getEnv("SUPABASE_SERVICE_ROLE_KEY");
+    if (!serviceKey || !authHeader || authHeader !== `Bearer ${serviceKey}`) {
+      return c.json({ error: "Unauthorized: Invalid or missing token" }, 401);
+    }
+
+    // SECURITY: Validate shop domain
+    if (shop !== "global" && !SHOPIFY_DOMAIN_REGEX.test(shop)) {
+      return c.json({ error: "Invalid shop domain" }, 400);
+    }
+
     const { phoneNumber, templateId } = await c.req.json();
     // SECURITY: Redact phoneNumber from logs
     console.log(`[WhatsApp] Intent to send template "${templateId}" to [REDACTED]`);

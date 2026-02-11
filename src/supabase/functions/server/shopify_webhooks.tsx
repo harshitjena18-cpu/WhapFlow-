@@ -1,6 +1,7 @@
 import { Hono } from "npm:hono";
 import * as kv from "./kv_store.tsx";
 import * as billing from "./billing.ts";
+import { getEnv } from "../../../lib/env.ts";
 import { getMerchantCredentials, verifyWebhookHmac } from "./shopify_client.ts";
 import { scheduleAutomation } from "./automation.ts";
 import { AutomationTemplate } from "./types.ts";
@@ -16,7 +17,7 @@ app.post("/shopify", async (c) => {
     const rawBody = await c.req.text();
 
     // SECURITY: Verify HMAC
-    const secret = Deno.env.get('SHOPIFY_CLIENT_SECRET');
+    const secret = getEnv('SHOPIFY_CLIENT_SECRET');
     if (!secret) {
       console.error("[Shopify Webhook] Critical Error: SHOPIFY_CLIENT_SECRET not configured");
       return c.json({ error: 'Server configuration error' }, 500);
@@ -162,7 +163,7 @@ app.post("/app/uninstalled", async (c) => {
     console.log(`\n--- ⚠️ APP UNINSTALLED WEBHOOK RECEIVED [${shop}] ---`);
 
     // SECURITY: Verify HMAC
-    const secret = Deno.env.get('SHOPIFY_CLIENT_SECRET');
+    const secret = getEnv('SHOPIFY_CLIENT_SECRET');
     if (!secret) {
       console.error("[Uninstall Webhook] Critical Error: SHOPIFY_CLIENT_SECRET not configured");
       return c.json({ error: 'Server configuration error' }, 500);

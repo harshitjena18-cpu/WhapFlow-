@@ -1,4 +1,5 @@
 import { Hono } from "npm:hono";
+import { getEnv } from "../../../lib/env.ts";
 import { processWhatsAppStatuses } from "./automation.ts";
 import { sendWhatsAppTemplate } from "./whatsapp.ts";
 
@@ -42,7 +43,7 @@ app.get("/webhooks/whatsapp", (c) => {
   const token = c.req.query("hub.verify_token");
   const challenge = c.req.query("hub.challenge");
 
-  const verifyToken = Deno.env.get("WHATSAPP_VERIFY_TOKEN");
+  const verifyToken = getEnv("WHATSAPP_VERIFY_TOKEN");
 
   // SECURITY: Ensure verifyToken is configured and matches the request token
   if (mode === "subscribe" && verifyToken && token === verifyToken) {
