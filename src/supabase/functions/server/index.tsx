@@ -588,17 +588,6 @@ app.post(`${SERVER_BASE_PATH}/api/webhooks/shopify`, async (c) => {
       return c.json({ error: 'Unauthorized' }, 401);
     }
 
-    // SECURITY: Deduplication (Prevent Replay Attacks)
-    // Only perform deduplication AFTER successful HMAC verification to prevent DoS via KV resource exhaustion
-    if (webhookId) {
-      const alreadyProcessed = await kv.get(`webhook_id:${webhookId}`);
-      if (alreadyProcessed) {
-        console.log(`[Shopify Webhook] Skipping duplicate webhook ${webhookId} for ${shop}`);
-        return c.json({ status: 'success', duplicate: true }, 200);
-      }
-      await kv.set(`webhook_id:${webhookId}`, { processed_at: new Date().toISOString() });
-    }
-
     if (!shop) {
         console.error("[Shopify Webhook] Missing Shop Domain header");
         return c.json({ error: 'Missing shop domain' }, 400);
@@ -611,12 +600,21 @@ app.post(`${SERVER_BASE_PATH}/api/webhooks/shopify`, async (c) => {
     const customerName = payload.customer ? `${payload.customer.first_name} ${payload.customer.last_name}` : "Guest";
     const customerEmail = payload.customer?.email || payload.email || "";
 
-    // SECURITY: Encrypt PII at rest
-    const [encName, encEmail, encPhone] = await Promise.all([
+    // PERFORMANCE: Parallelize deduplication check and PII encryption
+    // Saves 1 KV round-trip for non-duplicate webhooks
+    const [alreadyProcessed, encName, encEmail, encPhone] = await Promise.all([
+      webhookId ? kv.get(`webhook_id:${webhookId}`) : Promise.resolve(null),
       encrypt(customerName),
       encrypt(customerEmail),
       encrypt(customerPhone)
     ]);
+
+    // SECURITY: Deduplication (Prevent Replay Attacks)
+    // Only perform deduplication AFTER successful HMAC verification to prevent DoS via KV resource exhaustion
+    if (alreadyProcessed) {
+      console.log(`[Shopify Webhook] Skipping duplicate webhook ${webhookId} for ${shop}`);
+      return c.json({ status: 'success', duplicate: true }, 200);
+    }
 
     const firstProduct = payload.line_items?.[0]?.title || "Unknown Product";
     const cartValue = payload.total_price || "0.00";
@@ -649,24 +647,27 @@ app.post(`${SERVER_BASE_PATH}/api/webhooks/shopify`, async (c) => {
       created_at: new Date().toISOString()
     };
 
-    // Using the persistent KV store to simulate an 'abandoned_carts' table
-    await kv.set(cartKey, abandonedCartData);
-    
-    console.log(`✅ SUCCESS: Cart saved with ID [${cartId}]`);
-    console.log('Status: "pending" (Waiting for automation trigger)');
-    console.log('-----------------------------------\n');
-
     // 4. AUTOMATION DELAY: Wait, then check logic
     
     // CHECK INTEGRATIONS & LIMITS (Parallelized for performance)
     console.log('\n🔍 AUTOMATION CHECKS: Verifying integration status and limits...');
     
+    // PERFORMANCE: Merge persistence (cart, deduplication) and dependency fetching into a single batch
+    // Saves 2 sequential KV round-trips by parallelizing writes with independent reads
     const [merchant, whatsappConfig, billingConfig, rawTemplates] = await Promise.all([
       getMerchantCredentials(shop),
       kv.get(`shop:${shop}:config:whatsapp`),
       billing.getBillingConfig(shop),
-      kv.getByPrefix(`shop:${shop}:template:`)
+      kv.getByPrefix(`shop:${shop}:template:`),
+      // PERSISTENCE: Save cart to database
+      kv.set(cartKey, abandonedCartData),
+      // SECURITY: Mark webhook as processed
+      webhookId ? kv.set(`webhook_id:${webhookId}`, { processed_at: new Date().toISOString() }) : Promise.resolve()
     ]);
+
+    console.log(`✅ SUCCESS: Cart saved with ID [${cartId}]`);
+    console.log('Status: "pending" (Waiting for automation trigger)');
+    console.log('-----------------------------------\n');
     const templates = (rawTemplates || []) as AutomationTemplate[];
 
     // Check if THIS shop is connected
@@ -739,42 +740,59 @@ app.post(`${SERVER_BASE_PATH}/api/webhooks/app/uninstalled`, async (c) => {
       return c.json({ error: 'Unauthorized' }, 401);
     }
 
-    // SECURITY: Deduplication (Prevent Replay Attacks)
-    // Only perform deduplication AFTER successful HMAC verification to prevent DoS via KV resource exhaustion
-    if (webhookId) {
-      const alreadyProcessed = await kv.get(`webhook_id:${webhookId}`);
-      if (alreadyProcessed) {
-        console.log(`[Uninstall Webhook] Skipping duplicate webhook ${webhookId} for ${shop}`);
-        return c.json({ status: 'success', duplicate: true }, 200);
-      }
-      await kv.set(`webhook_id:${webhookId}`, { processed_at: new Date().toISOString() });
-    }
-
     if (!shop) {
         return c.json({ error: 'Missing shop domain' }, 400);
     }
 
-    // 1. Cleanup Merchant Record
+    // PERFORMANCE: Fetch all required records in a single batch to reduce round-trip latency
+    // Saves 2 sequential KV round-trips
     const merchantKey = `merchant:${shop}`;
-    const merchant = await kv.get(merchantKey);
-    
+    const shopifyKey = `shop:${shop}:config:shopify`;
+    const [alreadyProcessed, merchant, shopifyConfig] = await kv.mget([
+      webhookId ? `webhook_id:${webhookId}` : "dummy_key",
+      merchantKey,
+      shopifyKey
+    ]);
+
+    // SECURITY: Deduplication (Prevent Replay Attacks)
+    if (alreadyProcessed) {
+      console.log(`[Uninstall Webhook] Skipping duplicate webhook ${webhookId} for ${shop}`);
+      return c.json({ status: 'success', duplicate: true }, 200);
+    }
+
+    const updateKeys = [];
+    const updateValues = [];
+    const now = new Date().toISOString();
+
+    // 1. Cleanup Merchant Record
     if (merchant) {
         console.log(`[Uninstall] Deactivating merchant record for ${shop}...`);
         merchant.shopify_connected = false;
         merchant.access_token = null; // Security: Clear token
-        merchant.updated_at = new Date().toISOString();
-        
-        await kv.set(merchantKey, merchant);
+        merchant.updated_at = now;
+        updateKeys.push(merchantKey);
+        updateValues.push(merchant);
     }
 
     // 2. Cleanup Scoped Config (Scoping by shop to prevent multi-tenancy leaks)
-    const shopifyKey = `shop:${shop}:config:shopify`;
-    const shopifyConfig = await kv.get(shopifyKey);
     if (shopifyConfig) {
         console.log(`[Uninstall] Clearing shop-scoped dashboard config...`);
         shopifyConfig.connection_status = 'disconnected';
         shopifyConfig.connected_at = null;
-        await kv.set(shopifyKey, shopifyConfig);
+        updateKeys.push(shopifyKey);
+        updateValues.push(shopifyConfig);
+    }
+
+    // Deduplication persistence
+    if (webhookId) {
+      updateKeys.push(`webhook_id:${webhookId}`);
+      updateValues.push({ processed_at: now });
+    }
+
+    // PERFORMANCE: Persist all cleanup operations in a single batch request
+    // Saves 2 sequential KV round-trips
+    if (updateKeys.length > 0) {
+      await kv.mset(updateKeys, updateValues);
     }
     
     // 3. Cleanup: We don't delete carts immediately for analytics, 
