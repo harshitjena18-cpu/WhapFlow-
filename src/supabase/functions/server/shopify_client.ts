@@ -115,7 +115,6 @@ export async function verifyWebhookHmac(rawBody: string, hmacHeader: string, sec
     }
 
     // Shopify webhooks use base64 for the HMAC header
-    // REFACTOR: Use Buffer.from instead of atob for better cross-platform support and performance
     const signatureBytes = Buffer.from(hmacHeader, "base64");
 
     // Type narrowing for TypeScript safety
