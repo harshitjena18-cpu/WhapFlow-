@@ -4,8 +4,7 @@
  * V2 (Legacy): PBKDF2 + AES-GCM
  */
 import { getEnv } from "../../../lib/env.ts";
-
-import { getEnv } from "../../../lib/env.ts";
+import { Buffer } from "node:buffer";
 
 const ALGORITHM = "AES-GCM";
 const PREFIX_V3 = "enc:v3:";
@@ -78,5 +77,5 @@ export async function decrypt(enc: string | null | undefined): Promise<string | 
   return enc;
 }
 
-const b64 = (u: Uint8Array) => btoa(String.fromCharCode(...u));
-const deb64 = (s: string) => new Uint8Array(atob(s).split("").map(c => c.charCodeAt(0)));
+const b64 = (u: Uint8Array) => Buffer.from(u).toString("base64");
+const deb64 = (s: string) => Buffer.from(s, "base64");
