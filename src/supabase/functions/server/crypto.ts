@@ -19,7 +19,7 @@ let _cachedSecret: string | null = null;
 let _cachedV3Key: CryptoKey | null = null;
 
 function getSecret() {
-  const secret = Deno.env.get("ENCRYPTION_SECRET") || Deno.env.get("SHOPIFY_CLIENT_SECRET");
+  const secret = getEnv("ENCRYPTION_SECRET") || getEnv("SHOPIFY_CLIENT_SECRET");
   if (!secret) throw new Error("Security Error: Missing encryption secrets.");
   return secret;
 }
@@ -77,5 +77,5 @@ export async function decrypt(enc: string | null | undefined): Promise<string | 
   return enc;
 }
 
-const b64 = (u: Uint8Array) => Buffer.from(u).toString('base64');
-const deb64 = (s: string) => Uint8Array.from(Buffer.from(s, 'base64'));
+const b64 = (u: Uint8Array) => Buffer.from(u).toString("base64");
+const deb64 = (s: string) => Buffer.from(s, "base64");

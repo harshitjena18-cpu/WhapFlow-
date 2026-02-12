@@ -47,3 +47,7 @@
 ## 2026-02-14 - [Parallel Merchant Validation in Dashboard Routes]
 **Learning:** Sequential await calls for merchant validation before fetching dashboard data create an unnecessary latency bottleneck. Parallelizing the merchant existence check with the primary data fetch using `Promise.all` reduces latency by approximately one full KV round-trip (~50-150ms).
 **Action:** Identify routes using sequential validation helpers (like `getValidatedShop`) and refactor them to use `Promise.all` for all independent I/O operations, ensuring security checks are still performed on the results.
+
+## 2026-02-17 - [Webhook Latency Reduction via Parallelization & Batching]
+**Learning:** In high-traffic webhook handlers, sequential `await` calls for deduplication, encryption, and dependency fetching create a significant latency floor. Merging independent writes (like deduplication marking and data persistence) with independent reads (like config fetching) into a single `Promise.all` can reduce total latency by ~50%.
+**Action:** Audit webhook handlers for sequential `kv.get` and `kv.set` calls. Use `kv.mget` for batch reads and move `kv.set` calls into existing `Promise.all` blocks when they are independent of the other fetched data.
