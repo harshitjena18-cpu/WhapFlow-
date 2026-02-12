@@ -1,0 +1,281 @@
+import { Hono } from "npm:hono";
+import * as kv from "./kv_store.tsx";
+import * as billing from "./billing.ts";
+import { getEnv } from "../../../lib/env.ts";
+import { verifyWebhookHmac, getMerchantCredentials } from "./shopify_client.ts";
+import { encrypt } from "./crypto.ts";
+import { scheduleAutomation, processWhatsAppStatuses, AutomationTemplate } from "./automation.ts";
+
+const webhooksApp = new Hono();
+
+/**
+ * Shopify Webhook Receiver (CHECKOUTS)
+ * Path: /shopify (mounted at /api/webhooks)
+ */
+webhooksApp.post("/shopify", async (c) => {
+  try {
+    const hmac = c.req.header('X-Shopify-Hmac-Sha256');
+    const shop = c.req.header('X-Shopify-Shop-Domain');
+    const webhookId = c.req.header('X-Shopify-Webhook-Id');
+    const rawBody = await c.req.text();
+
+    // SECURITY: Verify HMAC
+    const secret = getEnv('SHOPIFY_CLIENT_SECRET');
+    if (!secret) {
+      console.error("[Shopify Webhook] Critical Error: SHOPIFY_CLIENT_SECRET not configured");
+      return c.json({ error: 'Server configuration error' }, 500);
+    }
+    if (!hmac) {
+      console.error("[Shopify Webhook] Missing HMAC header");
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    const isValid = await verifyWebhookHmac(rawBody, hmac, secret);
+    if (!isValid) {
+      console.error(`[Shopify Webhook] HMAC verification failed for ${shop}`);
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    // SECURITY: Deduplication (Prevent Replay Attacks)
+    // Only perform deduplication AFTER successful HMAC verification to prevent DoS via KV resource exhaustion
+    if (webhookId) {
+      const alreadyProcessed = await kv.get(`webhook_id:${webhookId}`);
+      if (alreadyProcessed) {
+        console.log(`[Shopify Webhook] Skipping duplicate webhook ${webhookId} for ${shop}`);
+        return c.json({ status: 'success', duplicate: true }, 200);
+      }
+      await kv.set(`webhook_id:${webhookId}`, { processed_at: new Date().toISOString() });
+    }
+
+    if (!shop) {
+        console.error("[Shopify Webhook] Missing Shop Domain header");
+        return c.json({ error: 'Missing shop domain' }, 400);
+    }
+
+    const payload = JSON.parse(rawBody);
+
+    // 1. Extract key data points
+    const customerPhone = payload.customer?.phone || payload.phone || "No phone provided";
+    const customerName = payload.customer ? `${payload.customer.first_name} ${payload.customer.last_name}` : "Guest";
+    const customerEmail = payload.customer?.email || payload.email || "";
+
+    // SECURITY: Encrypt PII at rest
+    const [encName, encEmail, encPhone] = await Promise.all([
+      encrypt(customerName),
+      encrypt(customerEmail),
+      encrypt(customerPhone)
+    ]);
+
+    const firstProduct = payload.line_items?.[0]?.title || "Unknown Product";
+    const cartValue = payload.total_price || "0.00";
+    const currency = payload.currency || "USD";
+    const recoveryUrl = payload.abandoned_checkout_url || "No URL";
+
+    // 2. Log reception (Structured & Redacted)
+    console.log(`[Shopify Webhook] Received for ${shop}`, {
+      timestamp: new Date().toISOString(),
+      product: `${firstProduct} (+${Math.max(0, (payload.line_items?.length || 0) - 1)} others)`,
+      value: `${cartValue} ${currency}`,
+    });
+    // 3. PERSISTENCE: Save to Database
+    console.log('\n💾 PERSISTENCE: Saving abandoned cart to database...');
+
+    const cartId = payload.id ? String(payload.id) : crypto.randomUUID();
+    const cartKey = `abandoned_cart:${cartId}`;
+
+    const abandonedCartData = {
+      id: cartId,
+      shop: shop, // CRITICAL: Link cart to store
+      customer_name: encName,
+      customer_email: encEmail,
+      phone: encPhone,
+      product_title: firstProduct,
+      total_price: cartValue,
+      currency: currency,
+      checkout_url: recoveryUrl,
+      status: "pending",
+      created_at: new Date().toISOString()
+    };
+
+    // Using the persistent KV store to simulate an 'abandoned_carts' table
+    await kv.set(cartKey, abandonedCartData);
+
+    console.log(`✅ SUCCESS: Cart saved with ID [${cartId}]`);
+    console.log('Status: "pending" (Waiting for automation trigger)');
+    console.log('-----------------------------------\n');
+
+    // 4. AUTOMATION DELAY: Wait, then check logic
+
+    // CHECK INTEGRATIONS & LIMITS (Parallelized for performance)
+    console.log('\n🔍 AUTOMATION CHECKS: Verifying integration status and limits...');
+
+    const [merchant, whatsappConfig, billingConfig, rawTemplates] = await Promise.all([
+      getMerchantCredentials(shop),
+      kv.get(`shop:${shop}:config:whatsapp`),
+      billing.getBillingConfig(shop),
+      kv.getByPrefix(`shop:${shop}:template:`)
+    ]);
+    const templates = (rawTemplates || []) as AutomationTemplate[];
+
+    // Check if THIS shop is connected
+    if (!merchant || !merchant.shopify_connected) {
+       console.log(`⏹️ AUTOMATION PAUSED: Merchant ${shop} not connected/active.`);
+       return c.json({ status: 'success', received: true, automation: 'paused_merchant_inactive' }, 200);
+    }
+
+    // Check WhatsApp Connection
+    const whatsappConnected = whatsappConfig?.connection_status === 'connected';
+    if (!whatsappConnected) {
+      console.log("⏹️ AUTOMATION PAUSED: WhatsApp integration not connected.");
+      return c.json({ status: 'success', received: true, automation: 'paused_integrations_missing' }, 200);
+    }
+
+    // CHECK BILLING / PLAN
+    const automationCheck = billing.checkLimitWithConfig('automation', billingConfig);
+    if (!automationCheck.allowed) {
+      console.log(`⏹️ AUTOMATION PAUSED: ${automationCheck.error}`);
+      return c.json({ status: 'success', received: true, automation: 'paused_plan_limit' }, 200);
+    }
+
+    // FETCH ENABLED TEMPLATE
+    const enabledTemplate = (templates as AutomationTemplate[]).find(t => t.enabled);
+
+    if (!enabledTemplate) {
+        console.log("⏹️ AUTOMATION SKIPPED: No enabled template found.");
+        // Do NOT start delay timer
+    } else {
+        console.log(`✅ TEMPLATE FOUND: ${enabledTemplate.display_name} (${enabledTemplate.template_name})`);
+        console.log(`   - Delay: ${enabledTemplate.delay_minutes} minutes`);
+        await scheduleAutomation({ cartId, cartKey, templateName: enabledTemplate.template_name, shop }, enabledTemplate.delay_minutes);
+    }
+
+    return c.json({ status: 'success', received: true }, 200);
+
+  } catch (error) {
+    console.error('[Shopify Webhook] Error processing payload:', error);
+    return c.json({ error: 'Invalid payload' }, 400);
+  }
+});
+
+/**
+ * Shopify Webhook Receiver (APP UNINSTALL)
+ * Path: /app/uninstalled (mounted at /api/webhooks)
+ */
+webhooksApp.post("/app/uninstalled", async (c) => {
+  try {
+    const hmac = c.req.header('X-Shopify-Hmac-Sha256');
+    const shop = c.req.header('X-Shopify-Shop-Domain');
+    const webhookId = c.req.header('X-Shopify-Webhook-Id');
+    const rawBody = await c.req.text();
+
+    console.log(`\n--- ⚠️ APP UNINSTALLED WEBHOOK RECEIVED [${shop}] ---`);
+
+    // SECURITY: Verify HMAC
+    const secret = getEnv('SHOPIFY_CLIENT_SECRET');
+    if (!secret) {
+      console.error("[Uninstall Webhook] Critical Error: SHOPIFY_CLIENT_SECRET not configured");
+      return c.json({ error: 'Server configuration error' }, 500);
+    }
+    if (!hmac) {
+      console.error("[Uninstall Webhook] Missing HMAC header");
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    const isValid = await verifyWebhookHmac(rawBody, hmac, secret);
+    if (!isValid) {
+      console.error(`[Uninstall Webhook] HMAC verification failed for ${shop}`);
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    // SECURITY: Deduplication (Prevent Replay Attacks)
+    // Only perform deduplication AFTER successful HMAC verification to prevent DoS via KV resource exhaustion
+    if (webhookId) {
+      const alreadyProcessed = await kv.get(`webhook_id:${webhookId}`);
+      if (alreadyProcessed) {
+        console.log(`[Uninstall Webhook] Skipping duplicate webhook ${webhookId} for ${shop}`);
+        return c.json({ status: 'success', duplicate: true }, 200);
+      }
+      await kv.set(`webhook_id:${webhookId}`, { processed_at: new Date().toISOString() });
+    }
+
+    if (!shop) {
+        return c.json({ error: 'Missing shop domain' }, 400);
+    }
+
+    // 1. Cleanup Merchant Record
+    const merchantKey = `merchant:${shop}`;
+    const merchant = await kv.get(merchantKey);
+
+    if (merchant) {
+        console.log(`[Uninstall] Deactivating merchant record for ${shop}...`);
+        merchant.shopify_connected = false;
+        merchant.access_token = null; // Security: Clear token
+        merchant.updated_at = new Date().toISOString();
+
+        await kv.set(merchantKey, merchant);
+    }
+
+    // 2. Cleanup Scoped Config (Scoping by shop to prevent multi-tenancy leaks)
+    const shopifyKey = `shop:${shop}:config:shopify`;
+    const shopifyConfig = await kv.get(shopifyKey);
+    if (shopifyConfig) {
+        console.log(`[Uninstall] Clearing shop-scoped dashboard config...`);
+        shopifyConfig.connection_status = 'disconnected';
+        shopifyConfig.connected_at = null;
+        await kv.set(shopifyKey, shopifyConfig);
+    }
+
+    // 3. Cleanup: We don't delete carts immediately for analytics,
+    // but future automations will fail because merchant.shopify_connected is false.
+
+    console.log(`[Uninstall] Cleanup complete for ${shop}.`);
+    return c.json({ status: 'success' }, 200);
+
+  } catch (error) {
+    console.error('[Uninstall Webhook] Error:', error);
+    return c.json({ error: 'Internal Server Error' }, 500);
+  }
+});
+
+/**
+ * WhatsApp Webhook Receiver
+ * Path: /whatsapp (mounted at /api/webhooks)
+ */
+// GET: Verification Challenge
+webhooksApp.get("/whatsapp", (c) => {
+  const mode = c.req.query("hub.mode");
+  const token = c.req.query("hub.verify_token");
+  const challenge = c.req.query("hub.challenge");
+
+  const verifyToken = getEnv("WHATSAPP_VERIFY_TOKEN");
+
+  // SECURITY: Ensure verifyToken is configured and matches the request token
+  if (mode === "subscribe" && verifyToken && token === verifyToken) {
+    console.log("[WhatsApp Webhook] Webhook verified.");
+    return c.text(challenge || "");
+  }
+
+  console.error("[WhatsApp Webhook] Verification failed.");
+  return c.json({ error: "Forbidden" }, 403);
+});
+
+// POST: Status Updates & Messages
+webhooksApp.post("/whatsapp", async (c) => {
+  try {
+    const body = await c.req.json();
+
+    // Check if it's a status update
+    if (body.entry && body.entry[0]?.changes && body.entry[0]?.changes[0]?.value?.statuses) {
+      const statuses = body.entry[0].changes[0].value.statuses;
+      // PERFORMANCE: Process all status updates in a single optimized batch
+      await processWhatsAppStatuses(statuses);
+    }
+
+    return c.json({ status: 'ok' });
+  } catch (error) {
+    console.error("[WhatsApp Webhook] Error processing POST:", error);
+    return c.json({ error: "Internal Error" }, 500);
+  }
+});
+
+export default webhooksApp;

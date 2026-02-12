@@ -4,7 +4,7 @@ import * as billing from "./billing.ts";
 import { getMerchantCredentials, shopifyGraphql, verifyWebhookHmac } from "./shopify_client.ts";
 import { PlanLevel, PLAN_LIMITS } from "./billing.ts";
 import { getEnv } from "../../../lib/env.ts";
-import { API_DOMAIN, APP_DOMAIN, SERVER_BASE_PATH } from "./constants.ts";
+import { API_DOMAIN, APP_DOMAIN, SERVER_BASE_PATH, SHOPIFY_DOMAIN_REGEX } from "./constants.ts";
 
 const app = new Hono();
 
@@ -68,6 +68,11 @@ app.post("/create-subscription", async (c) => {
     
     if (!plan || !shop) {
       return c.json({ error: "Missing plan or shop" }, 400);
+    }
+
+    // SECURITY: Validate shop domain to prevent multi-tenancy leaks
+    if (shop !== "global" && !SHOPIFY_DOMAIN_REGEX.test(shop)) {
+      return c.json({ error: "Invalid shop domain" }, 400);
     }
     
     const targetPlan = PLAN_LIMITS[plan as PlanLevel];
@@ -150,6 +155,11 @@ app.post("/create-subscription", async (c) => {
 app.get("/status", async (c) => {
   const shop = c.req.query("shop");
   if (!shop) return c.json({ error: "Shop required" }, 400);
+
+  // SECURITY: Validate shop domain to prevent multi-tenancy leaks
+  if (shop !== "global" && !SHOPIFY_DOMAIN_REGEX.test(shop)) {
+    return c.json({ error: "Invalid shop domain" }, 400);
+  }
 
   try {
     const merchant = await getMerchantCredentials(shop);
