@@ -51,6 +51,9 @@ app.route(`${SERVER_BASE_PATH}/dashboard`, dashboardApp);
 app.route(`${SERVER_BASE_PATH}/api/dashboard`, dashboardMetricsApp);
 app.route(`${SERVER_BASE_PATH}/auth/shopify`, shopifyAuthApp);
 app.route(`${SERVER_BASE_PATH}/api/billing`, billingApp);
+app.route(`${SERVER_BASE_PATH}/api/integrations`, integrationsApp);
+app.route(`${SERVER_BASE_PATH}/api/templates`, templatesApp);
+app.route(`${SERVER_BASE_PATH}/api/webhooks`, webhooksApp);
 
 // New Routes
 app.route(`${SERVER_BASE_PATH}/api/templates`, templatesApp);

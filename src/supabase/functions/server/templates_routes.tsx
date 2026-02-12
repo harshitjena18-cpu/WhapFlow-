@@ -76,8 +76,8 @@ app.post("/", async (c) => {
   }
 });
 
-// PUT /api/templates/:id
-app.put("/:id", async (c) => {
+// PUT /:id
+templatesApp.put("/:id", async (c) => {
   try {
     const id = c.req.param("id");
     const body = await c.req.json();
