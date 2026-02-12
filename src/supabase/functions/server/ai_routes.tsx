@@ -1,0 +1,26 @@
+import { Hono } from "npm:hono";
+import * as billing from "./billing.ts";
+
+const app = new Hono();
+
+// GET /api/ai/usage
+app.get("/usage", async (c) => {
+  try {
+    const shop = c.req.query("shop");
+    if (!shop) return c.json({ error: "Shop parameter required" }, 400);
+
+    const config = await billing.getBillingConfig(shop);
+    const limits = billing.PLAN_LIMITS[config.plan];
+
+    return c.json({
+      ai_generations_used: config.ai_generations_used,
+      ai_generations_limit: limits.ai_generations,
+      ai_usage_reset_at: config.billing_cycle_reset_at
+    });
+  } catch (error) {
+    console.error("Error fetching AI usage:", error);
+    return c.json({ error: "Failed to fetch usage stats" }, 500);
+  }
+});
+
+export default app;

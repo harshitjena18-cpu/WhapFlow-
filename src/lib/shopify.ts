@@ -7,6 +7,7 @@
  */
 
 import { z } from "zod";
+import { getEnv } from "./env.ts";
 import { ShopifyCartPayload } from "../types/index.ts";
 import { getEnv } from "./env.ts";
 
@@ -44,15 +45,13 @@ export const verifyShopifyWebhook = async (hmac: string, body: string): Promise<
   const secret = getEnv("SHOPIFY_SECRET");
 
   if (!secret) {
-    console.error("[Shopify] Missing SHOPIFY_SECRET environment variable");
+    console.error("[Shopify] Missing SHOPIFY_SECRET");
     return false;
   }
 
   try {
     const encoder = new TextEncoder();
-    const msgData = encoder.encode(body);
     const keyData = encoder.encode(secret);
-
     const key = await crypto.subtle.importKey(
       "raw",
       keyData,
@@ -62,15 +61,16 @@ export const verifyShopifyWebhook = async (hmac: string, body: string): Promise<
     );
 
     const signatureBytes = Uint8Array.from(atob(hmac), c => c.charCodeAt(0));
+    const bodyBytes = encoder.encode(body);
 
     return await crypto.subtle.verify(
       "HMAC",
       key,
       signatureBytes,
-      msgData
+      bodyBytes
     );
-  } catch (error) {
-    console.error("[Shopify] Error verifying webhook signature:", error);
+  } catch (e) {
+    console.error("[Shopify] Verification failed:", e);
     return false;
   }
 };
