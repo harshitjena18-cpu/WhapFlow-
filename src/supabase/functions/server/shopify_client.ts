@@ -1,5 +1,6 @@
 import * as kv from "./kv_store.tsx";
 import { decrypt } from "./crypto.ts";
+import { Buffer } from "node:buffer";
 
 // Module-level cache for HMAC CryptoKeys to minimize import overhead (~2-5ms per call)
 let _cachedHmacKey: CryptoKey | null = null;
@@ -114,7 +115,7 @@ export async function verifyWebhookHmac(rawBody: string, hmacHeader: string, sec
     }
 
     // Shopify webhooks use base64 for the HMAC header
-    const signatureBytes = Uint8Array.from(atob(hmacHeader), c => c.charCodeAt(0));
+    const signatureBytes = Buffer.from(hmacHeader, "base64");
 
     // Type narrowing for TypeScript safety
     if (!_cachedHmacKey) {
