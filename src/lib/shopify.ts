@@ -1,7 +1,6 @@
 /**
  * Shopify Integration Helper
  * 
- * Future purpose:
  * - Validate HMAC signatures from webhooks
  * - Parse and normalize cart data
  * - Sync product details
@@ -10,6 +9,7 @@
 import { z } from "zod";
 import { getEnv } from "./env.ts";
 import { ShopifyCartPayload } from "../types/index.ts";
+import { getEnv } from "./env.ts";
 
 const ShopifyLineItemSchema = z.object({
   id: z.number(),
