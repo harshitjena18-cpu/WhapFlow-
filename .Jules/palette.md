@@ -9,3 +9,7 @@
 ## 2025-05-16 - [Dynamic Keyboard Shortcut Hints]
 **Learning:** Hardcoding platform-specific keyboard symbols (like ⌘) alienates Windows and Linux users and provides inaccurate instructions. Using `navigator.userAgent` to dynamically swap between ⌘ and Ctrl ensures a localized and professional experience. Furthermore, keyboard hints should always be accompanied by a functional event listener to "close the loop" between instruction and action.
 **Action:** Always detect OS for keyboard-based hints and ensure the corresponding `keydown` logic is implemented for both `Meta` (Mac) and `Control` (Win/Linux) keys.
+
+## 2025-05-18 - [Tokenized Variables UX]
+**Learning:** Representing technical placeholders (like {{customer_name}}) as pill-shaped "tokens" rather than plain text or standard buttons makes them feel more like distinct, reusable entities. Combining these with tooltips that describe the underlying data source provides immediate clarity without cluttering the UI.
+**Action:** Use the "Chip/Pill" pattern for variable insertion UI, ensuring each token has a descriptive tooltip and an accessible `aria-label`.
