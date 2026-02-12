@@ -1,19 +1,11 @@
 import { Hono } from "npm:hono";
 import * as kv from "./kv_store.tsx";
-import { IntegrationConfig } from "./types.ts";
+import { DEFAULT_CONFIG } from "./types.ts";
 
-const integrationsApp = new Hono();
+const app = new Hono();
 
-// Integration Configurations (Future-proofing)
-const DEFAULT_CONFIG: IntegrationConfig = {
-  connected_at: null,
-  last_error: null,
-  connection_status: 'disconnected',
-  metadata: {}
-};
-
-// GET /status
-integrationsApp.get("/status", async (c) => {
+// GET /api/integrations/status
+app.get("/status", async (c) => {
   try {
     const shop = c.req.query("shop") || "global";
     // SECURITY: Scoping configurations by shop to prevent multi-tenancy leaks
@@ -62,8 +54,8 @@ integrationsApp.get("/status", async (c) => {
   }
 });
 
-// POST /status
-integrationsApp.post("/status", async (c) => {
+// POST /api/integrations/status (For demo/testing purposes)
+app.post("/status", async (c) => {
   try {
     const body = await c.req.json();
     const shop = body.shop || c.req.query("shop") || "global";
@@ -118,4 +110,4 @@ integrationsApp.post("/status", async (c) => {
   }
 });
 
-export default integrationsApp;
+export default app;

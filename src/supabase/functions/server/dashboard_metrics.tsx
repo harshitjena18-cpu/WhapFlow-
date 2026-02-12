@@ -1,12 +1,12 @@
 import { Hono } from "npm:hono";
 import * as kv from "./kv_store.tsx";
 import * as billing from "./billing.ts";
-import { AutomationTemplate, IntegrationConfig } from "./types.ts";
+import { AutomationTemplate } from "./automation.ts";
 
-const app = new Hono();
+const dashboardMetricsApp = new Hono();
 
-// GET /api/dashboard/metrics
-app.get("/metrics", async (c) => {
+// GET /metrics (mounted at /api/dashboard)
+dashboardMetricsApp.get("/metrics", async (c) => {
   try {
     const shop = c.req.query("shop");
     if (!shop) {
@@ -28,14 +28,11 @@ app.get("/metrics", async (c) => {
       return c.json({ error: "Unauthorized: Merchant not found" }, 401);
     }
 
-    const sConfig = shopifyConfig as IntegrationConfig | null;
-    const wConfig = whatsappConfig as IntegrationConfig | null;
-
     const status = {
-      shopify_connected: sConfig?.connection_status === 'connected',
-      whatsapp_connected: wConfig?.connection_status === 'connected',
-      shopify: sConfig,
-      whatsapp: wConfig
+      shopify_connected: shopifyConfig?.connection_status === 'connected',
+      whatsapp_connected: whatsappConfig?.connection_status === 'connected',
+      shopify: shopifyConfig,
+      whatsapp: whatsappConfig
     };
 
     // 2. Derive Stats
@@ -46,7 +43,6 @@ app.get("/metrics", async (c) => {
     const limits = billing.PLAN_LIMITS[billingConfig.plan];
 
     // 4. Determine Automation Status
-    // Automation is only active if integrations are connected AND a template is enabled AND plan allows it
     const integrationsConnected = status.shopify_connected && status.whatsapp_connected;
 
     let automationStatus = "active";
@@ -102,4 +98,4 @@ app.get("/metrics", async (c) => {
   }
 });
 
-export default app;
+export default dashboardMetricsApp;

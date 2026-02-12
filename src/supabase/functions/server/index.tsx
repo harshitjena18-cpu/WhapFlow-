@@ -4,14 +4,18 @@ import { logger } from "npm:hono/logger";
 import { secureHeaders } from "npm:hono/secure-headers";
 import { processPendingJobs } from "./queue.ts";
 import { executeAutomation } from "./automation.ts";
+
 import authApp from "./auth.tsx";
 import dashboardApp from "./dashboard.tsx";
+import dashboardMetricsApp from "./dashboard_metrics.tsx";
 import shopifyAuthApp from "./shopify_auth.tsx";
 import billingApp from "./billing_routes.tsx";
-import integrationsApp from "./integrations_routes.tsx";
 import templatesApp from "./templates_routes.tsx";
+import integrationsApp from "./integrations_routes.tsx";
 import webhooksApp from "./webhooks_routes.tsx";
-import metricsApp from "./metrics_routes.tsx";
+import whatsappApp from "./whatsapp_routes.tsx";
+import aiApp from "./ai_routes.tsx";
+
 import { SERVER_BASE_PATH } from "./constants.ts";
 
 const app = new Hono();
@@ -41,17 +45,22 @@ app.onError((err, c) => {
   return c.json({ error: "Internal Server Error" }, 500);
 });
 
-// Mount routes
+// Mount Routes
 app.route(SERVER_BASE_PATH, authApp);
 app.route(`${SERVER_BASE_PATH}/dashboard`, dashboardApp);
+app.route(`${SERVER_BASE_PATH}/api/dashboard`, dashboardMetricsApp);
 app.route(`${SERVER_BASE_PATH}/auth/shopify`, shopifyAuthApp);
 app.route(`${SERVER_BASE_PATH}/api/billing`, billingApp);
 app.route(`${SERVER_BASE_PATH}/api/integrations`, integrationsApp);
 app.route(`${SERVER_BASE_PATH}/api/templates`, templatesApp);
 app.route(`${SERVER_BASE_PATH}/api/webhooks`, webhooksApp);
 
-// Mount metrics app at the base path because it defines its own /api/... routes
-app.route(SERVER_BASE_PATH, metricsApp);
+// New Routes
+app.route(`${SERVER_BASE_PATH}/api/templates`, templatesApp);
+app.route(`${SERVER_BASE_PATH}/api/integrations`, integrationsApp);
+app.route(`${SERVER_BASE_PATH}/api/webhooks`, webhooksApp);
+app.route(`${SERVER_BASE_PATH}/api/whatsapp`, whatsappApp);
+app.route(`${SERVER_BASE_PATH}/api/ai`, aiApp);
 
 // Health check endpoint
 app.get(`${SERVER_BASE_PATH}/health`, (c) => {
@@ -61,6 +70,189 @@ app.get(`${SERVER_BASE_PATH}/health`, (c) => {
 // Process Queue periodically
 Deno.cron("Process Queue", "* * * * *", async () => {
     await processPendingJobs(executeAutomation);
+});
+
+/**
+ * WhatsApp Sender
+ * Path: /app/api/whatsapp/send/route.ts (Simulated)
+ */
+app.post(`${SERVER_BASE_PATH}/api/whatsapp/send`, async (c) => {
+  try {
+    const authHeader = c.req.header("Authorization");
+    const shop = c.req.query("shop") || "global";
+
+    // SECURITY: Protect demo endpoint from unauthorized use
+    // Verify against service role key for internal/admin access
+    const serviceKey = getEnv("SUPABASE_SERVICE_ROLE_KEY");
+    if (!serviceKey || !authHeader || authHeader !== `Bearer ${serviceKey}`) {
+      return c.json({ error: "Unauthorized: Invalid or missing token" }, 401);
+    }
+
+    // SECURITY: Validate shop domain
+    if (shop !== "global" && !SHOPIFY_DOMAIN_REGEX.test(shop)) {
+      return c.json({ error: "Invalid shop domain" }, 400);
+    }
+
+    const { phoneNumber, templateId } = await c.req.json();
+    // SECURITY: Redact phoneNumber from logs
+    console.log(`[WhatsApp] Intent to send template "${templateId}" to [REDACTED]`);
+    
+    // Call the shared helper
+    const result = await sendWhatsAppTemplate({
+      to: phoneNumber,
+      templateName: templateId || "abandoned_cart_test",
+      languageCode: "en_US"
+    });
+    
+    if (result.success) {
+      return c.json({ success: true, message: 'Message sent', data: result.data }, 200);
+    } else {
+      return c.json({ error: 'WhatsApp API Error', details: result.error }, 500);
+    }
+
+  } catch (_error) {
+    return c.json({ error: 'Invalid request' }, 400);
+  }
+});
+
+/**
+ * WhatsApp Webhook Receiver
+ * Path: /app/api/webhooks/whatsapp/route.ts
+ */
+// GET: Verification Challenge
+app.get(`${SERVER_BASE_PATH}/api/webhooks/whatsapp`, (c) => {
+  const mode = c.req.query("hub.mode");
+  const token = c.req.query("hub.verify_token");
+  const challenge = c.req.query("hub.challenge");
+
+  const verifyToken = getEnv("WHATSAPP_VERIFY_TOKEN");
+
+  // SECURITY: Ensure verifyToken is configured and matches the request token
+  if (mode === "subscribe" && verifyToken && token === verifyToken) {
+    console.log("[WhatsApp Webhook] Webhook verified.");
+    return c.text(challenge || "");
+  }
+
+  console.error("[WhatsApp Webhook] Verification failed.");
+  return c.json({ error: "Forbidden" }, 403);
+});
+
+// POST: Status Updates & Messages
+app.post(`${SERVER_BASE_PATH}/api/webhooks/whatsapp`, async (c) => {
+  try {
+    const body = await c.req.json();
+
+    // Check if it's a status update
+    if (body.entry && body.entry[0]?.changes && body.entry[0]?.changes[0]?.value?.statuses) {
+      const statuses = body.entry[0].changes[0].value.statuses;
+      // PERFORMANCE: Process all status updates in a single optimized batch
+      await processWhatsAppStatuses(statuses);
+    }
+
+    return c.json({ status: 'ok' });
+  } catch (error) {
+    console.error("[WhatsApp Webhook] Error processing POST:", error);
+    return c.json({ error: "Internal Error" }, 500);
+  }
+});
+
+// GET /api/dashboard/metrics
+app.get(`${SERVER_BASE_PATH}/api/dashboard/metrics`, async (c) => {
+  try {
+    const shop = c.req.query("shop");
+    if (!shop) {
+      return c.json({ error: "Missing shop parameter" }, 400);
+    }
+
+    // 1. PERFORMANCE: Fetch all dependencies including merchant in parallel to minimize round-trip latency
+    const [merchant, shopifyConfig, whatsappConfig, rawTemplates, billingConfig] = await Promise.all([
+      kv.get(`merchant:${shop}`),
+      kv.get(`shop:${shop}:config:shopify`),
+      kv.get(`shop:${shop}:config:whatsapp`),
+      kv.getByPrefix(`shop:${shop}:template:`),
+      billing.getBillingConfig(shop)
+    ]);
+    const templates = (rawTemplates || []) as AutomationTemplate[];
+
+    // SECURITY: Verify merchant exists to prevent unauthorized data access
+    if (!merchant && shop !== "global") {
+      return c.json({ error: "Unauthorized: Merchant not found" }, 401);
+    }
+
+    const status = {
+      shopify_connected: shopifyConfig?.connection_status === 'connected',
+      whatsapp_connected: whatsappConfig?.connection_status === 'connected',
+      shopify: shopifyConfig,
+      whatsapp: whatsappConfig
+    };
+    
+    // 2. Derive Stats
+    const templatesCount = templates.length;
+    const hasEnabledTemplate = (templates as AutomationTemplate[]).some(t => t.enabled);
+    
+    // 3. Billing Context
+    const limits = billing.PLAN_LIMITS[billingConfig.plan];
+    
+    // 4. Determine Automation Status
+    // Automation is only active if integrations are connected AND a template is enabled AND plan allows it
+    const integrationsConnected = status.shopify_connected && status.whatsapp_connected;
+    
+    let automationStatus = "active";
+    let automationReason = "Running";
+    
+    if (!integrationsConnected) {
+      automationStatus = "paused";
+      automationReason = "Integrations not connected";
+    } else if (!hasEnabledTemplate) {
+      automationStatus = "paused";
+      automationReason = "No active template";
+    } else if (!limits.automation_enabled) {
+      automationStatus = "paused";
+      automationReason = `Disabled on ${limits.name} plan`;
+    }
+
+    return c.json({
+      readiness: {
+        templates: {
+          total: templatesCount,
+          has_enabled: hasEnabledTemplate
+        },
+        billing: {
+          plan: billingConfig.plan,
+          plan_name: limits.name,
+          ai_usage: {
+            used: billingConfig.ai_generations_used,
+            limit: limits.ai_generations
+          },
+          whatsapp_usage: {
+            used: billingConfig.whatsapp_conversations_used,
+            limit: limits.whatsapp_conversations
+          },
+          automation_enabled: limits.automation_enabled,
+          billing_cycle_reset_at: billingConfig.billing_cycle_reset_at
+        },
+        // Legacy support for frontend that expects 'ai_usage' at root
+        ai_usage: {
+          used: billingConfig.ai_generations_used,
+          limit: limits.ai_generations
+        },
+        integrations: status,
+        automation: {
+          status: automationStatus,
+          reason: automationReason
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error("Error fetching dashboard metrics:", error);
+    return c.json({ error: "Failed to fetch dashboard metrics" }, 500);
+  }
+});
+
+// Health check endpoint
+app.get(`${SERVER_BASE_PATH}/health`, (c) => {
+  return c.json({ status: "ok" });
 });
 
 Deno.serve(app.fetch);

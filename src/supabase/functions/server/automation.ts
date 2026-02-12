@@ -1,11 +1,14 @@
 import * as kv from "./kv_store.tsx";
 import * as billing from "./billing.ts";
 import { BILLING_KEY_PREFIX } from "./billing.ts";
-import { decrypt } from "./crypto.ts";
 import { checkOrderExists, getMerchantCredentials } from "./shopify_client.ts";
 import { sendWhatsAppTemplate } from "./whatsapp.ts";
 import { enqueueJob } from "./queue.ts";
-import { AutomationPayload, AutomationTemplate, WhatsAppStatus } from "./types.ts";
+import {
+  AutomationPayload,
+  AutomationTemplate,
+  WhatsAppStatus
+} from "./types.ts";
 
 // Helper: Ensure only one template is enabled for a specific shop
 export async function disableOtherTemplates(exceptId: string, shop: string = "global") {
@@ -14,13 +17,13 @@ export async function disableOtherTemplates(exceptId: string, shop: string = "gl
 
   // PERFORMANCE: Fetch only enabled templates using DB-side filtering to avoid full table scan
   // This reduces memory usage and network transfer compared to fetching all templates
-  const enabledTemplates = await kv.getByPrefixAndValue(prefix, "value->enabled", true);
+  // deno-lint-ignore no-explicit-any
+  const templates = (await kv.getByPrefixAndValue(prefix, "value->enabled", true)) as AutomationTemplate[];
 
   const updateKeys: string[] = [];
-  const updateValues: any[] = [];
+  const updateValues: AutomationTemplate[] = [];
 
-  for (const t of enabledTemplates) {
-    // Only process if it's not the one we want to keep enabled
+  for (const t of templates) {
     if (t.id !== exceptId) {
       t.enabled = false;
       updateKeys.push(`${prefix}${t.id}`);
@@ -29,71 +32,16 @@ export async function disableOtherTemplates(exceptId: string, shop: string = "gl
   }
 
   if (updateKeys.length > 0) {
-    // PERFORMANCE: Batch update all templates in a single request
     await kv.mset(updateKeys, updateValues);
+    console.log(`[Templates] Disabled ${updateKeys.length} other templates for shop ${shop}`);
   }
 }
 
-// Helper: Validate Template Content
 export function validateTemplateContent(content: string): string | null {
   if (!content || !content.trim()) return "Content cannot be empty";
   if (content.length > 1024) return "Content exceeds 1024 characters";
   if (!content.includes("{{checkout_link}}")) return "Content must include {{checkout_link}}";
   return null;
-}
-
-// Helper: Process WhatsApp Status Updates in Batch
-export async function processWhatsAppStatuses(statuses: WhatsAppStatus[]) {
-  if (statuses.length === 0) return;
-
-  const wamids = statuses.map(s => s.id);
-  const msgMapKeys = wamids.map(id => `msg_map:${id}`);
-
-  // PERFORMANCE: Batch fetch all cart ID mappings in a single request
-  const cartIds = await kv.mget(msgMapKeys);
-
-  const validUpdates: { cartId: string, newStatus: string }[] = [];
-  const cartKeys: string[] = [];
-
-  for (let i = 0; i < statuses.length; i++) {
-    const cartId = cartIds[i];
-    const wamid = statuses[i].id;
-    const newStatus = statuses[i].status;
-
-    if (cartId) {
-      validUpdates.push({ cartId, newStatus });
-      cartKeys.push(`abandoned_cart:${cartId}`);
-      console.log(`[WhatsApp Status] Message ${wamid} (${newStatus}) linked to cart ${cartId}`);
-    } else {
-      console.log(`[WhatsApp Status] No cart found for message ${wamid}`);
-    }
-  }
-
-  if (cartKeys.length === 0) return;
-
-  // PERFORMANCE: Batch fetch all associated carts in a single request
-  const carts = await kv.mget(cartKeys);
-
-  const updateKeys: string[] = [];
-  const updateValues: any[] = [];
-  const now = new Date().toISOString();
-
-  for (let i = 0; i < validUpdates.length; i++) {
-    const cart = carts[i];
-    if (cart) {
-      cart.delivery_status = validUpdates[i].newStatus;
-      cart.updated_at = now;
-      updateKeys.push(`abandoned_cart:${validUpdates[i].cartId}`);
-      updateValues.push(cart);
-      console.log(`[WhatsApp Status] Prepared update for cart ${validUpdates[i].cartId} status: ${validUpdates[i].newStatus}`);
-    }
-  }
-
-  // PERFORMANCE: Batch persist all updated carts in a single request
-  if (updateKeys.length > 0) {
-    await kv.mset(updateKeys, updateValues);
-    console.log(`[WhatsApp Status] Successfully persisted ${updateKeys.length} cart updates.`);
-  }
 }
 
 export async function scheduleAutomation(payload: AutomationPayload, delayMinutes: number) {
@@ -105,9 +53,11 @@ export async function executeAutomation(payload: AutomationPayload) {
   const { cartId, cartKey, templateName, shop } = payload;
 
   try {
-    console.log(`\n⏰ AUTOMATION: Executing job for cart [${cartId}]. Checking logic...`);
+    console.log(`🚀 EXECUTE AUTOMATION for cart ${cartId} (Shop: ${shop})`);
+    console.log(`   Checking logic...`);
 
     // Fetch all required data in parallel to minimize latency and fix variable access order
+    // Need to cast rawTemplates to correct type, as getByPrefix returns unknown[]
     const [currentCart, merchant, rawTemplates, billingConfig] = await Promise.all([
       kv.get(cartKey),
       getMerchantCredentials(shop),
@@ -120,16 +70,6 @@ export async function executeAutomation(payload: AutomationPayload) {
       console.log(`❌ AUTOMATION SKIPPED: Cart [${cartId}] no longer exists.`);
       return;
     }
-
-    // SECURITY: Decrypt PII before use
-    const [name, email, phone] = await Promise.all([
-      decrypt(currentCart.customer_name),
-      decrypt(currentCart.customer_email),
-      decrypt(currentCart.phone)
-    ]);
-    currentCart.customer_name = name;
-    currentCart.customer_email = email;
-    currentCart.phone = phone;
 
     if (!merchant || !merchant.access_token) {
       console.error(`❌ AUTOMATION FAILED: No credentials found for ${shop}`);
@@ -224,5 +164,59 @@ export async function executeAutomation(payload: AutomationPayload) {
         await kv.set(cartKey, cart);
       }
     } catch (_e) { /* Ignore secondary storage error */ }
+  }
+}
+
+// Helper: Process WhatsApp Status Updates in Batch
+export async function processWhatsAppStatuses(statuses: WhatsAppStatus[]) {
+  if (statuses.length === 0) return;
+
+  const wamids = statuses.map(s => s.id);
+  const msgMapKeys = wamids.map(id => `msg_map:${id}`);
+
+  // PERFORMANCE: Batch fetch all cart ID mappings in a single request
+  const cartIds = await kv.mget(msgMapKeys);
+
+  const validUpdates: { cartId: string, newStatus: string }[] = [];
+  const cartKeys: string[] = [];
+
+  for (let i = 0; i < statuses.length; i++) {
+    const cartId = cartIds[i];
+    const wamid = statuses[i].id;
+    const newStatus = statuses[i].status;
+
+    if (cartId) {
+      validUpdates.push({ cartId, newStatus });
+      cartKeys.push(`abandoned_cart:${cartId}`);
+      console.log(`[WhatsApp Status] Message ${wamid} (${newStatus}) linked to cart ${cartId}`);
+    } else {
+      console.log(`[WhatsApp Status] No cart found for message ${wamid}`);
+    }
+  }
+
+  if (cartKeys.length === 0) return;
+
+  // PERFORMANCE: Batch fetch all associated carts in a single request
+  const carts = await kv.mget(cartKeys);
+
+  const updateKeys: string[] = [];
+  const updateValues: any[] = [];
+  const now = new Date().toISOString();
+
+  for (let i = 0; i < validUpdates.length; i++) {
+    const cart = carts[i];
+    if (cart) {
+      cart.delivery_status = validUpdates[i].newStatus;
+      cart.updated_at = now;
+      updateKeys.push(`abandoned_cart:${validUpdates[i].cartId}`);
+      updateValues.push(cart);
+      console.log(`[WhatsApp Status] Prepared update for cart ${validUpdates[i].cartId} status: ${validUpdates[i].newStatus}`);
+    }
+  }
+
+  // PERFORMANCE: Batch persist all updated carts in a single request
+  if (updateKeys.length > 0) {
+    await kv.mset(updateKeys, updateValues);
+    console.log(`[WhatsApp Status] Successfully persisted ${updateKeys.length} cart updates.`);
   }
 }

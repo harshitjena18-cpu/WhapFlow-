@@ -1,9 +1,6 @@
-export interface IntegrationConfig {
-  connected_at: string | null;
-  last_error: string | null;
-  connection_status: 'connected' | 'disconnected' | 'error' | 'pending';
-  metadata: Record<string, unknown>;
-}
+/**
+ * Shared Types and Constants
+ */
 
 export interface WhatsAppStatus {
   id: string;
@@ -36,9 +33,23 @@ export interface AutomationTemplate {
   created_at: string;
 }
 
+export interface IntegrationConfig {
+  connected_at: string | null;
+  last_error: string | null;
+  connection_status: 'connected' | 'disconnected' | 'error' | 'pending';
+  metadata: Record<string, unknown>;
+}
+
 export interface AutomationPayload {
   cartId: string;
   cartKey: string;
   templateName: string;
   shop: string;
 }
+
+export const DEFAULT_CONFIG: IntegrationConfig = {
+  connected_at: null,
+  last_error: null,
+  connection_status: 'disconnected',
+  metadata: {}
+};
