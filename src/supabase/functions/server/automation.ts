@@ -1,6 +1,7 @@
 import * as kv from "./kv_store.tsx";
 import * as billing from "./billing.ts";
 import { BILLING_KEY_PREFIX } from "./billing.ts";
+import { decrypt } from "./crypto.ts";
 import { checkOrderExists, getMerchantCredentials } from "./shopify_client.ts";
 import { sendWhatsAppTemplate } from "./whatsapp.ts";
 import { enqueueJob } from "./queue.ts";
@@ -75,6 +76,18 @@ export async function executeAutomation(payload: AutomationPayload) {
       console.error(`❌ AUTOMATION FAILED: No credentials found for ${shop}`);
       return;
     }
+
+    // SECURITY: Decrypt PII for processing and safety checks
+    // We perform these checks to ensure safety helpers and external APIs receive plain text
+    const [decEmail, decPhone, decName] = await Promise.all([
+      currentCart.customer_email ? decrypt(currentCart.customer_email) : null,
+      currentCart.phone ? decrypt(currentCart.phone) : null,
+      currentCart.customer_name ? decrypt(currentCart.customer_name) : null
+    ]);
+
+    currentCart.customer_email = decEmail;
+    currentCart.phone = decPhone;
+    currentCart.customer_name = decName;
 
     // 1. Pre-checks (Status & Plan)
     const isPending = currentCart.status === 'pending';
