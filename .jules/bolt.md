@@ -51,7 +51,3 @@
 ## 2026-02-17 - [Webhook Latency Reduction via Parallelization & Batching]
 **Learning:** In high-traffic webhook handlers, sequential `await` calls for deduplication, encryption, and dependency fetching create a significant latency floor. Merging independent writes (like deduplication marking and data persistence) with independent reads (like config fetching) into a single `Promise.all` can reduce total latency by ~50%.
 **Action:** Audit webhook handlers for sequential `kv.get` and `kv.set` calls. Use `kv.mget` for batch reads and move `kv.set` calls into existing `Promise.all` blocks when they are independent of the other fetched data.
-
-## 2026-02-24 - [Performance Batching with mget and Utility Refactoring]
-**Learning:** Batching Key-Value lookups with `kv.mget` significantly reduces latency in Edge Functions by minimizing round-trips to the database. Refactoring core utilities like `getBillingConfig` and `getMerchantCredentials` to accept pre-fetched data allows for cleaner, highly-optimized data paths in complex routes (Dashboard, Webhooks, Automation).
-**Action:** When multiple independent KV keys are needed, always use `kv.mget` instead of parallel `kv.get` calls. Update domain-specific fetchers to support optional pre-fetched input to avoid redundant lookups.

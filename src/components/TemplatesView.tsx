@@ -888,27 +888,17 @@ export function TemplatesView() {
                     {formData.content?.length || 0} / 1024 chars
                   </span>
                 </div>
-                <div className="flex flex-wrap gap-2 mt-1 mb-2">
-                  {[
-                    { tag: '{{customer_name}}', desc: 'Insert customer full name' },
-                    { tag: '{{product_name}}', desc: 'Insert name of abandoned products' },
-                    { tag: '{{checkout_link}}', desc: 'Insert unique recovery link (Required)' }
-                  ].map(variable => (
-                    <Tooltip key={variable.tag}>
-                      <TooltipTrigger asChild>
-                        <button
-                          type="button"
-                          onClick={() => insertVariable(variable.tag)}
-                          className="text-[10px] bg-gray-50 hover:bg-[#25D366]/10 hover:text-[#128C7E] hover:border-[#25D366]/30 text-gray-600 px-2.5 py-1.5 rounded-full border border-gray-200 transition-all flex items-center gap-1.5 active:scale-95 focus-visible:ring-2 focus-visible:ring-[#25D366]/20 outline-none"
-                          aria-label={variable.desc}
-                        >
-                          <Plus className="w-3 h-3" /> {variable.tag}
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent side="top">
-                        <p>{variable.desc}</p>
-                      </TooltipContent>
-                    </Tooltip>
+                <div className="flex flex-wrap gap-1.5 mt-1 mb-1">
+                  {['{{customer_name}}', '{{product_name}}', '{{checkout_link}}'].map(variable => (
+                    <button
+                      key={variable}
+                      type="button"
+                      onClick={() => insertVariable(variable)}
+                      className="text-[10px] bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded border border-gray-200 transition-colors flex items-center gap-1 active:scale-95"
+                      title={`Insert ${variable}`}
+                    >
+                      <Plus className="w-2.5 h-2.5" /> {variable}
+                    </button>
                   ))}
                 </div>
                 <Textarea 

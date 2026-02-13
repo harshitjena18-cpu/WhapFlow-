@@ -14,8 +14,3 @@
 **Vulnerability:** The `/api/whatsapp/send` endpoint was completely unprotected, allowing anyone to send WhatsApp messages if they knew the URL. This posed a significant risk for spam, cost exhaustion, and reputation damage.
 **Learning:** Development or "simulated" endpoints often bypass standard security controls and can be left in production by accident.
 **Prevention:** Always protect internal or administrative endpoints with strong authentication (e.g., verifying against a service role key) even in MVP or demo phases.
-
-## 2025-07-10 - PII Encryption Bypass in Automation Logic
-**Vulnerability:** Although customer PII (email, phone, name) was encrypted at rest in the KV store, the automation logic in `executeAutomation` failed to decrypt this data before using it. This caused safety checks (like `checkOrderExists`) to fail silently and resulted in encrypted strings being sent to external APIs (like WhatsApp), leading to both functional failure and potential privacy leaks.
-**Learning:** Encryption at rest is only effective if the application correctly handles the data's lifecycle, including decryption at the last possible moment before use. Silent failures in security-related safety checks can lead to unexpected behaviors like spamming customers.
-**Prevention:** Always verify that data fetched from encrypted storage is decrypted before being passed to external services or safety-critical logic. Use type systems or naming conventions (e.g., `encEmail`) to distinguish between encrypted and plain text data.

@@ -66,12 +66,10 @@ export const BILLING_KEY_PREFIX = "billing:config:";
  * Get current billing config, performing a lazy reset if needed.
  * Supports multi-tenancy via 'shop' parameter. 
  * Falls back to global key if shop is not provided (legacy/admin support).
- *
- * PERFORMANCE: Supports an optional pre-fetched config to avoid redundant database round-trips.
  */
-export async function getBillingConfig(shop: string = "global", preFetchedConfig?: BillingConfig | null): Promise<BillingConfig> {
+export async function getBillingConfig(shop: string = "global"): Promise<BillingConfig> {
   const key = `${BILLING_KEY_PREFIX}${shop}`;
-  let config = preFetchedConfig !== undefined ? preFetchedConfig : (await kv.get(key) as BillingConfig | null);
+  let config = await kv.get(key) as BillingConfig | null;
 
   // Initialize if missing
   if (!config) {

@@ -16,11 +16,9 @@ export function escapeShopifySearch(value: string): string {
 
 /**
  * Retrieve merchant credentials from KV
- *
- * PERFORMANCE: Supports an optional pre-fetched merchant object to avoid redundant database round-trips.
  */
-export async function getMerchantCredentials(shop: string, preFetchedMerchant?: any) {
-  const merchant = preFetchedMerchant !== undefined ? preFetchedMerchant : await kv.get(`merchant:${shop}`);
+export async function getMerchantCredentials(shop: string) {
+  const merchant = await kv.get(`merchant:${shop}`);
   if (merchant && merchant.access_token) {
     // Decrypt the token if it was stored encrypted
     merchant.access_token = await decrypt(merchant.access_token);
