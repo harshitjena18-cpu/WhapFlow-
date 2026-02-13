@@ -3,7 +3,9 @@ import { cors } from "npm:hono/cors";
 import { logger } from "npm:hono/logger";
 import { secureHeaders } from "npm:hono/secure-headers";
 import { processPendingJobs } from "./queue.ts";
-import { executeAutomation } from "./automation.ts";
+import { executeAutomation, processWhatsAppStatuses } from "./automation.ts";
+import { getEnv } from "../../../lib/env.ts";
+import { sendWhatsAppTemplate } from "./whatsapp.ts";
 
 import authApp from "./auth.tsx";
 import dashboardApp from "./dashboard.tsx";
@@ -17,7 +19,6 @@ import whatsappApp from "./whatsapp_routes.tsx";
 import aiApp from "./ai_routes.tsx";
 
 import { SERVER_BASE_PATH, SHOPIFY_DOMAIN_REGEX } from "./constants.ts";
-import { getEnv } from "../../../lib/env.ts";
 
 const app = new Hono();
 
@@ -55,6 +56,8 @@ app.route(`${SERVER_BASE_PATH}/api/billing`, billingApp);
 app.route(`${SERVER_BASE_PATH}/api/integrations`, integrationsApp);
 app.route(`${SERVER_BASE_PATH}/api/templates`, templatesApp);
 app.route(`${SERVER_BASE_PATH}/api/webhooks`, webhooksApp);
+
+// New Routes
 app.route(`${SERVER_BASE_PATH}/api/whatsapp`, whatsappApp);
 app.route(`${SERVER_BASE_PATH}/api/ai`, aiApp);
 
@@ -151,6 +154,5 @@ app.post(`${SERVER_BASE_PATH}/api/webhooks/whatsapp`, async (c) => {
     return c.json({ error: "Internal Error" }, 500);
   }
 });
-
 
 Deno.serve(app.fetch);
