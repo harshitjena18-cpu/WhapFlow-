@@ -57,12 +57,22 @@ export async function executeAutomation(payload: AutomationPayload) {
     console.log(`   Checking logic...`);
 
     // Fetch all required data in parallel to minimize latency and fix variable access order
-    // Need to cast rawTemplates to correct type, as getByPrefix returns unknown[]
-    const [currentCart, merchant, rawTemplates, billingConfig] = await Promise.all([
-      kv.get(cartKey),
-      getMerchantCredentials(shop),
-      kv.getByPrefix(`shop:${shop}:template:`),
-      billing.getBillingConfig(shop)
+    // PERFORMANCE: Batch simple KV lookups to reduce database round-trips
+    const [kvData, rawTemplates] = await Promise.all([
+      kv.mget([
+        cartKey,
+        `merchant:${shop}`,
+        `${billing.BILLING_KEY_PREFIX}${shop}`
+      ]),
+      kv.getByPrefix(`shop:${shop}:template:`)
+    ]);
+
+    const [currentCart, rawMerchant, rawBillingConfig] = kvData;
+
+    // Use pre-fetched data to elide internal database calls
+    const [merchant, billingConfig] = await Promise.all([
+      getMerchantCredentials(shop, rawMerchant),
+      billing.getBillingConfig(shop, rawBillingConfig)
     ]);
     const templates = (rawTemplates || []) as AutomationTemplate[];
 
