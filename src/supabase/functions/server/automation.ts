@@ -2,6 +2,7 @@ import * as kv from "./kv_store.tsx";
 import * as billing from "./billing.ts";
 import { BILLING_KEY_PREFIX } from "./billing.ts";
 import { checkOrderExists, getMerchantCredentials } from "./shopify_client.ts";
+import { decrypt } from "./crypto.ts";
 import { sendWhatsAppTemplate } from "./whatsapp.ts";
 import { enqueueJob } from "./queue.ts";
 import {
@@ -70,6 +71,19 @@ export async function executeAutomation(payload: AutomationPayload) {
       console.log(`❌ AUTOMATION SKIPPED: Cart [${cartId}] no longer exists.`);
       return;
     }
+
+    // SECURITY: Decrypt PII before use in safety checks and external APIs
+    // Data remains encrypted at rest in KV, but must be plaintext for Shopify/WhatsApp
+    const [decName, decEmail, decPhone] = await Promise.all([
+      decrypt(currentCart.customer_name),
+      decrypt(currentCart.customer_email),
+      decrypt(currentCart.phone)
+    ]);
+
+    // Update the local object for subsequent logic
+    currentCart.customer_name = decName;
+    currentCart.customer_email = decEmail;
+    currentCart.phone = decPhone;
 
     if (!merchant || !merchant.access_token) {
       console.error(`❌ AUTOMATION FAILED: No credentials found for ${shop}`);

@@ -14,3 +14,8 @@
 **Vulnerability:** The `/api/whatsapp/send` endpoint was completely unprotected, allowing anyone to send WhatsApp messages if they knew the URL. This posed a significant risk for spam, cost exhaustion, and reputation damage.
 **Learning:** Development or "simulated" endpoints often bypass standard security controls and can be left in production by accident.
 **Prevention:** Always protect internal or administrative endpoints with strong authentication (e.g., verifying against a service role key) even in MVP or demo phases.
+
+## 2025-07-10 - Broken Encryption Loop (Missing Decryption at Use)
+**Vulnerability:** Personally Identifiable Information (PII) like names and phone numbers were encrypted at ingestion but not decrypted before being used in safety checks (Shopify order search) or external APIs (WhatsApp). This caused security features to break core functionality and safety-critical spam prevention.
+**Learning:** Security features must be integrated into the entire data lifecycle. Encryption at rest is useless or even harmful if the application doesn't know when and how to decrypt that data for legitimate processing.
+**Prevention:** Always verify the full data path of sensitive information. If data is encrypted at rest, ensure the processing logic (automations, external calls) has the necessary logic to decrypt and use it securely.
