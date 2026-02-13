@@ -1,6 +1,7 @@
 import * as kv from "./kv_store.tsx";
 import * as billing from "./billing.ts";
 import { BILLING_KEY_PREFIX } from "./billing.ts";
+import { decrypt } from "./crypto.ts";
 import { checkOrderExists, getMerchantCredentials } from "./shopify_client.ts";
 import { decrypt } from "./crypto.ts";
 import { sendWhatsAppTemplate } from "./whatsapp.ts";
@@ -57,13 +58,23 @@ export async function executeAutomation(payload: AutomationPayload) {
     console.log(`🚀 EXECUTE AUTOMATION for cart ${cartId} (Shop: ${shop})`);
     console.log(`   Checking logic...`);
 
-    // Fetch all required data in parallel to minimize latency and fix variable access order
+    // Fetch all required data in parallel and batch KV gets to minimize latency.
     // Need to cast rawTemplates to correct type, as getByPrefix returns unknown[]
-    const [currentCart, merchant, rawTemplates, billingConfig] = await Promise.all([
-      kv.get(cartKey),
-      getMerchantCredentials(shop),
+    const [configs, rawTemplates, currentCart] = await Promise.all([
+      kv.mget([
+        `merchant:${shop}`,
+        `${billing.BILLING_KEY_PREFIX}${shop}`
+      ]),
       kv.getByPrefix(`shop:${shop}:template:`),
-      billing.getBillingConfig(shop)
+      kv.get(cartKey)
+    ]);
+
+    const [merchantData, preFetchedBilling] = configs;
+
+    // Use pre-fetched data to avoid redundant KV round-trips
+    const [merchant, billingConfig] = await Promise.all([
+      getMerchantCredentials(shop, merchantData),
+      billing.getBillingConfig(shop, preFetchedBilling)
     ]);
     const templates = (rawTemplates || []) as AutomationTemplate[];
 
@@ -89,6 +100,18 @@ export async function executeAutomation(payload: AutomationPayload) {
       console.error(`❌ AUTOMATION FAILED: No credentials found for ${shop}`);
       return;
     }
+
+    // SECURITY: Decrypt PII for processing and safety checks
+    // We perform these checks to ensure safety helpers and external APIs receive plain text
+    const [decEmail, decPhone, decName] = await Promise.all([
+      currentCart.customer_email ? decrypt(currentCart.customer_email) : null,
+      currentCart.phone ? decrypt(currentCart.phone) : null,
+      currentCart.customer_name ? decrypt(currentCart.customer_name) : null
+    ]);
+
+    currentCart.customer_email = decEmail;
+    currentCart.phone = decPhone;
+    currentCart.customer_name = decName;
 
     // 1. Pre-checks (Status & Plan)
     const isPending = currentCart.status === 'pending';
