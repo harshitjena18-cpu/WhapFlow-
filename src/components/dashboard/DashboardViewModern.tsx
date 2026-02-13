@@ -295,7 +295,10 @@ export function DashboardViewModern() {
             </div>
             
             <div className="flex items-center gap-2">
-              <button className="p-2 hover:bg-gray-50 rounded-lg transition-colors">
+              <button
+                className="p-2 hover:bg-gray-50 rounded-lg transition-colors"
+                aria-label="More options"
+              >
                 <MoreHorizontal className="w-4 h-4 text-gray-400" />
               </button>
             </div>

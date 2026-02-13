@@ -9,3 +9,7 @@
 ## 2025-05-16 - [Dynamic Keyboard Shortcut Hints]
 **Learning:** Hardcoding platform-specific keyboard symbols (like ⌘) alienates Windows and Linux users and provides inaccurate instructions. Using `navigator.userAgent` to dynamically swap between ⌘ and Ctrl ensures a localized and professional experience. Furthermore, keyboard hints should always be accompanied by a functional event listener to "close the loop" between instruction and action.
 **Action:** Always detect OS for keyboard-based hints and ensure the corresponding `keydown` logic is implemented for both `Meta` (Mac) and `Control` (Win/Linux) keys.
+
+## 2025-05-17 - [Auth Loading States & Accessible Icons]
+**Learning:** Auth forms without immediate visual feedback (spinners) on submission lead to double-clicking and user frustration. Standardizing on `Loader2` from `lucide-react` with `animate-spin` provides consistent perceived performance. Additionally, icon-only buttons in the dashboard (like 'More' menus) must have explicit `aria-label` attributes to be navigable via screen readers, as the icon itself provides no semantic meaning.
+**Action:** Use `isLoading` patterns with `Loader2` for all async actions and audit icon-only buttons for missing ARIA labels.
