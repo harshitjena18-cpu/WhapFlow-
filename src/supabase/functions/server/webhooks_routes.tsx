@@ -109,11 +109,22 @@ webhooksApp.post("/shopify", async (c) => {
     // CHECK INTEGRATIONS & LIMITS (Parallelized for performance)
     console.log('\n🔍 AUTOMATION CHECKS: Verifying integration status and limits...');
 
-    const [merchant, whatsappConfig, billingConfig, rawTemplates] = await Promise.all([
-      getMerchantCredentials(shop),
-      kv.get(`shop:${shop}:config:whatsapp`),
-      billing.getBillingConfig(shop),
+    // PERFORMANCE: Batch fetch dependencies to reduce round-trip latency
+    const [configs, rawTemplates] = await Promise.all([
+      kv.mget([
+        `merchant:${shop}`,
+        `shop:${shop}:config:whatsapp`,
+        `${billing.BILLING_KEY_PREFIX}${shop}`
+      ]),
       kv.getByPrefix(`shop:${shop}:template:`)
+    ]);
+
+    const [merchantData, whatsappConfig, preFetchedBilling] = configs;
+
+    // Use pre-fetched data to avoid redundant KV round-trips
+    const [merchant, billingConfig] = await Promise.all([
+      getMerchantCredentials(shop, merchantData),
+      billing.getBillingConfig(shop, preFetchedBilling)
     ]);
     const templates = (rawTemplates || []) as AutomationTemplate[];
 
@@ -202,27 +213,36 @@ webhooksApp.post("/app/uninstalled", async (c) => {
         return c.json({ error: 'Missing shop domain' }, 400);
     }
 
-    // 1. Cleanup Merchant Record
+    // 1. Cleanup Merchant Record & Scoped Config (Batched)
     const merchantKey = `merchant:${shop}`;
-    const merchant = await kv.get(merchantKey);
+    const shopifyKey = `shop:${shop}:config:shopify`;
+
+    // PERFORMANCE: Batch GETs to reduce round-trips
+    const [merchant, shopifyConfig] = await kv.mget([merchantKey, shopifyKey]);
+
+    const updateKeys = [];
+    const updateValues = [];
 
     if (merchant) {
         console.log(`[Uninstall] Deactivating merchant record for ${shop}...`);
         merchant.shopify_connected = false;
         merchant.access_token = null; // Security: Clear token
         merchant.updated_at = new Date().toISOString();
-
-        await kv.set(merchantKey, merchant);
+        updateKeys.push(merchantKey);
+        updateValues.push(merchant);
     }
 
-    // 2. Cleanup Scoped Config (Scoping by shop to prevent multi-tenancy leaks)
-    const shopifyKey = `shop:${shop}:config:shopify`;
-    const shopifyConfig = await kv.get(shopifyKey);
     if (shopifyConfig) {
         console.log(`[Uninstall] Clearing shop-scoped dashboard config...`);
         shopifyConfig.connection_status = 'disconnected';
         shopifyConfig.connected_at = null;
-        await kv.set(shopifyKey, shopifyConfig);
+        updateKeys.push(shopifyKey);
+        updateValues.push(shopifyConfig);
+    }
+
+    // PERFORMANCE: Batch SETs to reduce round-trips
+    if (updateKeys.length > 0) {
+        await kv.mset(updateKeys, updateValues);
     }
 
     // 3. Cleanup: We don't delete carts immediately for analytics,

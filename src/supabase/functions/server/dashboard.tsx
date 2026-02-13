@@ -168,13 +168,12 @@ dashboardApp.get("/data", async (c) => {
 
   // Try to get data from KV store
   try {
-    // PERFORMANCE: Fetch all dependencies including merchant in parallel to minimize round-trip latency
-    // This eliminates a sequential database round-trip previously caused by getValidatedShop
-    const [merchant, metrics, revenue, activity] = await Promise.all([
-      kv.get(`merchant:${shop}`),
-      kv.get(`shop:${shop}:metrics`),
-      kv.get(`shop:${shop}:revenue`),
-      kv.get(`shop:${shop}:activity`)
+    // PERFORMANCE: Batch KV lookups in a single database query to minimize latency
+    const [merchant, metrics, revenue, activity] = await kv.mget([
+      `merchant:${shop}`,
+      `shop:${shop}:metrics`,
+      `shop:${shop}:revenue`,
+      `shop:${shop}:activity`
     ]);
 
     // SECURITY: Verify merchant exists to prevent unauthorized data access
@@ -224,10 +223,10 @@ dashboardApp.get("/automations", async (c) => {
   }
 
   try {
-    // PERFORMANCE: Parallelize merchant validation and automations fetch
-    const [merchant, automations] = await Promise.all([
-      kv.get(`merchant:${shop}`),
-      kv.get(`shop:${shop}:automations`)
+    // PERFORMANCE: Batch merchant validation and automations fetch
+    const [merchant, automations] = await kv.mget([
+      `merchant:${shop}`,
+      `shop:${shop}:automations`
     ]);
 
     // SECURITY: Verify merchant existence
@@ -257,10 +256,10 @@ dashboardApp.post("/automations/:id/toggle", async (c) => {
 
   const id = c.req.param("id");
   try {
-    // PERFORMANCE: Parallelize merchant validation and automations fetch
-    const [merchant, rawAutomations] = await Promise.all([
-      kv.get(`merchant:${shop}`),
-      kv.get(`shop:${shop}:automations`)
+    // PERFORMANCE: Batch merchant validation and automations fetch
+    const [merchant, rawAutomations] = await kv.mget([
+      `merchant:${shop}`,
+      `shop:${shop}:automations`
     ]);
 
     // SECURITY: Verify merchant existence
