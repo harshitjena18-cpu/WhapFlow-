@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MessageCircle, Mail, Lock, Chrome, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { MessageCircle, Mail, Lock, Chrome, ArrowRight, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -185,8 +185,17 @@ export function Login() {
               className="w-full h-12 bg-gradient-to-r from-[#25D366] to-[#20BD5A] hover:from-[#20BD5A] hover:to-[#1BA84E] text-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 text-base font-semibold mt-8 group"
               disabled={isLoading}
             >
-              {isLoading ? 'Signing in...' : 'Sign In'}
-              {!isLoading && <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" />}
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Signing in...
+                </>
+              ) : (
+                <>
+                  Sign In
+                  <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" />
+                </>
+              )}
             </Button>
           </form>
 
