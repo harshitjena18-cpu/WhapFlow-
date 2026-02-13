@@ -49,7 +49,7 @@
 **Action:** Identify routes using sequential validation helpers (like `getValidatedShop`) and refactor them to use `Promise.all` for all independent I/O operations, ensuring security checks are still performed on the results.
 
 ## 2026-02-17 - [Webhook Latency Reduction via Parallelization & Batching]
-**Learning:** In high-traffic webhook handlers, sequential `await` calls for deduplication, encryption, and dependency fetching create a significant latency floor. Merging independent writes (like deduplication marking and data persistence) with independent reads (like config fetching) into a single `Promise.all` can reduce total latency by ~50%.
+**Learning:** In high-traffic webhook handlers, sequential `await` calls for deduplication, encryption, and dependency fetching create a significant latency floor. Merging independent writes (like deduplication marking and data persistence) into a single `Promise.all` can reduce total latency by ~50%.
 **Action:** Audit webhook handlers for sequential `kv.get` and `kv.set` calls. Use `kv.mget` for batch reads and move `kv.set` calls into existing `Promise.all` blocks when they are independent of the other fetched data.
 
 ## 2026-02-24 - [Performance Batching with mget and Utility Refactoring]

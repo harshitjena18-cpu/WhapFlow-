@@ -1,6 +1,7 @@
 import { Hono } from "npm:hono";
 import * as kv from "./kv_store.tsx";
 import * as billing from "./billing.ts";
+import { getMerchantCredentials } from "./shopify_client.ts";
 import { AutomationTemplate } from "./automation.ts";
 import { getMerchantCredentials } from "./shopify_client.ts";
 
