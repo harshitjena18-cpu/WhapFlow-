@@ -3,6 +3,7 @@ import * as kv from "./kv_store.tsx";
 import * as billing from "./billing.ts";
 import { getMerchantCredentials } from "./shopify_client.ts";
 import { AutomationTemplate } from "./automation.ts";
+import { getMerchantCredentials } from "./shopify_client.ts";
 
 const dashboardMetricsApp = new Hono();
 
@@ -14,8 +15,9 @@ dashboardMetricsApp.get("/metrics", async (c) => {
       return c.json({ error: "Missing shop parameter" }, 400);
     }
 
-    // 1. PERFORMANCE: Batch simple KV lookups to reduce database round-trips
-    const [kvData, rawTemplates] = await Promise.all([
+    // 1. PERFORMANCE: Fetch all dependencies in parallel and batch KV gets to minimize round-trip latency.
+    // This reduces the number of concurrent database requests from 5 to 2.
+    const [configs, rawTemplates] = await Promise.all([
       kv.mget([
         `merchant:${shop}`,
         `shop:${shop}:config:shopify`,
@@ -25,12 +27,12 @@ dashboardMetricsApp.get("/metrics", async (c) => {
       kv.getByPrefix(`shop:${shop}:template:`)
     ]);
 
-    const [rawMerchant, shopifyConfig, whatsappConfig, rawBillingConfig] = kvData;
+    const [merchantData, shopifyConfig, whatsappConfig, preFetchedBilling] = configs;
 
-    // 2. PERFORMANCE: Use pre-fetched data to elide internal database calls while maintaining decryption/reset logic
+    // Use pre-fetched data to avoid redundant KV round-trips
     const [merchant, billingConfig] = await Promise.all([
-      getMerchantCredentials(shop, rawMerchant),
-      billing.getBillingConfig(shop, rawBillingConfig)
+      getMerchantCredentials(shop, merchantData),
+      billing.getBillingConfig(shop, preFetchedBilling)
     ]);
     const templates = (rawTemplates || []) as AutomationTemplate[];
 

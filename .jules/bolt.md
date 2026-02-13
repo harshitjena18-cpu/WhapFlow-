@@ -52,6 +52,6 @@
 **Learning:** In high-traffic webhook handlers, sequential `await` calls for deduplication, encryption, and dependency fetching create a significant latency floor. Merging independent writes (like deduplication marking and data persistence) into a single `Promise.all` can reduce total latency by ~50%.
 **Action:** Audit webhook handlers for sequential `kv.get` and `kv.set` calls. Use `kv.mget` for batch reads and move `kv.set` calls into existing `Promise.all` blocks when they are independent of the other fetched data.
 
-## 2026-02-19 - [Batching KV Lookups with mget]
-**Learning:** Using `kv.mget` to batch multiple Key-Value lookups into a single database query provides a measurable performance boost (~50-66% latency reduction in simulated benchmarks) compared to multiple parallel `kv.get` calls. This is especially effective when combined with refactored helper functions that accept pre-fetched data.
-**Action:** Use `kv.mget` for fetching multiple independent configuration keys in core routes. Refactor shared helpers (like `getMerchantCredentials` and `getBillingConfig`) to support optional pre-fetched data to elide redundant DB calls while preserving necessary post-fetch logic.
+## 2026-02-24 - [Performance Batching with mget and Utility Refactoring]
+**Learning:** Batching Key-Value lookups with `kv.mget` significantly reduces latency in Edge Functions by minimizing round-trips to the database. Refactoring core utilities like `getBillingConfig` and `getMerchantCredentials` to accept pre-fetched data allows for cleaner, highly-optimized data paths in complex routes (Dashboard, Webhooks, Automation).
+**Action:** When multiple independent KV keys are needed, always use `kv.mget` instead of parallel `kv.get` calls. Update domain-specific fetchers to support optional pre-fetched input to avoid redundant lookups.

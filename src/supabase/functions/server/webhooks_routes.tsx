@@ -109,8 +109,8 @@ webhooksApp.post("/shopify", async (c) => {
     // CHECK INTEGRATIONS & LIMITS (Parallelized for performance)
     console.log('\n🔍 AUTOMATION CHECKS: Verifying integration status and limits...');
 
-    // PERFORMANCE: Batch simple KV lookups to reduce database round-trips
-    const [kvData, rawTemplates] = await Promise.all([
+    // PERFORMANCE: Batch fetch dependencies to reduce round-trip latency
+    const [configs, rawTemplates] = await Promise.all([
       kv.mget([
         `merchant:${shop}`,
         `shop:${shop}:config:whatsapp`,
@@ -119,12 +119,12 @@ webhooksApp.post("/shopify", async (c) => {
       kv.getByPrefix(`shop:${shop}:template:`)
     ]);
 
-    const [rawMerchant, whatsappConfig, rawBillingConfig] = kvData;
+    const [merchantData, whatsappConfig, preFetchedBilling] = configs;
 
-    // Use pre-fetched data to elide internal database calls
+    // Use pre-fetched data to avoid redundant KV round-trips
     const [merchant, billingConfig] = await Promise.all([
-      getMerchantCredentials(shop, rawMerchant),
-      billing.getBillingConfig(shop, rawBillingConfig)
+      getMerchantCredentials(shop, merchantData),
+      billing.getBillingConfig(shop, preFetchedBilling)
     ]);
     const templates = (rawTemplates || []) as AutomationTemplate[];
 
