@@ -5,9 +5,7 @@ import { projectId as _projectId, publicAnonKey as _publicAnonKey } from '../../
 import { toast as _toast } from 'sonner@2.0.3';
 import { 
   TrendingUp, 
-  TrendingDown as _TrendingDown,
   MessageCircle, 
-  ShoppingCart as _ShoppingCart,
   Users, 
   DollarSign,
   ArrowUpRight,
@@ -17,15 +15,12 @@ import {
   Download,
   MoreHorizontal,
   CheckCircle2,
-  AlertCircle as _AlertCircle,
   Zap,
   Target,
   Activity
 } from 'lucide-react';
 import { motion, useInView } from 'motion/react';
 import { 
-  LineChart as _LineChart,
-  Line as _Line,
   BarChart, 
   Bar, 
   PieChart,
