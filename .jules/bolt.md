@@ -55,3 +55,10 @@
 ## 2026-02-24 - [Performance Batching with mget and Utility Refactoring]
 **Learning:** Batching Key-Value lookups with `kv.mget` significantly reduces latency in Edge Functions by minimizing round-trips to the database. Refactoring core utilities like `getBillingConfig` and `getMerchantCredentials` to accept pre-fetched data allows for cleaner, highly-optimized data paths in complex routes (Dashboard, Webhooks, Automation).
 **Action:** When multiple independent KV keys are needed, always use `kv.mget` instead of parallel `kv.get` calls. Update domain-specific fetchers to support optional pre-fetched input to avoid redundant lookups.
+
+## 2026-03-05 - [Automation Pipeline Parallelization & Frontend Object Hoisting]
+**Learning:** The `executeAutomation` function was suffering from both redundant PII decryption (repeated logic) and sequential I/O (fetching merchant, billing, and decrypting fields one-by-one). Additionally, React components like `DashboardViewModern` re-allocated large static data structures (chart config, integrations list) on every render, triggering unnecessary GC and prop comparison overhead.
+**Action:**
+1. Parallelize all independent dependencies (merchant credentials, billing config) AND PII decryption into a single `Promise.all` block.
+2. Hoist static data objects outside of React components to prevent re-allocation.
+3. Use `React.memo` for list items (e.g., `MetricCard`) that don't change when siblings do.

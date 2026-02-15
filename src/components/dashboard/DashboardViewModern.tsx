@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, memo } from 'react';
 // deno-lint-ignore no-unused-vars
 import { projectId as _projectId, publicAnonKey as _publicAnonKey } from '../../utils/supabase/info';
 // deno-lint-ignore no-unused-vars
@@ -84,6 +84,39 @@ interface ChartDataPoint {
   abandoned: number;
 }
 
+// PERFORMANCE: Move static data outside component to prevent redundant object creation on every render.
+const SALES_DATA: ChartDataPoint[] = [
+  { name: 'Mon', value: 2598.2, recovered: 1200, abandoned: 1398 },
+  { name: 'Tue', value: 1765.09, recovered: 900, abandoned: 865 },
+  { name: 'Wed', value: 4005.66, recovered: 2100, abandoned: 1905 },
+  { name: 'Thu', value: 1795.09, recovered: 950, abandoned: 845 },
+  { name: 'Fri', value: 2598.2, recovered: 1300, abandoned: 1298 },
+  { name: 'Sat', value: 3674, recovered: 1850, abandoned: 1824 },
+  { name: 'Sun', value: 1821.05, recovered: 920, abandoned: 901 }
+];
+
+const SUBSCRIBER_DATA = [
+  { name: 'Sun', value: 2100 },
+  { name: 'Mon', value: 2400 },
+  { name: 'Tue', value: 1800 },
+  { name: 'Wed', value: 3674 },
+  { name: 'Thu', value: 2200 },
+  { name: 'Fri', value: 2800 },
+  { name: 'Sat', value: 2400 }
+];
+
+const DISTRIBUTION_DATA = [
+  { name: 'Recovered', value: 45, color: '#14B8A6' },
+  { name: 'Pending', value: 30, color: '#8B5CF6' },
+  { name: 'Abandoned', value: 25, color: '#6B7280' }
+];
+
+const INTEGRATION_DATA = [
+  { name: 'Shopify', type: 'E-commerce', rate: 85, profit: '$8,650' },
+  { name: 'WhatsApp', type: 'Messaging', rate: 92, profit: '$720' },
+  { name: 'Stripe', type: 'Payment', rate: 78, profit: '$432' }
+];
+
 export function DashboardViewModern() {
   // deno-lint-ignore no-unused-vars
   const [metrics, _setMetrics] = useState<DashboardMetrics>({
@@ -100,39 +133,6 @@ export function DashboardViewModern() {
   const [isLoading, setIsLoading] = useState(true);
   // deno-lint-ignore no-unused-vars
   const [dateRange, _setDateRange] = useState('Last 7 days');
-
-  // Chart data
-  const salesData: ChartDataPoint[] = [
-    { name: 'Mon', value: 2598.2, recovered: 1200, abandoned: 1398 },
-    { name: 'Tue', value: 1765.09, recovered: 900, abandoned: 865 },
-    { name: 'Wed', value: 4005.66, recovered: 2100, abandoned: 1905 },
-    { name: 'Thu', value: 1795.09, recovered: 950, abandoned: 845 },
-    { name: 'Fri', value: 2598.2, recovered: 1300, abandoned: 1298 },
-    { name: 'Sat', value: 3674, recovered: 1850, abandoned: 1824 },
-    { name: 'Sun', value: 1821.05, recovered: 920, abandoned: 901 }
-  ];
-
-  const subscriberData = [
-    { name: 'Sun', value: 2100 },
-    { name: 'Mon', value: 2400 },
-    { name: 'Tue', value: 1800 },
-    { name: 'Wed', value: 3674 },
-    { name: 'Thu', value: 2200 },
-    { name: 'Fri', value: 2800 },
-    { name: 'Sat', value: 2400 }
-  ];
-
-  const distributionData = [
-    { name: 'Recovered', value: 45, color: '#14B8A6' },
-    { name: 'Pending', value: 30, color: '#8B5CF6' },
-    { name: 'Abandoned', value: 25, color: '#6B7280' }
-  ];
-
-  const integrationData = [
-    { name: 'Shopify', type: 'E-commerce', rate: 85, profit: '$8,650' },
-    { name: 'WhatsApp', type: 'Messaging', rate: 92, profit: '$720' },
-    { name: 'Stripe', type: 'Payment', rate: 78, profit: '$432' }
-  ];
 
   // Refs for scroll animations
   const metricsRef = useRef(null);
@@ -306,7 +306,7 @@ export function DashboardViewModern() {
           
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={salesData}>
+              <AreaChart data={SALES_DATA}>
                 <defs>
                   <linearGradient id="colorRecovered" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#14B8A6" stopOpacity={0.3}/>
@@ -400,7 +400,7 @@ export function DashboardViewModern() {
           
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={subscriberData}>
+              <BarChart data={SUBSCRIBER_DATA}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
                 <XAxis 
                   dataKey="name" 
@@ -463,7 +463,7 @@ export function DashboardViewModern() {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={distributionData}
+                    data={DISTRIBUTION_DATA}
                     cx="50%"
                     cy="50%"
                     innerRadius={50}
@@ -473,7 +473,7 @@ export function DashboardViewModern() {
                     animationDuration={600}
                     animationEasing="ease-out"
                   >
-                    {distributionData.map((entry, index) => (
+                    {DISTRIBUTION_DATA.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
@@ -483,7 +483,7 @@ export function DashboardViewModern() {
             </div>
             
             <div className="flex-1 space-y-4">
-              {distributionData.map((item, index) => (
+              {DISTRIBUTION_DATA.map((item, index) => (
                 <div key={index} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div 
@@ -520,7 +520,7 @@ export function DashboardViewModern() {
           </div>
           
           <div className="space-y-4">
-            {integrationData.map((integration, index) => (
+            {INTEGRATION_DATA.map((integration, index) => (
               <motion.div
                 key={index}
                 className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-all group"
@@ -573,7 +573,8 @@ interface MetricCardProps {
   inView: boolean;
 }
 
-function MetricCard({ title, value, change, icon: Icon, iconColor, iconBg, index, inView }: MetricCardProps) {
+// PERFORMANCE: Memoize MetricCard to prevent unnecessary re-renders when parent state changes.
+const MetricCard = memo(({ title, value, change, icon: Icon, iconColor, iconBg, index, inView }: MetricCardProps) => {
   const isPositive = change >= 0;
   
   return (
@@ -606,4 +607,6 @@ function MetricCard({ title, value, change, icon: Icon, iconColor, iconBg, index
       </div>
     </motion.div>
   );
-}
+});
+
+MetricCard.displayName = "MetricCard";
