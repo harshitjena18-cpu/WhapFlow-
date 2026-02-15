@@ -3,13 +3,19 @@ import * as kv from "./kv_store.tsx";
 import * as billing from "./billing.ts";
 import { getMerchantCredentials } from "./shopify_client.ts";
 import { AutomationTemplate } from "./automation.ts";
+import { verifyShopifySession } from "./middleware.ts";
 
 const dashboardMetricsApp = new Hono();
+
+// SECURITY: Apply session verification to all metrics routes
+dashboardMetricsApp.use("*", verifyShopifySession);
 
 // GET /metrics (mounted at /api/dashboard)
 dashboardMetricsApp.get("/metrics", async (c) => {
   try {
-    const shop = c.req.query("shop");
+    // SECURITY: Use verified shop domain
+    const shop = (c.get("verified_shop") as string) || c.req.query("shop");
+
     if (!shop) {
       return c.json({ error: "Missing shop parameter" }, 400);
     }
