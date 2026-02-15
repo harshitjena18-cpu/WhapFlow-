@@ -4,6 +4,7 @@
  */
 
 import { getEnv } from "../../../lib/env.ts";
+import { Buffer } from "node:buffer";
 
 interface SendMessageParams {
   to: string;
@@ -11,6 +12,10 @@ interface SendMessageParams {
   languageCode?: string;
   components?: any[];
 }
+
+// Module-level cache for HMAC CryptoKeys
+let _cachedHmacKey: CryptoKey | null = null;
+let _cachedHmacSecret: string | null = null;
 
 export const sendWhatsAppTemplate = async ({
   to,
@@ -67,3 +72,59 @@ export const sendWhatsAppTemplate = async ({
     return { success: false, error };
   }
 };
+
+/**
+ * Verify WhatsApp Webhook Signature
+ * Validates the X-Hub-Signature-256 header using HMAC-SHA256
+ */
+export async function verifyWhatsAppSignature(rawBody: string, signatureHeader: string | null): Promise<boolean> {
+  const secret = getEnv("WHATSAPP_APP_SECRET");
+  if (!secret) {
+      console.error("[WhatsApp Webhook] Critical Error: WHATSAPP_APP_SECRET not configured");
+      return false;
+  }
+
+  if (!signatureHeader || !rawBody) {
+      return false;
+  }
+
+  // Header format: sha256=<signature_hex>
+  const [method, signature] = signatureHeader.split("=");
+  if (method !== "sha256" || !signature) {
+      return false;
+  }
+
+  try {
+    const encoder = new TextEncoder();
+    const msgData = encoder.encode(rawBody);
+
+    // PERFORMANCE: Cache the imported CryptoKey
+    if (_cachedHmacSecret !== secret || !_cachedHmacKey) {
+      const keyData = encoder.encode(secret);
+      _cachedHmacKey = await crypto.subtle.importKey(
+        "raw",
+        keyData,
+        { name: "HMAC", hash: "SHA-256" },
+        false,
+        ["verify"]
+      );
+      _cachedHmacSecret = secret;
+    }
+
+    if (!_cachedHmacKey) {
+        throw new Error("HMAC Key initialization failed");
+    }
+
+    const signatureBytes = Buffer.from(signature, "hex");
+
+    return await crypto.subtle.verify(
+      "HMAC",
+      _cachedHmacKey,
+      signatureBytes,
+      msgData
+    );
+  } catch (error) {
+    console.error("[WhatsApp Webhook] HMAC verification error:", error);
+    return false;
+  }
+}

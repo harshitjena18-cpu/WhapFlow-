@@ -50,8 +50,9 @@ app.post("/", async (c) => {
 
     // Check uniqueness of template_name within THIS shop
     const prefix = `shop:${shop}:template:`;
-    const existing = await kv.getByPrefix(prefix) as AutomationTemplate[];
-    if (existing.some(t => t.template_name === template_name)) {
+    // OPTIMIZATION: Use DB-side filtering to check for existence instead of fetching all templates
+    const existing = await kv.getByPrefixAndValue(prefix, "template_name", template_name, 1);
+    if (existing.length > 0) {
       return c.json({ error: "Template name must be unique" }, 400);
     }
 

@@ -11,6 +11,14 @@ const app = new Hono();
  */
 app.post("/whatsapp/send", async (c) => {
   try {
+    const authHeader = c.req.header("Authorization");
+    const serviceKey = getEnv("SUPABASE_SERVICE_ROLE_KEY");
+
+    // SECURITY: Protect endpoint from unauthorized use
+    if (!serviceKey || !authHeader || authHeader !== `Bearer ${serviceKey}`) {
+      return c.json({ error: "Unauthorized: Invalid or missing token" }, 401);
+    }
+
     const { phoneNumber, templateId } = await c.req.json();
     // SECURITY: Redact phoneNumber from logs
     console.log(`[WhatsApp] Intent to send template "${templateId}" to [REDACTED]`);

@@ -124,7 +124,13 @@ app.post("/create-subscription", async (c) => {
       }]
     };
 
-    console.log(`[Billing] Creating subscription for ${shop} to ${plan} ($${targetPlan.price})...`);
+    console.info(JSON.stringify({
+      event: "billing_subscription_create_attempt",
+      shop,
+      plan,
+      amount: targetPlan.price,
+      currency: "USD"
+    }));
 
     // 3. Call Shopify
     const data = await shopifyGraphql(shop, merchant.access_token, mutation, variables);
@@ -218,7 +224,12 @@ app.get("/status", async (c) => {
 
     // Sync with database
     if (currentConfig.plan !== activePlan) {
-        console.log(`[Billing] Syncing plan for ${shop}: ${currentConfig.plan} -> ${activePlan}`);
+        console.info(JSON.stringify({
+          event: "billing_plan_sync",
+          shop,
+          from_plan: currentConfig.plan,
+          to_plan: activePlan
+        }));
         await billing.updatePlan(shop, activePlan, subscriptionId || undefined);
     }
 
@@ -270,11 +281,20 @@ async function processBillingWebhook(c: any, action: 'update' | 'cancel') {
   const payload = JSON.parse(rawBody);
   const subscription = payload.app_subscription;
   
-  console.log(`[Billing Webhook] ${action.toUpperCase()} received for ${shop}`);
+  console.info(JSON.stringify({
+    event: "billing_webhook_received",
+    action,
+    shop
+  }));
 
   if (action === 'cancel' || (subscription && subscription.status !== 'ACTIVE')) {
      // DOWNGRADE TO FREE
-     console.log(`[Billing] Downgrading ${shop} to Free.`);
+     console.info(JSON.stringify({
+       event: "billing_downgrade",
+       shop,
+       to_plan: "free",
+       reason: "webhook_cancel_or_inactive"
+     }));
      await billing.updatePlan(shop, 'free');
   } else if (action === 'update') {
      // Re-verify status to be sure (Webhook might be for a different plan)
@@ -296,7 +316,11 @@ async function processBillingWebhook(c: any, action: 'update' | 'cancel') {
      
      if (newPlan !== 'free') {
          await billing.updatePlan(shop, newPlan, subscription.admin_graphql_api_id);
-         console.log(`[Billing] Updated ${shop} to ${newPlan} via Webhook.`);
+         console.info(JSON.stringify({
+           event: "billing_upgrade_webhook",
+           shop,
+           to_plan: newPlan
+         }));
      }
   }
 

@@ -5,6 +5,7 @@ import { getEnv } from "../../../lib/env.ts";
 import { verifyWebhookHmac, getMerchantCredentials } from "./shopify_client.ts";
 import { encrypt } from "./crypto.ts";
 import { scheduleAutomation, processWhatsAppStatuses, AutomationTemplate } from "./automation.ts";
+import { verifyWhatsAppSignature } from "./whatsapp.ts";
 
 const webhooksApp = new Hono();
 
@@ -41,7 +42,6 @@ webhooksApp.post("/shopify", async (c) => {
     if (webhookId) {
       const alreadyProcessed = await kv.get(`webhook_id:${webhookId}`);
       if (alreadyProcessed) {
-        console.log(`[Shopify Webhook] Skipping duplicate webhook ${webhookId} for ${shop}`);
         return c.json({ status: 'success', duplicate: true }, 200);
       }
       await kv.set(`webhook_id:${webhookId}`, { processed_at: new Date().toISOString() });
@@ -203,7 +203,6 @@ webhooksApp.post("/app/uninstalled", async (c) => {
     if (webhookId) {
       const alreadyProcessed = await kv.get(`webhook_id:${webhookId}`);
       if (alreadyProcessed) {
-        console.log(`[Uninstall Webhook] Skipping duplicate webhook ${webhookId} for ${shop}`);
         return c.json({ status: 'success', duplicate: true }, 200);
       }
       await kv.set(`webhook_id:${webhookId}`, { processed_at: new Date().toISOString() });
@@ -282,7 +281,17 @@ webhooksApp.get("/whatsapp", (c) => {
 // POST: Status Updates & Messages
 webhooksApp.post("/whatsapp", async (c) => {
   try {
-    const body = await c.req.json();
+    const signature = c.req.header("X-Hub-Signature-256");
+    const rawBody = await c.req.text();
+
+    // SECURITY: Verify HMAC
+    const isValid = await verifyWhatsAppSignature(rawBody, signature || null);
+    if (!isValid) {
+      console.error("[WhatsApp Webhook] HMAC verification failed");
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const body = JSON.parse(rawBody);
 
     // Check if it's a status update
     if (body.entry && body.entry[0]?.changes && body.entry[0]?.changes[0]?.value?.statuses) {
