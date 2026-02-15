@@ -18,8 +18,7 @@ export async function disableOtherTemplates(exceptId: string, shop: string = "gl
 
   // PERFORMANCE: Fetch only enabled templates using DB-side filtering to avoid full table scan
   // This reduces memory usage and network transfer compared to fetching all templates
-  // deno-lint-ignore no-explicit-any
-  const templates = (await kv.getByPrefixAndValue(prefix, "value->enabled", true)) as AutomationTemplate[];
+  const templates = await kv.getByPrefixAndValue<AutomationTemplate>(prefix, "value->enabled", true);
 
   const updateKeys: string[] = [];
   const updateValues: AutomationTemplate[] = [];
@@ -62,7 +61,7 @@ export async function executeAutomation(payload: AutomationPayload) {
         `merchant:${shop}`,
         `${billing.BILLING_KEY_PREFIX}${shop}`
       ]),
-      kv.getByPrefix(`shop:${shop}:template:`),
+      kv.getByPrefix<AutomationTemplate>(`shop:${shop}:template:`),
       kv.get(cartKey)
     ]);
 
@@ -77,7 +76,7 @@ export async function executeAutomation(payload: AutomationPayload) {
       return;
     }
 
-    const templates = (rawTemplates || []) as AutomationTemplate[];
+    const templates = rawTemplates || [];
     if (!templates.some(t => t.enabled)) {
       console.log('⏹️ AUTOMATION SKIPPED: No enabled templates found.');
       return;

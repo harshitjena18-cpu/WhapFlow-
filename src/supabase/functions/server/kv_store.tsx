@@ -38,13 +38,13 @@ export const set = async (key: string, value: any): Promise<void> => {
 };
 
 // Get retrieves a key-value pair from the database.
-export const get = async (key: string): Promise<any> => {
+export const get = async <T = any>(key: string): Promise<T> => {
   const supabase = client();
   const { data, error } = await supabase.from("kv_store_c8eef56a").select("value").eq("key", key).maybeSingle();
   if (error) {
     throw new Error(error.message);
   }
-  return data?.value;
+  return data?.value as T;
 };
 
 // Delete deletes a key-value pair from the database.
@@ -70,7 +70,7 @@ export const mset = async (keys: string[], values: any[]): Promise<void> => {
 
 // Gets multiple key-value pairs from the database.
 // Preserves the order of input keys and returns null for missing keys.
-export const mget = async (keys: string[]): Promise<any[]> => {
+export const mget = async <T = any>(keys: string[]): Promise<T[]> => {
   if (keys.length === 0) return [];
   const supabase = client();
   // PERFORMANCE: Select both key and value to allow mapping results back to original order
@@ -83,12 +83,12 @@ export const mget = async (keys: string[]): Promise<any[]> => {
   const resultsMap = new Map(data?.map((item) => [item.key, item.value]));
 
   // Return results in the exact order of requested keys
-  return keys.map((key) => resultsMap.get(key) ?? null);
+  return keys.map((key) => resultsMap.get(key) as T ?? null as unknown as T);
 };
 
 // Scan Queue (Efficient Range Query)
 // Fetches keys starting with "queue:v1:" and less than or equal to endKey
-export const scanQueue = async (endKey: string): Promise<any[]> => {
+export const scanQueue = async <T = any>(endKey: string): Promise<T[]> => {
   const supabase = client();
   const { data, error } = await supabase.from("kv_store_c8eef56a")
     .select("key, value")
@@ -98,7 +98,7 @@ export const scanQueue = async (endKey: string): Promise<any[]> => {
   if (error) {
     throw new Error(error.message);
   }
-  return data?.map((d) => d.value) ?? [];
+  return data?.map((d) => d.value as T) ?? [];
 };
 
 // Deletes multiple key-value pairs from the database.
@@ -111,7 +111,7 @@ export const mdel = async (keys: string[]): Promise<void> => {
 };
 
 // Search for key-value pairs by prefix.
-export const getByPrefix = async (prefix: string, limit?: number): Promise<any[]> => {
+export const getByPrefix = async <T = any>(prefix: string, limit?: number): Promise<T[]> => {
   const supabase = client();
   let query = supabase.from("kv_store_c8eef56a").select("key, value").like("key", prefix + "%");
 
@@ -123,11 +123,11 @@ export const getByPrefix = async (prefix: string, limit?: number): Promise<any[]
   if (error) {
     throw new Error(error.message);
   }
-  return data?.map((d) => d.value) ?? [];
+  return data?.map((d) => d.value as T) ?? [];
 };
 // Search for key-value pairs by prefix and value (JSONB column query)
 // Uses Supabase's arrow operators for JSONB filtering (e.g., 'value->enabled')
-export const getByPrefixAndValue = async (prefix: string, jsonPath: string, value: any, limit?: number): Promise<any[]> => {
+export const getByPrefixAndValue = async <T = any>(prefix: string, jsonPath: string, value: any, limit?: number): Promise<T[]> => {
   const supabase = client();
   let query = supabase.from("kv_store_c8eef56a")
     .select("key, value")
@@ -142,5 +142,5 @@ export const getByPrefixAndValue = async (prefix: string, jsonPath: string, valu
   if (error) {
     throw new Error(error.message);
   }
-  return data?.map((d) => d.value) ?? [];
+  return data?.map((d) => d.value as T) ?? [];
 };
