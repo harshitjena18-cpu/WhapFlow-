@@ -1,5 +1,6 @@
 import * as kv from "./kv_store.tsx";
 import { decrypt } from "./crypto.ts";
+import { Merchant } from "./types.ts";
 import { Buffer } from "node:buffer";
 
 // Module-level cache for HMAC CryptoKeys to minimize import overhead (~2-5ms per call)
@@ -19,8 +20,8 @@ export function escapeShopifySearch(value: string): string {
  *
  * PERFORMANCE: Supports an optional pre-fetched merchant object to avoid redundant database round-trips.
  */
-export async function getMerchantCredentials(shop: string, preFetchedMerchant?: any) {
-  const merchant = preFetchedMerchant !== undefined ? preFetchedMerchant : await kv.get(`merchant:${shop}`);
+export async function getMerchantCredentials(shop: string, preFetchedMerchant?: Merchant | null): Promise<Merchant | null> {
+  const merchant = preFetchedMerchant !== undefined ? preFetchedMerchant : (await kv.get(`merchant:${shop}`) as Merchant | null);
   if (merchant && merchant.access_token) {
     // Decrypt the token if it was stored encrypted
     merchant.access_token = await decrypt(merchant.access_token);

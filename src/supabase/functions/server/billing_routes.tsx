@@ -1,4 +1,4 @@
-import { Hono } from "npm:hono";
+import { Hono, Context } from "npm:hono";
 import * as _kv from "./kv_store.tsx";
 import * as billing from "./billing.ts";
 import { getMerchantCredentials, shopifyGraphql, verifyWebhookHmac } from "./shopify_client.ts";
@@ -253,8 +253,7 @@ app.get("/status", async (c) => {
  */
 
 // Helper for Webhook processing
-// deno-lint-ignore no-explicit-any
-async function processBillingWebhook(c: any, action: 'update' | 'cancel') {
+async function processBillingWebhook(c: Context, action: 'update' | 'cancel') {
   const hmac = c.req.header('X-Shopify-Hmac-Sha256');
   const shop = c.req.header('X-Shopify-Shop-Domain');
   const rawBody = await c.req.text();

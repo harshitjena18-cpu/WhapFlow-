@@ -26,7 +26,7 @@ const client = () => {
 };
 
 // Set stores a key-value pair in the database.
-export const set = async (key: string, value: any): Promise<void> => {
+export const set = async <T = any>(key: string, value: T): Promise<void> => {
   const supabase = client();
   const { error } = await supabase.from("kv_store_c8eef56a").upsert({
     key,
@@ -38,13 +38,13 @@ export const set = async (key: string, value: any): Promise<void> => {
 };
 
 // Get retrieves a key-value pair from the database.
-export const get = async <T = any>(key: string): Promise<T> => {
+export const get = async <T = any>(key: string): Promise<T | null> => {
   const supabase = client();
   const { data, error } = await supabase.from("kv_store_c8eef56a").select("value").eq("key", key).maybeSingle();
   if (error) {
     throw new Error(error.message);
   }
-  return data?.value as T;
+  return data?.value ?? null;
 };
 
 // Delete deletes a key-value pair from the database.
@@ -60,7 +60,7 @@ export const del = async (key: string): Promise<boolean> => {
 };
 
 // Sets multiple key-value pairs in the database.
-export const mset = async (keys: string[], values: any[]): Promise<void> => {
+export const mset = async <T = any>(keys: string[], values: T[]): Promise<void> => {
   const supabase = client();
   const { error } = await supabase.from("kv_store_c8eef56a").upsert(keys.map((k, i) => ({ key: k, value: values[i] })));
   if (error) {
@@ -70,7 +70,7 @@ export const mset = async (keys: string[], values: any[]): Promise<void> => {
 
 // Gets multiple key-value pairs from the database.
 // Preserves the order of input keys and returns null for missing keys.
-export const mget = async <T = any>(keys: string[]): Promise<T[]> => {
+export const mget = async <T = any>(keys: string[]): Promise<(T | null)[]> => {
   if (keys.length === 0) return [];
   const supabase = client();
   // PERFORMANCE: Select both key and value to allow mapping results back to original order
