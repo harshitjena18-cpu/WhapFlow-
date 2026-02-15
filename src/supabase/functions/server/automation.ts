@@ -98,12 +98,9 @@ export async function executeAutomation(payload: AutomationPayload) {
       return;
     }
 
-    // Update local object with plain text for safety checks and API calls
-    currentCart.customer_name = decName;
-    currentCart.customer_email = decEmail;
-    currentCart.phone = decPhone;
-
-    // 4. PRE-CHECKS (Billing Limits)
+    // 1. Pre-checks (Status & Plan)
+    const isPending = currentCart.status === 'pending';
+    const hasEnabledTemplate = (templates as AutomationTemplate[]).some(t => t.enabled);
     const automationCheck = billing.checkLimitWithConfig('automation', billingConfig);
     const whatsappCheck = billing.checkLimitWithConfig('whatsapp', billingConfig);
 
@@ -118,8 +115,8 @@ export async function executeAutomation(payload: AutomationPayload) {
         shop,
         merchant.access_token,
         currentCart.created_at,
-        currentCart.customer_email,
-        currentCart.phone
+        decEmail,
+        decPhone
     );
 
     if (orderExists) {
@@ -130,29 +127,51 @@ export async function executeAutomation(payload: AutomationPayload) {
       return;
     }
 
-    // 6. FINAL EXECUTION: Send WhatsApp Message
-    console.log(`✅ CONDITIONS MET: Ready to send WhatsApp message.`);
-    console.log(`   - Automation ready using template: ${templateName}`);
+    // 3. Final Execution
+    if (isPending && hasEnabledTemplate && automationCheck.allowed && whatsappCheck.allowed) {
+      console.log(`✅ CONDITIONS MET: Ready to send WhatsApp message.`);
+      console.log(`   - Automation ready using template: ${templateName}`);
 
-    const result = await sendWhatsAppTemplate({
-      to: currentCart.phone,
-      templateName: templateName,
-      languageCode: "en_US"
-    });
+      const result = await sendWhatsAppTemplate({
+        to: decPhone,
+        templateName: templateName,
+        languageCode: "en_US"
+      });
 
-    if (result.success) {
-      // 7. PERFORMANCE: Batch all state updates in a single KV request
-      billingConfig.whatsapp_conversations_used += 1;
-      currentCart.status = 'messaged';
-      currentCart.messaged_at = new Date().toISOString();
+      if (result.success) {
+        // PERFORMANCE: Batch all updates (Billing, Message Map, Cart) in a single request
+        const updateKeys = [];
+        const updateValues = [];
 
-      const updateKeys = [`${BILLING_KEY_PREFIX}${shop}`, cartKey];
-      const updateValues = [billingConfig, currentCart];
+        // 1. Increment Usage (manually since we already have the config)
+        billingConfig.whatsapp_conversations_used += 1;
+        updateKeys.push(`${BILLING_KEY_PREFIX}${shop}`);
+        updateValues.push(billingConfig);
 
-      if (result.wamid) {
-        currentCart.wamid = result.wamid;
-        updateKeys.push(`msg_map:${result.wamid}`);
-        updateValues.push(cartId);
+        // 2. Update Cart Status
+        currentCart.status = 'messaged';
+        currentCart.messaged_at = new Date().toISOString();
+
+        if (result.wamid) {
+             currentCart.wamid = result.wamid;
+             // 3. Map message ID to cart for status tracking
+             updateKeys.push(`msg_map:${result.wamid}`);
+             updateValues.push(cartId);
+             console.log(`🔗 Mapped message ${result.wamid} to cart ${cartId}`);
+        }
+
+        updateKeys.push(cartKey);
+        updateValues.push(currentCart);
+
+        // Atomic batch update
+        await kv.mset(updateKeys, updateValues);
+        console.log(`⚡ [Automation] Optimized: Persisted ${updateKeys.length} updates in a single batch.`);
+
+      } else {
+        console.error(`❌ AUTOMATION FAILED: WhatsApp API Error for cart ${cartId}`, result.error);
+        currentCart.status = 'failed';
+        currentCart.last_error = result.error;
+        await kv.set(cartKey, currentCart);
       }
 
       await kv.mset(updateKeys, updateValues);

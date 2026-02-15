@@ -91,6 +91,7 @@ export function TemplatesView() {
 
   // Copy State
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [modifierKey, setModifierKey] = useState('⌘');
   const contentRef = useRef<HTMLTextAreaElement>(null);
 
   const handleCopy = async (text: string, id: string) => {
@@ -180,6 +181,8 @@ export function TemplatesView() {
     fetchTemplates();
     fetchAIUsage();
     fetchIntegrations();
+    const isMac = /Mac|iPod|iPhone|iPad/.test(navigator.userAgent || '');
+    setModifierKey(isMac ? '⌘' : 'Ctrl');
   }, []);
 
   // Validation Logic
@@ -830,7 +833,15 @@ export function TemplatesView() {
 
       {/* Create / Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent
+          className="max-w-2xl"
+          onKeyDown={(e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && !submitting && validationErrors.length === 0) {
+              e.preventDefault();
+              handleSave();
+            }
+          }}
+        >
           <DialogHeader>
             <DialogTitle>{isEditing ? 'Edit Template' : 'New Template'}</DialogTitle>
             <DialogDescription>
@@ -881,13 +892,14 @@ export function TemplatesView() {
                   <span className={`text-[10px] ${
                     (formData.content?.length || 0) > 1024
                       ? 'text-red-500 font-bold'
-                      : (formData.content?.length || 0) > 900
+                      : (formData.content?.length || 0) > 921
                         ? 'text-orange-500 font-semibold'
                         : 'text-gray-500'
                   }`}>
                     {formData.content?.length || 0} / 1024 chars
                   </span>
                 </div>
+                <Progress value={Math.min(((formData.content?.length || 0) / 1024) * 100, 100)} className="h-1.5 mb-1" />
                 <div className="flex flex-wrap gap-2 mt-1 mb-2">
                   {[
                     { tag: '{{customer_name}}', desc: 'Insert customer full name' },
@@ -953,7 +965,12 @@ export function TemplatesView() {
 
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleSave} disabled={submitting || validationErrors.length > 0}>
+              <Button
+                onClick={handleSave}
+                disabled={submitting || validationErrors.length > 0}
+                aria-keyshortcuts={`${modifierKey}+Enter`}
+                title={`Save Template (${modifierKey}+Enter)`}
+              >
                 {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                 Save Template
               </Button>
