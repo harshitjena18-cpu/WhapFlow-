@@ -83,7 +83,7 @@ export const mget = async <T = any>(keys: string[]): Promise<(T | null)[]> => {
   const resultsMap = new Map(data?.map((item) => [item.key, item.value]));
 
   // Return results in the exact order of requested keys
-  return keys.map((key) => resultsMap.get(key) ?? null);
+  return keys.map((key) => resultsMap.get(key) as T ?? null as unknown as T);
 };
 
 // Scan Queue (Efficient Range Query)
@@ -98,7 +98,7 @@ export const scanQueue = async <T = any>(endKey: string): Promise<T[]> => {
   if (error) {
     throw new Error(error.message);
   }
-  return data?.map((d) => d.value) ?? [];
+  return data?.map((d) => d.value as T) ?? [];
 };
 
 // Deletes multiple key-value pairs from the database.
@@ -123,7 +123,7 @@ export const getByPrefix = async <T = any>(prefix: string, limit?: number): Prom
   if (error) {
     throw new Error(error.message);
   }
-  return data?.map((d) => d.value) ?? [];
+  return data?.map((d) => d.value as T) ?? [];
 };
 // Search for key-value pairs by prefix and value (JSONB column query)
 // Uses Supabase's arrow operators for JSONB filtering (e.g., 'value->enabled')
@@ -142,5 +142,5 @@ export const getByPrefixAndValue = async <T = any>(prefix: string, jsonPath: str
   if (error) {
     throw new Error(error.message);
   }
-  return data?.map((d) => d.value) ?? [];
+  return data?.map((d) => d.value as T) ?? [];
 };
