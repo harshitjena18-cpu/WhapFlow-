@@ -53,3 +53,13 @@ export const DEFAULT_CONFIG: IntegrationConfig = {
   connection_status: 'disconnected',
   metadata: {}
 };
+
+export interface Merchant {
+  shop: string;
+  access_token: string | null;
+  scopes: string;
+  plan: string;
+  shopify_connected: boolean;
+  created_at: string;
+  updated_at: string;
+}
