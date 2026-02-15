@@ -3,7 +3,6 @@ import * as billing from "./billing.ts";
 import { BILLING_KEY_PREFIX } from "./billing.ts";
 import { decrypt } from "./crypto.ts";
 import { checkOrderExists, getMerchantCredentials } from "./shopify_client.ts";
-import { decrypt } from "./crypto.ts";
 import { sendWhatsAppTemplate } from "./whatsapp.ts";
 import { enqueueJob } from "./queue.ts";
 import {
@@ -85,6 +84,7 @@ export async function executeAutomation(payload: AutomationPayload) {
 
     // SECURITY: Decrypt PII before use in safety checks and external APIs
     // Data remains encrypted at rest in KV, but must be plaintext for Shopify/WhatsApp
+    // decrypt() handles null/undefined internally, so we don't need explicit checks here.
     const [decName, decEmail, decPhone] = await Promise.all([
       decrypt(currentCart.customer_name),
       decrypt(currentCart.customer_email),
@@ -101,17 +101,9 @@ export async function executeAutomation(payload: AutomationPayload) {
       return;
     }
 
-    // SECURITY: Decrypt PII for processing and safety checks
-    // We perform these checks to ensure safety helpers and external APIs receive plain text
-    const [decEmail, decPhone, decName] = await Promise.all([
-      currentCart.customer_email ? decrypt(currentCart.customer_email) : null,
-      currentCart.phone ? decrypt(currentCart.phone) : null,
-      currentCart.customer_name ? decrypt(currentCart.customer_name) : null
-    ]);
-
-    currentCart.customer_email = decEmail;
-    currentCart.phone = decPhone;
-    currentCart.customer_name = decName;
+    // REMOVED REDUNDANT DECRYPTION BLOCK HERE
+    // The variables decName, decEmail, decPhone were already decrypted and assigned above.
+    // The previous code block (lines 105-112 in original) was causing a redeclaration error.
 
     // 1. Pre-checks (Status & Plan)
     const isPending = currentCart.status === 'pending';
