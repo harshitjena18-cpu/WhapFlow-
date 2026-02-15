@@ -139,12 +139,23 @@ app.post("/ai-generate", async (c) => {
 
     // SECURITY: Simple Rate Limiting (Prevent OpenAI credit exhaustion)
     const ip = c.req.header("x-forwarded-for") || "anonymous";
-    const rateKey = `rate_limit:ai_gen:${shop}:${ip}`;
+    // Add hourly bucket to key to allow reset and cleanup
+    const currentHour = new Date().toISOString().slice(0, 13);
+    const rateKey = `rate_limit:ai_gen:${shop}:${ip}:${currentHour}`;
     const hits = (await kv.get(rateKey) || 0) as number;
     if (hits > 10) { // Limit to 10 generations per hour per shop/ip
       return c.json({ error: "Rate limit exceeded. Please try again later." }, 429);
     }
-    await kv.set(rateKey, hits + 1); // Ideally this would expire, but we'll use a daily/hourly key suffix
+    await kv.set(rateKey, hits + 1);
+
+    // Performance: Clean up previous hour's key on first hit of new hour to prevent storage leak
+    if (hits === 0) {
+      const prevHour = new Date(Date.now() - 3600000).toISOString().slice(0, 13);
+      const prevKey = `rate_limit:ai_gen:${shop}:${ip}:${prevHour}`;
+      // Fire and forget delete to minimize latency impact
+      kv.del(prevKey).catch(e => console.error("Failed to cleanup rate limit key:", e));
+    }
+
 
     // 1. Check Billing Limits
     const limitCheck = await billing.checkLimit('ai', shop);
