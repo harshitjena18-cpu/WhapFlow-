@@ -12,8 +12,6 @@ const app = new Hono();
 app.post("/whatsapp/send", async (c) => {
   try {
     const { phoneNumber, templateId } = await c.req.json();
-    // SECURITY: Redact phoneNumber from logs
-    console.log(`[WhatsApp] Intent to send template "${templateId}" to [REDACTED]`);
 
     // Call the shared helper
     const result = await sendWhatsAppTemplate({
