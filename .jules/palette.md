@@ -17,3 +17,7 @@
 ## 2026-05-24 - [Password Visibility Toggles and Form Accessibility]
 **Learning:** Auth forms significantly benefit from password visibility toggles, especially on mobile or for complex passwords. Using independent states for "Password" and "Confirm Password" prevents accidental disclosure and reduces friction. Ensuring these toggles use `type="button"` prevents accidental form submissions.
 **Action:** Always include password visibility toggles in Auth forms. Use `aria-label` to clearly communicate the toggle state to screen readers. Ensure toggle buttons are within a `relative` container and do not interfere with the input's focus state.
+
+## 2026-06-15 - [Character Limit Visibility and Modal Keyboard UX]
+**Learning:** For inputs with strict technical constraints (like WhatsApp's 1024-character limit), a simple text counter is often overlooked. Combining it with a visual `Progress` bar provides immediate, peripheral awareness of remaining space. Additionally, modal dialogs for content creation should support `Cmd/Ctrl + Enter` shortcuts to streamline the "Compose-to-Save" flow for power users.
+**Action:** Implement tri-state feedback for character limits (standard, warning at 90%, error at 100%) and supplement with a `Progress` bar. Always provide platform-aware keyboard shortcuts in primary creation modals and communicate them via `aria-keyshortcuts` and native tooltips or titles.

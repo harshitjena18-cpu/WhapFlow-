@@ -18,7 +18,7 @@ import webhooksApp from "./webhooks_routes.tsx";
 import whatsappApp from "./whatsapp_routes.tsx";
 import aiApp from "./ai_routes.tsx";
 
-import { SERVER_BASE_PATH, SHOPIFY_DOMAIN_REGEX } from "./constants.ts";
+import { SERVER_BASE_PATH, SHOPIFY_DOMAIN_REGEX, APP_DOMAIN, API_DOMAIN } from "./constants.ts";
 
 const app = new Hono();
 
@@ -32,7 +32,28 @@ app.use('*', secureHeaders());
 app.use(
   "/*",
   cors({
-    origin: "*",
+    origin: (origin) => {
+      // Allow requests with no origin (e.g. mobile apps, curl)
+      if (!origin) return origin;
+
+      // Localhost for development
+      if (origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:")) {
+        return origin;
+      }
+
+      // Production frontend
+      if (origin === APP_DOMAIN) {
+        return origin;
+      }
+
+      // Allow API domain if it calls itself
+      if (origin === API_DOMAIN) {
+        return origin;
+      }
+
+      // Block others
+      return undefined;
+    },
     allowHeaders: ["Content-Type", "Authorization", "X-Shopify-Access-Token", "X-Shopify-Hmac-Sha256", "X-Shopify-Shop-Domain", "X-Shopify-Topic"],
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     exposeHeaders: ["Content-Length"],
@@ -155,4 +176,8 @@ app.post(`${SERVER_BASE_PATH}/api/webhooks/whatsapp`, async (c) => {
   }
 });
 
-Deno.serve(app.fetch);
+if (import.meta.main) {
+  Deno.serve(app.fetch);
+}
+
+export default app;

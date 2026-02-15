@@ -55,10 +55,8 @@ export async function executeAutomation(payload: AutomationPayload) {
 
   try {
     console.log(`🚀 EXECUTE AUTOMATION for cart ${cartId} (Shop: ${shop})`);
-    console.log(`   Checking logic...`);
 
-    // Fetch all required data in parallel and batch KV gets to minimize latency.
-    // Need to cast rawTemplates to correct type, as getByPrefix returns unknown[]
+    // 1. PERFORMANCE: Fetch all required data in parallel and batch KV gets to minimize latency.
     const [configs, rawTemplates, currentCart] = await Promise.all([
       kv.mget([
         `merchant:${shop}`,
@@ -68,42 +66,37 @@ export async function executeAutomation(payload: AutomationPayload) {
       kv.get(cartKey)
     ]);
 
-    const [merchantData, preFetchedBilling] = configs;
-
-    // Use pre-fetched data to avoid redundant KV round-trips
-    const [merchant, billingConfig] = await Promise.all([
-      getMerchantCredentials(shop, merchantData),
-      billing.getBillingConfig(shop, preFetchedBilling)
-    ]);
-    const templates = (rawTemplates || []) as AutomationTemplate[];
-
+    // 2. EARLY RETURNS: Skip processing as soon as possible if conditions aren't met
     if (!currentCart) {
       console.log(`❌ AUTOMATION SKIPPED: Cart [${cartId}] no longer exists.`);
       return;
     }
 
-    // SECURITY: Decrypt PII before use in safety checks and external APIs
-    // Data remains encrypted at rest in KV, but must be plaintext for Shopify/WhatsApp
-    // decrypt() handles null/undefined internally, so we don't need explicit checks here.
-    const [decName, decEmail, decPhone] = await Promise.all([
+    if (currentCart.status !== 'pending') {
+      console.log(`⏹️ AUTOMATION SKIPPED: Cart [${cartId}] status is ${currentCart.status}`);
+      return;
+    }
+
+    const templates = (rawTemplates || []) as AutomationTemplate[];
+    if (!templates.some(t => t.enabled)) {
+      console.log('⏹️ AUTOMATION SKIPPED: No enabled templates found.');
+      return;
+    }
+
+    // 3. PERFORMANCE: Parallelize Merchant/Billing derivations and PII Decryption
+    const [merchantData, preFetchedBilling] = configs;
+    const [merchant, billingConfig, decName, decEmail, decPhone] = await Promise.all([
+      getMerchantCredentials(shop, merchantData),
+      billing.getBillingConfig(shop, preFetchedBilling),
       decrypt(currentCart.customer_name),
       decrypt(currentCart.customer_email),
       decrypt(currentCart.phone)
     ]);
 
-    // Update the local object for subsequent logic
-    currentCart.customer_name = decName;
-    currentCart.customer_email = decEmail;
-    currentCart.phone = decPhone;
-
     if (!merchant || !merchant.access_token) {
       console.error(`❌ AUTOMATION FAILED: No credentials found for ${shop}`);
       return;
     }
-
-    // REMOVED REDUNDANT DECRYPTION BLOCK HERE
-    // The variables decName, decEmail, decPhone were already decrypted and assigned above.
-    // The previous code block (lines 105-112 in original) was causing a redeclaration error.
 
     // 1. Pre-checks (Status & Plan)
     const isPending = currentCart.status === 'pending';
@@ -111,19 +104,19 @@ export async function executeAutomation(payload: AutomationPayload) {
     const automationCheck = billing.checkLimitWithConfig('automation', billingConfig);
     const whatsappCheck = billing.checkLimitWithConfig('whatsapp', billingConfig);
 
-    if (!isPending || !hasEnabledTemplate || !automationCheck.allowed || !whatsappCheck.allowed) {
-      console.log('⏹️ AUTOMATION SKIPPED: Pre-conditions not met (e.g. cart already messaged, automation off, or limit reached).');
+    if (!automationCheck.allowed || !whatsappCheck.allowed) {
+      console.log('⏹️ AUTOMATION SKIPPED: Plan limits reached.');
       return;
     }
 
-    // 2. Orders API Safety Check (Preventing spam if already converted)
+    // 5. SAFETY CHECK: Verify if order exists to prevent spam
     console.log(`   - API CHECK: Checking if order exists for ${shop}...`);
     const orderExists = await checkOrderExists(
         shop,
         merchant.access_token,
         currentCart.created_at,
-        currentCart.customer_email,
-        currentCart.phone
+        decEmail,
+        decPhone
     );
 
     if (orderExists) {
@@ -140,7 +133,7 @@ export async function executeAutomation(payload: AutomationPayload) {
       console.log(`   - Automation ready using template: ${templateName}`);
 
       const result = await sendWhatsAppTemplate({
-        to: currentCart.phone,
+        to: decPhone,
         templateName: templateName,
         languageCode: "en_US"
       });
@@ -180,6 +173,14 @@ export async function executeAutomation(payload: AutomationPayload) {
         currentCart.last_error = result.error;
         await kv.set(cartKey, currentCart);
       }
+
+      await kv.mset(updateKeys, updateValues);
+      console.log(`⚡ [Automation] Optimized: Persisted ${updateKeys.length} updates in a single batch.`);
+    } else {
+      console.error(`❌ AUTOMATION FAILED: WhatsApp API Error for cart ${cartId}`, result.error);
+      currentCart.status = 'failed';
+      currentCart.last_error = result.error;
+      await kv.set(cartKey, currentCart);
     }
 
   } catch (err) {

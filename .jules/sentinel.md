@@ -19,3 +19,8 @@
 **Vulnerability:** Although customer PII (email, phone, name) was encrypted at rest in the KV store, the automation logic in `executeAutomation` failed to decrypt this data before using it. This caused safety checks (like `checkOrderExists`) to fail silently and resulted in encrypted strings being sent to external APIs (like WhatsApp), leading to both functional failure and potential privacy leaks.
 **Learning:** Encryption at rest is only effective if the application correctly handles the data's lifecycle, including decryption at the last possible moment before use. Silent failures in security-related safety checks can lead to unexpected behaviors like spamming customers.
 **Prevention:** Always verify that data fetched from encrypted storage is decrypted before being passed to external services or safety-critical logic. Use type systems or naming conventions (e.g., `encEmail`) to distinguish between encrypted and plain text data.
+
+## 2025-07-10 - PII Leak via Object Mutation in Automation
+**Vulnerability:** The `executeAutomation` function decrypted PII and overwrote the fields in the `currentCart` object. When the object was subsequently saved back to KV, the PII was stored in plaintext, bypassing the encryption-at-rest requirement.
+**Learning:** Decrypting data directly into objects that are destined for persistence is a common source of accidental data leakage. Security logic should maintain a clear separation between "data at rest" (encrypted) and "data in flight/use" (plaintext).
+**Prevention:** Always decrypt PII into local, short-lived variables. Never mutate persistence-bound objects with plaintext data unless the intent is specifically to change the stored value to plaintext.
