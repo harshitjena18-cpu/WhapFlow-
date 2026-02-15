@@ -100,18 +100,8 @@ export async function executeAutomation(payload: AutomationPayload) {
       console.error(`❌ AUTOMATION FAILED: No credentials found for ${shop}`);
       return;
     }
+>>>>>>> REPLACE
 
-    // SECURITY: Decrypt PII for processing and safety checks
-    // We perform these checks to ensure safety helpers and external APIs receive plain text
-    const [decEmail, decPhone, decName] = await Promise.all([
-      currentCart.customer_email ? decrypt(currentCart.customer_email) : null,
-      currentCart.phone ? decrypt(currentCart.phone) : null,
-      currentCart.customer_name ? decrypt(currentCart.customer_name) : null
-    ]);
-
-    currentCart.customer_email = decEmail;
-    currentCart.phone = decPhone;
-    currentCart.customer_name = decName;
 
     // 1. Pre-checks (Status & Plan)
     const isPending = currentCart.status === 'pending';
