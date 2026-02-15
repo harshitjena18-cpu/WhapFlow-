@@ -26,7 +26,7 @@ const client = () => {
 };
 
 // Set stores a key-value pair in the database.
-export const set = async (key: string, value: any): Promise<void> => {
+export const set = async <T = any>(key: string, value: T): Promise<void> => {
   const supabase = client();
   const { error } = await supabase.from("kv_store_c8eef56a").upsert({
     key,
@@ -38,13 +38,13 @@ export const set = async (key: string, value: any): Promise<void> => {
 };
 
 // Get retrieves a key-value pair from the database.
-export const get = async (key: string): Promise<any> => {
+export const get = async <T = any>(key: string): Promise<T | null> => {
   const supabase = client();
   const { data, error } = await supabase.from("kv_store_c8eef56a").select("value").eq("key", key).maybeSingle();
   if (error) {
     throw new Error(error.message);
   }
-  return data?.value;
+  return data?.value ?? null;
 };
 
 // Delete deletes a key-value pair from the database.
@@ -60,7 +60,7 @@ export const del = async (key: string): Promise<boolean> => {
 };
 
 // Sets multiple key-value pairs in the database.
-export const mset = async (keys: string[], values: any[]): Promise<void> => {
+export const mset = async <T = any>(keys: string[], values: T[]): Promise<void> => {
   const supabase = client();
   const { error } = await supabase.from("kv_store_c8eef56a").upsert(keys.map((k, i) => ({ key: k, value: values[i] })));
   if (error) {
@@ -70,7 +70,7 @@ export const mset = async (keys: string[], values: any[]): Promise<void> => {
 
 // Gets multiple key-value pairs from the database.
 // Preserves the order of input keys and returns null for missing keys.
-export const mget = async (keys: string[]): Promise<any[]> => {
+export const mget = async <T = any>(keys: string[]): Promise<(T | null)[]> => {
   if (keys.length === 0) return [];
   const supabase = client();
   // PERFORMANCE: Select both key and value to allow mapping results back to original order
@@ -88,7 +88,7 @@ export const mget = async (keys: string[]): Promise<any[]> => {
 
 // Scan Queue (Efficient Range Query)
 // Fetches keys starting with "queue:v1:" and less than or equal to endKey
-export const scanQueue = async (endKey: string): Promise<any[]> => {
+export const scanQueue = async <T = any>(endKey: string): Promise<T[]> => {
   const supabase = client();
   const { data, error } = await supabase.from("kv_store_c8eef56a")
     .select("key, value")
@@ -111,7 +111,7 @@ export const mdel = async (keys: string[]): Promise<void> => {
 };
 
 // Search for key-value pairs by prefix.
-export const getByPrefix = async (prefix: string, limit?: number): Promise<any[]> => {
+export const getByPrefix = async <T = any>(prefix: string, limit?: number): Promise<T[]> => {
   const supabase = client();
   let query = supabase.from("kv_store_c8eef56a").select("key, value").like("key", prefix + "%");
 
@@ -127,7 +127,7 @@ export const getByPrefix = async (prefix: string, limit?: number): Promise<any[]
 };
 // Search for key-value pairs by prefix and value (JSONB column query)
 // Uses Supabase's arrow operators for JSONB filtering (e.g., 'value->enabled')
-export const getByPrefixAndValue = async (prefix: string, jsonPath: string, value: any, limit?: number): Promise<any[]> => {
+export const getByPrefixAndValue = async <T = any>(prefix: string, jsonPath: string, value: any, limit?: number): Promise<T[]> => {
   const supabase = client();
   let query = supabase.from("kv_store_c8eef56a")
     .select("key, value")
