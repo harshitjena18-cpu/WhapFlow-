@@ -88,13 +88,19 @@ export const mget = async <T = any>(keys: string[]): Promise<(T | null)[]> => {
 
 // Scan Queue (Efficient Range Query)
 // Fetches keys starting with "queue:v1:" and less than or equal to endKey
-export const scanQueue = async <T = any>(endKey: string): Promise<T[]> => {
+export const scanQueue = async <T = any>(endKey: string, limit?: number): Promise<T[]> => {
   const supabase = client();
-  // PERFORMANCE: Select only 'value' to reduce payload size as 'key' is unused
-  const { data, error } = await supabase.from("kv_store_c8eef56a")
+  // PERFORMANCE: Select only 'value' to reduce network payload
+  let query = supabase.from("kv_store_c8eef56a")
     .select("value")
     .like("key", "queue:v1:%")
     .lte("key", endKey);
+
+  if (limit) {
+    query = query.limit(limit);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     throw new Error(error.message);
@@ -114,7 +120,7 @@ export const mdel = async (keys: string[]): Promise<void> => {
 // Search for key-value pairs by prefix.
 export const getByPrefix = async <T = any>(prefix: string, limit?: number): Promise<T[]> => {
   const supabase = client();
-  // PERFORMANCE: Select only 'value' to reduce payload size
+  // PERFORMANCE: Select only 'value' to reduce network payload
   let query = supabase.from("kv_store_c8eef56a").select("value").like("key", prefix + "%");
 
   if (limit) {
@@ -131,7 +137,7 @@ export const getByPrefix = async <T = any>(prefix: string, limit?: number): Prom
 // Uses Supabase's arrow operators for JSONB filtering (e.g., 'value->enabled')
 export const getByPrefixAndValue = async <T = any>(prefix: string, jsonPath: string, value: any, limit?: number): Promise<T[]> => {
   const supabase = client();
-  // PERFORMANCE: Select only 'value' to reduce payload size
+  // PERFORMANCE: Select only 'value' to reduce network payload
   let query = supabase.from("kv_store_c8eef56a")
     .select("value")
     .like("key", prefix + "%")
