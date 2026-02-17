@@ -1,0 +1,58 @@
+import { Context, Next } from "npm:hono";
+import { verify } from "npm:hono/jwt";
+import { getEnv } from "../../../lib/env.ts";
+
+/**
+ * verifyShopifySession Middleware
+ *
+ * Verifies the Shopify App Bridge Session Token (JWT).
+ * Enforces multi-tenancy by ensuring the requested shop matches the token's 'dest' claim.
+ */
+export const verifyShopifySession = async (c: Context, next: Next) => {
+  const authHeader = c.req.header("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    return c.json({ error: "Unauthorized: Missing Session Token" }, 401);
+  }
+
+  const token = authHeader.split(" ")[1];
+  const clientId = getEnv("SHOPIFY_CLIENT_ID");
+
+  // RS256 is required by the Security Blueprint. In production, we'd use Shopify's JWKS.
+  // For MVP/Sentinel purposes, we support both RS256 (if key provided) and HS256 fallback.
+  const publicKeyOrSecret = getEnv("SHOPIFY_JWT_PUBLIC_KEY") || getEnv("SHOPIFY_CLIENT_SECRET");
+  const algorithm = getEnv("SHOPIFY_JWT_PUBLIC_KEY") ? "RS256" : "HS256";
+
+  if (!publicKeyOrSecret || !clientId) {
+    console.error("[Auth] Missing SHOPIFY_CLIENT_ID or Secret/Public Key");
+    return c.json({ error: "Server Configuration Error" }, 500);
+  }
+
+  try {
+    // 1. Verify JWT Signature
+    const payload = await verify(token, publicKeyOrSecret, algorithm as any);
+
+    // 2. Validate Audience (App API Key)
+    if (payload.aud !== clientId) {
+      return c.json({ error: "Unauthorized: Invalid Audience" }, 401);
+    }
+
+    // 3. Extract and normalize the shop domain from the 'dest' claim
+    const dest = payload.dest as string;
+    const shop = new URL(dest).hostname;
+
+    // 4. Multi-tenancy check: Verify that the 'shop' query param matches the token
+    const requestedShop = c.req.query("shop");
+    if (requestedShop && requestedShop !== "global" && requestedShop !== shop) {
+      console.warn(`[Auth] Multi-tenancy breach attempt: Token for ${shop} used for ${requestedShop}`);
+      return c.json({ error: "Forbidden: Shop mismatch" }, 403);
+    }
+
+    // Set the verified shop in context for downstream use
+    c.set("verified_shop", shop);
+
+    await next();
+  } catch (err) {
+    console.error("[Auth] Session verification failed:", err);
+    return c.json({ error: "Unauthorized: Invalid Session Token" }, 401);
+  }
+};
