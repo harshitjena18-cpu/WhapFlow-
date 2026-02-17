@@ -3,6 +3,12 @@ import { Automation } from '../types';
 import { Play, Pause, Settings } from 'lucide-react';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
 import { toast } from "sonner@2.0.3";
+import { Switch } from './ui/switch';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "./ui/tooltip";
 
 export function AutomationsView() {
   const [automations, setAutomations] = useState<Automation[]>([]);
@@ -133,27 +139,34 @@ export function AutomationsView() {
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
-                  <button
-                    onClick={() => toggleAutomation(automation.id)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      automation.enabled ? 'bg-[#25D366]' : 'bg-gray-200'
-                    }`}
-                    role="switch"
-                    aria-checked={automation.enabled}
-                    aria-label={`Toggle ${automation.name}`}
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        automation.enabled ? 'translate-x-6' : 'translate-x-1'
-                      }`}
-                    />
-                  </button>
-                  <button
-                    className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
-                    aria-label="Settings"
-                  >
-                    <Settings className="w-5 h-5" />
-                  </button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Switch
+                        checked={automation.enabled}
+                        onCheckedChange={() => toggleAutomation(automation.id)}
+                        aria-label={`Toggle ${automation.name}`}
+                        className="data-[state=checked]:bg-[#25D366]"
+                      />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>
+                        {automation.enabled ? "Disable" : "Enable"} Automation
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                        aria-label="Settings"
+                      >
+                        <Settings className="w-5 h-5" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Automation Settings</p>
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
               </div>
             </div>
