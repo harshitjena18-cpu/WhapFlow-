@@ -24,3 +24,13 @@
 **Vulnerability:** The `executeAutomation` function decrypted PII and overwrote the fields in the `currentCart` object. When the object was subsequently saved back to KV, the PII was stored in plaintext, bypassing the encryption-at-rest requirement.
 **Learning:** Decrypting data directly into objects that are destined for persistence is a common source of accidental data leakage. Security logic should maintain a clear separation between "data at rest" (encrypted) and "data in flight/use" (plaintext).
 **Prevention:** Always decrypt PII into local, short-lived variables. Never mutate persistence-bound objects with plaintext data unless the intent is specifically to change the stored value to plaintext.
+
+## 2025-07-10 - Insecure Redundant Webhook Handlers
+**Vulnerability:** Redundant WhatsApp webhook handlers were present in `index.tsx` and `whatsapp_routes.tsx` that lacked `X-Hub-Signature-256` verification. These handlers shadowed the secure implementation in `webhooks_routes.tsx` and allowed attackers to spoof WhatsApp status updates, potentially manipulating cart statuses.
+**Learning:** In modular Hono applications, registering the same route in the main app after mounting a sub-app can lead to the sub-app's routes being shadowed. Security validations must be consistent across all entry points for a given route.
+**Prevention:** Consolidate webhook handling to a single dedicated module. If redundant routes are necessary for backwards compatibility, ensure all instances implement strict signature verification.
+
+## 2025-07-10 - Automation Crash DoS via ReferenceError
+**Vulnerability:** The `executeAutomation` function in `automation.ts` contained a `ReferenceError` where `updateKeys` and `updateValues` were accessed in an error path but only defined in the success path. This could cause the background job processor to crash when encountering WhatsApp API errors.
+**Learning:** Error handling logic that depends on variables defined in the "happy path" is a common source of runtime crashes. In background jobs, these crashes can halt the entire queue.
+**Prevention:** Always define persistence variables (keys/values) in the outer scope of a function or ensure they are properly initialized before use in any catch/else block. Use `try...finally` or batch update patterns to ensure consistency.

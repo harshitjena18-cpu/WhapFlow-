@@ -1,7 +1,7 @@
 import { Hono } from "npm:hono";
 import { getEnv } from "../../../lib/env.ts";
 import { processWhatsAppStatuses } from "./automation.ts";
-import { sendWhatsAppTemplate } from "./whatsapp.ts";
+import { sendWhatsAppTemplate, verifyWhatsAppSignature } from "./whatsapp.ts";
 
 const app = new Hono();
 
@@ -64,7 +64,17 @@ app.get("/webhooks/whatsapp", (c) => {
 // POST: Status Updates & Messages
 app.post("/webhooks/whatsapp", async (c) => {
   try {
-    const body = await c.req.json();
+    const signature = c.req.header("X-Hub-Signature-256");
+    const rawBody = await c.req.text();
+
+    // SECURITY: Verify HMAC signature to prevent spoofing
+    const isValid = await verifyWhatsAppSignature(rawBody, signature || null);
+    if (!isValid) {
+      console.error("[WhatsApp Webhook] HMAC verification failed");
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const body = JSON.parse(rawBody);
 
     // Check if it's a status update
     if (body.entry && body.entry[0]?.changes && body.entry[0]?.changes[0]?.value?.statuses) {
