@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Automation } from '../types';
-import { Play, Pause, Settings } from 'lucide-react';
+import { Play, Pause, Settings, Zap } from 'lucide-react';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
 import { toast } from "sonner@2.0.3";
+import { Switch } from './ui/switch';
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
 export function AutomationsView() {
   const [automations, setAutomations] = useState<Automation[]>([]);
@@ -87,9 +89,20 @@ export function AutomationsView() {
           </p>
         </div>
         <div className="divide-y divide-gray-100">
-          {automations.map((automation) => (
-            <div
-              key={automation.id}
+          {automations.length === 0 ? (
+            <div className="px-8 py-16 text-center">
+              <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <Zap className="w-8 h-8 text-gray-300" />
+              </div>
+              <h3 className="text-base font-semibold text-gray-900">No automations yet</h3>
+              <p className="text-sm text-gray-500 mt-2 max-w-sm mx-auto">
+                Connect your store and set up your first abandoned cart recovery workflow to start seeing results.
+              </p>
+            </div>
+          ) : (
+            automations.map((automation) => (
+              <div
+                key={automation.id}
               className="px-8 py-7 hover:bg-gray-50 transition-colors duration-150"
             >
               <div className="flex items-start justify-between gap-6">
@@ -133,31 +146,29 @@ export function AutomationsView() {
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
-                  <button
-                    onClick={() => toggleAutomation(automation.id)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      automation.enabled ? 'bg-[#25D366]' : 'bg-gray-200'
-                    }`}
-                    role="switch"
-                    aria-checked={automation.enabled}
+                  <Switch
+                    checked={automation.enabled}
+                    onCheckedChange={() => toggleAutomation(automation.id)}
                     aria-label={`Toggle ${automation.name}`}
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        automation.enabled ? 'translate-x-6' : 'translate-x-1'
-                      }`}
-                    />
-                  </button>
-                  <button
-                    className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
-                    aria-label="Settings"
-                  >
-                    <Settings className="w-5 h-5" />
-                  </button>
+                  />
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                        aria-label="Settings"
+                      >
+                        <Settings className="w-5 h-5" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Automation Settings</p>
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
               </div>
-            </div>
-          ))}
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>
