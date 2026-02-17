@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Automation } from '../types';
-import { Play, Pause, Settings } from 'lucide-react';
+import { Play, Pause, Settings, Zap } from 'lucide-react';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
 import { toast } from "sonner@2.0.3";
 import { Switch } from './ui/switch';
@@ -93,9 +93,20 @@ export function AutomationsView() {
           </p>
         </div>
         <div className="divide-y divide-gray-100">
-          {automations.map((automation) => (
-            <div
-              key={automation.id}
+          {automations.length === 0 ? (
+            <div className="px-8 py-16 text-center">
+              <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <Zap className="w-8 h-8 text-gray-300" />
+              </div>
+              <h3 className="text-base font-semibold text-gray-900">No automations yet</h3>
+              <p className="text-sm text-gray-500 mt-2 max-w-sm mx-auto">
+                Connect your store and set up your first abandoned cart recovery workflow to start seeing results.
+              </p>
+            </div>
+          ) : (
+            automations.map((automation) => (
+              <div
+                key={automation.id}
               className="px-8 py-7 hover:bg-gray-50 transition-colors duration-150"
             >
               <div className="flex items-start justify-between gap-6">
@@ -169,8 +180,9 @@ export function AutomationsView() {
                   </Tooltip>
                 </div>
               </div>
-            </div>
-          ))}
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>
