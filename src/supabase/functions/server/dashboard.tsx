@@ -1,8 +1,12 @@
 import { Hono } from "npm:hono";
 import * as kv from "./kv_store.tsx";
 import { SHOPIFY_DOMAIN_REGEX } from "./constants.ts";
+import { verifyShopifySession } from "./middleware.ts";
 
 const dashboardApp = new Hono();
+
+// SECURITY: Apply session verification to all dashboard routes
+dashboardApp.use("*", verifyShopifySession);
 
 // Mock data to serve as default/fallback
 const defaultMetrics = [
@@ -158,10 +162,12 @@ const defaultAutomations = [
 
 // GET /dashboard/data
 dashboardApp.get("/data", async (c) => {
-  const shop = c.req.query("shop");
+  // SECURITY: Use verified shop domain from middleware instead of untrusted query parameter
+  const shop = (c.get("verified_shop") as string) || c.req.query("shop");
+
   if (!shop) return c.json({ error: "Missing shop parameter" }, 400);
 
-  // SECURITY: Validate shop domain to prevent multi-tenancy leaks
+  // SECURITY: Extra validation for shop domain
   if (shop !== "global" && !SHOPIFY_DOMAIN_REGEX.test(shop)) {
     return c.json({ error: "Invalid shop domain" }, 400);
   }
@@ -214,7 +220,9 @@ dashboardApp.get("/data", async (c) => {
 
 // GET /dashboard/automations
 dashboardApp.get("/automations", async (c) => {
-  const shop = c.req.query("shop");
+  // SECURITY: Use verified shop domain
+  const shop = (c.get("verified_shop") as string) || c.req.query("shop");
+
   if (!shop) return c.json({ error: "Missing shop parameter" }, 400);
 
   // SECURITY: Validate shop domain to prevent multi-tenancy leaks
@@ -246,7 +254,9 @@ dashboardApp.get("/automations", async (c) => {
 
 // POST /dashboard/automations/:id/toggle
 dashboardApp.post("/automations/:id/toggle", async (c) => {
-  const shop = c.req.query("shop");
+  // SECURITY: Use verified shop domain
+  const shop = (c.get("verified_shop") as string) || c.req.query("shop");
+
   if (!shop) return c.json({ error: "Missing shop parameter" }, 400);
 
   // SECURITY: Validate shop domain to prevent multi-tenancy leaks

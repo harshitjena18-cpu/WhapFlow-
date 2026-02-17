@@ -51,7 +51,8 @@ app.post("/", async (c) => {
     // Check uniqueness of template_name within THIS shop
     const prefix = `shop:${shop}:template:`;
     // OPTIMIZATION: Use DB-side filtering to check for existence instead of fetching all templates
-    const existing = await kv.getByPrefixAndValue(prefix, "template_name", template_name, 1);
+    // PERFORMANCE: Ensure we use the correct JSONB path 'value->template_name' for database-side filtering
+    const existing = await kv.getByPrefixAndValue(prefix, "value->template_name", template_name, 1);
     if (existing.length > 0) {
       return c.json({ error: "Template name must be unique" }, 400);
     }

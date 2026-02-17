@@ -21,3 +21,7 @@
 ## 2026-06-15 - [Character Limit Visibility and Modal Keyboard UX]
 **Learning:** For inputs with strict technical constraints (like WhatsApp's 1024-character limit), a simple text counter is often overlooked. Combining it with a visual `Progress` bar provides immediate, peripheral awareness of remaining space. Additionally, modal dialogs for content creation should support `Cmd/Ctrl + Enter` shortcuts to streamline the "Compose-to-Save" flow for power users.
 **Action:** Implement tri-state feedback for character limits (standard, warning at 90%, error at 100%) and supplement with a `Progress` bar. Always provide platform-aware keyboard shortcuts in primary creation modals and communicate them via `aria-keyshortcuts` and native tooltips or titles.
+
+## 2025-05-15 - [Consistency via Standard Components]
+**Learning:** In an established codebase, look for manual implementations of common UI patterns (like toggles) that bypass the design system. Replacing these with standard components (e.g., Radix-based `Switch`) automatically brings in accessibility features and visual consistency. Avoid wrapping interactive elements in extra `div`s inside `TooltipTrigger` to ensure tooltips appear on keyboard focus.
+**Action:** Always check `src/components/ui/` for existing components before modifying. Prioritize replacing "bespoke" controls. When using `TooltipTrigger asChild`, pass the interactive component directly.

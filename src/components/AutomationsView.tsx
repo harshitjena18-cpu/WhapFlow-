@@ -4,7 +4,11 @@ import { Play, Pause, Settings, Zap } from 'lucide-react';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
 import { toast } from "sonner@2.0.3";
 import { Switch } from './ui/switch';
-import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "./ui/tooltip";
 
 export function AutomationsView() {
   const [automations, setAutomations] = useState<Automation[]>([]);
@@ -146,11 +150,21 @@ export function AutomationsView() {
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
-                  <Switch
-                    checked={automation.enabled}
-                    onCheckedChange={() => toggleAutomation(automation.id)}
-                    aria-label={`Toggle ${automation.name}`}
-                  />
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Switch
+                        checked={automation.enabled}
+                        onCheckedChange={() => toggleAutomation(automation.id)}
+                        aria-label={`Toggle ${automation.name}`}
+                        className="data-[state=checked]:bg-[#25D366]"
+                      />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>
+                        {automation.enabled ? "Disable" : "Enable"} Automation
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <button
