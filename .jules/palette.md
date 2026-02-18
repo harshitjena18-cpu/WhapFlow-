@@ -25,3 +25,7 @@
 ## 2025-05-15 - [Consistency via Standard Components]
 **Learning:** In an established codebase, look for manual implementations of common UI patterns (like toggles) that bypass the design system. Replacing these with standard components (e.g., Radix-based `Switch`) automatically brings in accessibility features and visual consistency. Avoid wrapping interactive elements in extra `div`s inside `TooltipTrigger` to ensure tooltips appear on keyboard focus.
 **Action:** Always check `src/components/ui/` for existing components before modifying. Prioritize replacing "bespoke" controls. When using `TooltipTrigger asChild`, pass the interactive component directly.
+
+## 2024-05-24 - [Visual Usage Indicators and Accessible Informational Tooltips]
+**Learning:** Usage metrics (e.g., limits, quotas) are more intuitive when paired with visual `Progress` indicators, providing immediate peripheral feedback on consumption. When adding tooltips to text labels for context, wrapping the trigger in a `<button type="button">` with an `aria-label` ensures the information is discoverable via keyboard and screen readers.
+**Action:** Use `Progress` components for consumption-based metrics. Always ensure tooltip triggers are focusable elements if they provide essential context; use buttons for static text labels to maintain accessibility.

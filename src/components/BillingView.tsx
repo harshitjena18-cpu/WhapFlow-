@@ -1,6 +1,12 @@
-import { Check, CreditCard, Sparkles, Zap, MessageSquare } from 'lucide-react';
+import { Check, CreditCard, Sparkles, Zap, MessageSquare, Loader2, Info } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
+import { Progress } from './ui/progress';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "./ui/tooltip";
 import { useEffect, useState } from 'react';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
 import { toast } from 'sonner@2.0.3';
@@ -101,8 +107,9 @@ export function BillingView() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#25D366]"></div>
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <Loader2 className="animate-spin h-8 w-8 text-[#25D366]" />
+        <p className="text-sm text-gray-500 animate-pulse">Loading your billing details...</p>
       </div>
     );
   }
@@ -138,48 +145,70 @@ export function BillingView() {
               <Sparkles className="w-5 h-5 text-yellow-400" /> 
               Current Plan: {billingData?.plan_name || 'Free'}
             </h2>
-            <p className="text-sm text-gray-400 mt-1">
-              Your billing cycle resets on {resetDate}.
-            </p>
+            <div className="flex items-center gap-1.5 text-sm text-gray-400 mt-1">
+              <p>Your billing cycle resets on {resetDate}.</p>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button type="button" className="outline-none focus-visible:ring-1 focus-visible:ring-white rounded-full transition-all" aria-label="Billing cycle info">
+                    <Info className="w-3.5 h-3.5 cursor-help opacity-70 hover:opacity-100" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Your usage limits will refresh on this date.</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
           </div>
-          <Button className="bg-white text-gray-900 hover:bg-gray-100 font-semibold">
+          <Button className="bg-white text-gray-900 hover:bg-gray-100 font-semibold transition-all active:scale-95 shadow-sm">
             Manage Subscription
           </Button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-t border-gray-700 pt-8">
-           <div>
-             <div className="flex justify-between mb-2">
-               <span className="text-sm font-medium text-gray-300 flex items-center gap-2">
-                 <Zap className="w-4 h-4 text-orange-400" /> AI Generations
-               </span>
+           <div className="group">
+             <div className="flex justify-between mb-3">
+               <Tooltip>
+                 <TooltipTrigger asChild>
+                   <button type="button" className="text-sm font-medium text-gray-300 flex items-center gap-2 cursor-help group-hover:text-white transition-colors outline-none focus-visible:ring-1 focus-visible:ring-white rounded-sm px-0.5 -ml-0.5">
+                     <Zap className="w-4 h-4 text-orange-400" /> AI Generations
+                   </button>
+                 </TooltipTrigger>
+                 <TooltipContent>
+                   <p>Recovery messages generated with AI assistance.</p>
+                 </TooltipContent>
+               </Tooltip>
                <span className="text-sm font-bold">
                  {aiUsed} / {aiLimit === Infinity ? '∞' : aiLimit}
                </span>
              </div>
-             <div className="w-full bg-gray-700 rounded-full h-2">
-               <div 
-                 className="bg-orange-500 h-2 rounded-full transition-all duration-300" 
-                 style={{ width: `${Math.min(aiPercentage, 100)}%` }}
-               ></div>
-             </div>
+             <Progress
+               value={Math.min(aiPercentage, 100)}
+               className="h-2 bg-gray-700 [&_[data-slot=progress-indicator]]:bg-orange-500"
+               aria-label="AI Generations Usage"
+             />
            </div>
            
-           <div>
-             <div className="flex justify-between mb-2">
-               <span className="text-sm font-medium text-gray-300 flex items-center gap-2">
-                 <MessageSquare className="w-4 h-4 text-green-400" /> WhatsApp Conversations
-               </span>
+           <div className="group">
+             <div className="flex justify-between mb-3">
+               <Tooltip>
+                 <TooltipTrigger asChild>
+                   <button type="button" className="text-sm font-medium text-gray-300 flex items-center gap-2 cursor-help group-hover:text-white transition-colors outline-none focus-visible:ring-1 focus-visible:ring-white rounded-sm px-0.5 -ml-0.5">
+                     <MessageSquare className="w-4 h-4 text-green-400" /> WhatsApp Conversations
+                   </button>
+                 </TooltipTrigger>
+                 <TooltipContent>
+                   <p>Unique conversations initiated by automation.</p>
+                 </TooltipContent>
+               </Tooltip>
                <span className="text-sm font-bold">{whatsappUsed} / {whatsappLimit}</span>
              </div>
-             <div className="w-full bg-gray-700 rounded-full h-2">
-               <div 
-                 className="bg-green-500 h-2 rounded-full transition-all duration-300" 
-                 style={{ width: `${Math.min(whatsappPercentage, 100)}%` }}
-               ></div>
-             </div>
+             <Progress
+               value={Math.min(whatsappPercentage, 100)}
+               className="h-2 bg-gray-700 [&_[data-slot=progress-indicator]]:bg-green-500"
+               aria-label="WhatsApp Conversations Usage"
+             />
              {whatsappLimit === 0 && (
-               <p className="text-xs text-gray-500 mt-2">Upgrade to unlock WhatsApp automation.</p>
+               <p className="text-xs text-gray-500 mt-2 italic">Upgrade to unlock WhatsApp automation.</p>
              )}
            </div>
         </div>
