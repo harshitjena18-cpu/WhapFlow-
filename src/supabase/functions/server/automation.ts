@@ -126,7 +126,7 @@ export async function executeAutomation(payload: AutomationPayload) {
       return;
     }
 
-    // 3. Final Execution
+    // 4. Final Execution
     if (isPending && hasEnabledTemplate && automationCheck.allowed && whatsappCheck.allowed) {
       console.log(`✅ CONDITIONS MET: Ready to send WhatsApp message.`);
       console.log(`   - Automation ready using template: ${templateName}`);
@@ -137,11 +137,11 @@ export async function executeAutomation(payload: AutomationPayload) {
         languageCode: "en_US"
       });
 
+      const updateKeys: string[] = [];
+      const updateValues: any[] = [];
+
       if (result.success) {
         // PERFORMANCE: Batch all updates (Billing, Message Map, Cart) in a single request
-        const updateKeys = [];
-        const updateValues = [];
-
         // 1. Increment Usage (manually since we already have the config)
         billingConfig.whatsapp_conversations_used += 1;
         updateKeys.push(`${BILLING_KEY_PREFIX}${shop}`);
@@ -158,28 +158,22 @@ export async function executeAutomation(payload: AutomationPayload) {
              updateValues.push(cartId);
              console.log(`🔗 Mapped message ${result.wamid} to cart ${cartId}`);
         }
-
-        updateKeys.push(cartKey);
-        updateValues.push(currentCart);
-
-        // Atomic batch update
-        await kv.mset(updateKeys, updateValues);
-        console.log(`⚡ [Automation] Optimized: Persisted ${updateKeys.length} updates in a single batch.`);
-
       } else {
         console.error(`❌ AUTOMATION FAILED: WhatsApp API Error for cart ${cartId}`, result.error);
         currentCart.status = 'failed';
-        currentCart.last_error = result.error;
-        await kv.set(cartKey, currentCart);
+        currentCart.last_error = typeof result.error === 'string' ? result.error : JSON.stringify(result.error);
       }
 
+      updateKeys.push(cartKey);
+      updateValues.push(currentCart);
+
+      // Atomic batch update for all outcomes
       await kv.mset(updateKeys, updateValues);
       console.log(`⚡ [Automation] Optimized: Persisted ${updateKeys.length} updates in a single batch.`);
+
     } else {
-      console.error(`❌ AUTOMATION FAILED: WhatsApp API Error for cart ${cartId}`, result.error);
-      currentCart.status = 'failed';
-      currentCart.last_error = result.error;
-      await kv.set(cartKey, currentCart);
+      console.log(`⏹️ AUTOMATION SKIPPED: Pre-conditions failed (Status: ${currentCart.status})`);
+      // We don't mark as failed here, as it might just be already processed or over limit
     }
 
   } catch (err) {

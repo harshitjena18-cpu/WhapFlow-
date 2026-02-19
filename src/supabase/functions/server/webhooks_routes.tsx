@@ -37,16 +37,6 @@ webhooksApp.post("/shopify", async (c) => {
       return c.json({ error: 'Unauthorized' }, 401);
     }
 
-    // SECURITY: Deduplication (Prevent Replay Attacks)
-    // Only perform deduplication AFTER successful HMAC verification to prevent DoS via KV resource exhaustion
-    if (webhookId) {
-      const alreadyProcessed = await kv.get(`webhook_id:${webhookId}`);
-      if (alreadyProcessed) {
-        return c.json({ status: 'success', duplicate: true }, 200);
-      }
-      await kv.set(`webhook_id:${webhookId}`, { processed_at: new Date().toISOString() });
-    }
-
     if (!shop) {
         console.error("[Shopify Webhook] Missing Shop Domain header");
         return c.json({ error: 'Missing shop domain' }, 400);
@@ -54,17 +44,32 @@ webhooksApp.post("/shopify", async (c) => {
 
     const payload = JSON.parse(rawBody);
 
-    // 1. Extract key data points
+    // 1. PERFORMANCE: Massively parallelize deduplication check, I/O fetching, and PII encryption.
+    // This reduces the number of sequential await points from ~6 to 2.
     const customerPhone = payload.customer?.phone || payload.phone || "No phone provided";
     const customerName = payload.customer ? `${payload.customer.first_name} ${payload.customer.last_name}` : "Guest";
     const customerEmail = payload.customer?.email || payload.email || "";
 
-    // SECURITY: Encrypt PII at rest
-    const [encName, encEmail, encPhone] = await Promise.all([
-      encrypt(customerName),
-      encrypt(customerEmail),
-      encrypt(customerPhone)
+    const [
+      alreadyProcessed,
+      [encName, encEmail, encPhone],
+      configs,
+      rawTemplates
+    ] = await Promise.all([
+      webhookId ? kv.get(`webhook_id:${webhookId}`) : Promise.resolve(null),
+      Promise.all([encrypt(customerName), encrypt(customerEmail), encrypt(customerPhone)]),
+      kv.mget([
+        `merchant:${shop}`,
+        `shop:${shop}:config:whatsapp`,
+        `${billing.BILLING_KEY_PREFIX}${shop}`
+      ]),
+      kv.getByPrefix(`shop:${shop}:template:`)
     ]);
+
+    // SECURITY: Deduplication (Prevent Replay Attacks)
+    if (alreadyProcessed) {
+      return c.json({ status: 'success', duplicate: true }, 200);
+    }
 
     const firstProduct = payload.line_items?.[0]?.title || "Unknown Product";
     const cartValue = payload.total_price || "0.00";
@@ -77,15 +82,14 @@ webhooksApp.post("/shopify", async (c) => {
       product: `${firstProduct} (+${Math.max(0, (payload.line_items?.length || 0) - 1)} others)`,
       value: `${cartValue} ${currency}`,
     });
-    // 3. PERSISTENCE: Save to Database
-    console.log('\n💾 PERSISTENCE: Saving abandoned cart to database...');
 
+    // 3. PERSISTENCE Prep
     const cartId = payload.id ? String(payload.id) : crypto.randomUUID();
     const cartKey = `abandoned_cart:${cartId}`;
 
     const abandonedCartData = {
       id: cartId,
-      shop: shop, // CRITICAL: Link cart to store
+      shop: shop,
       customer_name: encName,
       customer_email: encEmail,
       phone: encPhone,
@@ -97,28 +101,18 @@ webhooksApp.post("/shopify", async (c) => {
       created_at: new Date().toISOString()
     };
 
-    // Using the persistent KV store to simulate an 'abandoned_carts' table
-    await kv.set(cartKey, abandonedCartData);
+    // 4. PERFORMANCE: Batch persistence of cart data AND deduplication marker
+    const updateKeys = [cartKey];
+    const updateValues: any[] = [abandonedCartData];
+    if (webhookId) {
+      updateKeys.push(`webhook_id:${webhookId}`);
+      updateValues.push({ processed_at: new Date().toISOString() });
+    }
+    await kv.mset(updateKeys, updateValues);
 
-    console.log(`✅ SUCCESS: Cart saved with ID [${cartId}]`);
-    console.log('Status: "pending" (Waiting for automation trigger)');
-    console.log('-----------------------------------\n');
+    console.log(`✅ SUCCESS: Cart saved with ID [${cartId}] (and deduplication marked)`);
 
-    // 4. AUTOMATION DELAY: Wait, then check logic
-
-    // CHECK INTEGRATIONS & LIMITS (Parallelized for performance)
-    console.log('\n🔍 AUTOMATION CHECKS: Verifying integration status and limits...');
-
-    // PERFORMANCE: Batch fetch dependencies to reduce round-trip latency
-    const [configs, rawTemplates] = await Promise.all([
-      kv.mget([
-        `merchant:${shop}`,
-        `shop:${shop}:config:whatsapp`,
-        `${billing.BILLING_KEY_PREFIX}${shop}`
-      ]),
-      kv.getByPrefix(`shop:${shop}:template:`)
-    ]);
-
+    // 5. AUTOMATION CHECKS
     const [merchantData, whatsappConfig, preFetchedBilling] = configs;
 
     // Use pre-fetched data to avoid redundant KV round-trips
