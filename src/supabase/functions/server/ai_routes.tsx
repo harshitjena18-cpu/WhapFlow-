@@ -1,12 +1,17 @@
 import { Hono } from "npm:hono";
 import * as billing from "./billing.ts";
+import { verifyShopifySession } from "./middleware.ts";
 
 const app = new Hono();
+
+// SECURITY: Apply session verification to all AI routes
+app.use("*", verifyShopifySession);
 
 // GET /api/ai/usage
 app.get("/usage", async (c) => {
   try {
-    const shop = c.req.query("shop");
+    // SECURITY: Use verified shop domain from middleware
+    const shop = (c.get("verified_shop") as string) || c.req.query("shop");
     if (!shop) return c.json({ error: "Shop parameter required" }, 400);
 
     const config = await billing.getBillingConfig(shop);

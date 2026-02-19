@@ -1,13 +1,18 @@
 import { Hono } from "npm:hono";
 import * as kv from "./kv_store.tsx";
 import { DEFAULT_CONFIG } from "./types.ts";
+import { verifyShopifySession } from "./middleware.ts";
 
 const app = new Hono();
+
+// SECURITY: Apply session verification to all integration routes
+app.use("*", verifyShopifySession);
 
 // GET /api/integrations/status
 app.get("/status", async (c) => {
   try {
-    const shop = c.req.query("shop") || "global";
+    // SECURITY: Use verified shop domain from middleware
+    const shop = (c.get("verified_shop") as string) || c.req.query("shop") || "global";
     // SECURITY: Scoping configurations by shop to prevent multi-tenancy leaks
     const shopifyKey = `shop:${shop}:config:shopify`;
     const whatsappKey = `shop:${shop}:config:whatsapp`;
@@ -58,7 +63,8 @@ app.get("/status", async (c) => {
 app.post("/status", async (c) => {
   try {
     const body = await c.req.json();
-    const shop = body.shop || c.req.query("shop") || "global";
+    // SECURITY: Use verified shop domain from middleware
+    const shop = (c.get("verified_shop") as string) || body.shop || c.req.query("shop") || "global";
 
     // SECURITY: Scoping configurations by shop to prevent multi-tenancy leaks
     const shopifyKey = `shop:${shop}:config:shopify`;
