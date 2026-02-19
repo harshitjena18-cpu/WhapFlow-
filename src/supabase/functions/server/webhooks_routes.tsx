@@ -50,26 +50,39 @@ webhooksApp.post("/shopify", async (c) => {
     const customerName = payload.customer ? `${payload.customer.first_name} ${payload.customer.last_name}` : "Guest";
     const customerEmail = payload.customer?.email || payload.email || "";
 
-    const [
-      alreadyProcessed,
-      [encName, encEmail, encPhone],
-      configs,
-      rawTemplates
-    ] = await Promise.all([
+    // PERFORMANCE: Parallelize all independent dependencies and deduplication check.
+    // This reduces the number of sequential asynchronous operations in the critical path.
+    const [dedupCheck, configsResult, encryptionResult] = await Promise.all([
+      // SECURITY: Deduplication check (Prevent Replay Attacks)
       webhookId ? kv.get(`webhook_id:${webhookId}`) : Promise.resolve(null),
-      Promise.all([encrypt(customerName), encrypt(customerEmail), encrypt(customerPhone)]),
-      kv.mget([
-        `merchant:${shop}`,
-        `shop:${shop}:config:whatsapp`,
-        `${billing.BILLING_KEY_PREFIX}${shop}`
+
+      // Batch fetch dependencies to reduce round-trip latency
+      Promise.all([
+        kv.mget([
+          `merchant:${shop}`,
+          `shop:${shop}:config:whatsapp`,
+          `${billing.BILLING_KEY_PREFIX}${shop}`
+        ]),
+        kv.getByPrefix(`shop:${shop}:template:`)
       ]),
-      kv.getByPrefix(`shop:${shop}:template:`)
+
+      // SECURITY: Encrypt PII at rest
+      Promise.all([
+        encrypt(customerName),
+        encrypt(customerEmail),
+        encrypt(customerPhone)
+      ])
     ]);
 
-    // SECURITY: Deduplication (Prevent Replay Attacks)
-    if (alreadyProcessed) {
+    // Check deduplication result
+    if (webhookId && dedupCheck) {
       return c.json({ status: 'success', duplicate: true }, 200);
     }
+
+    const [configs, rawTemplates] = configsResult;
+    const [encName, encEmail, encPhone] = encryptionResult;
+
+    const [merchantData, whatsappConfig, preFetchedBilling] = configs;
 
     const firstProduct = payload.line_items?.[0]?.title || "Unknown Product";
     const cartValue = payload.total_price || "0.00";
@@ -101,7 +114,7 @@ webhooksApp.post("/shopify", async (c) => {
       created_at: new Date().toISOString()
     };
 
-    // 4. PERFORMANCE: Batch persistence of cart data AND deduplication marker
+    // PERFORMANCE: Batch all writes (deduplication mark + cart save) in a single request
     const updateKeys = [cartKey];
     const updateValues: any[] = [abandonedCartData];
     if (webhookId) {
@@ -110,10 +123,15 @@ webhooksApp.post("/shopify", async (c) => {
     }
     await kv.mset(updateKeys, updateValues);
 
-    console.log(`✅ SUCCESS: Cart saved with ID [${cartId}] (and deduplication marked)`);
+    console.log(`✅ SUCCESS: Cart saved with ID [${cartId}]`);
+    console.log('Status: "pending" (Waiting for automation trigger)');
+    console.log('-----------------------------------\n');
 
-    // 5. AUTOMATION CHECKS
-    const [merchantData, whatsappConfig, preFetchedBilling] = configs;
+    // 4. AUTOMATION DELAY: Wait, then check logic
+
+    // CHECK INTEGRATIONS & LIMITS (Parallelized for performance)
+    console.log('\n🔍 AUTOMATION CHECKS: Verifying integration status and limits...');
+
 
     // Use pre-fetched data to avoid redundant KV round-trips
     const [merchant, billingConfig] = await Promise.all([
@@ -192,16 +210,6 @@ webhooksApp.post("/app/uninstalled", async (c) => {
       return c.json({ error: 'Unauthorized' }, 401);
     }
 
-    // SECURITY: Deduplication (Prevent Replay Attacks)
-    // Only perform deduplication AFTER successful HMAC verification to prevent DoS via KV resource exhaustion
-    if (webhookId) {
-      const alreadyProcessed = await kv.get(`webhook_id:${webhookId}`);
-      if (alreadyProcessed) {
-        return c.json({ status: 'success', duplicate: true }, 200);
-      }
-      await kv.set(`webhook_id:${webhookId}`, { processed_at: new Date().toISOString() });
-    }
-
     if (!shop) {
         return c.json({ error: 'Missing shop domain' }, 400);
     }
@@ -210,11 +218,27 @@ webhooksApp.post("/app/uninstalled", async (c) => {
     const merchantKey = `merchant:${shop}`;
     const shopifyKey = `shop:${shop}:config:shopify`;
 
-    // PERFORMANCE: Batch GETs to reduce round-trips
-    const [merchant, shopifyConfig] = await kv.mget([merchantKey, shopifyKey]);
+    // PERFORMANCE: Parallelize deduplication check and merchant/config fetch
+    const [alreadyProcessed, configs] = await Promise.all([
+      webhookId ? kv.get(`webhook_id:${webhookId}`) : Promise.resolve(null),
+      kv.mget([merchantKey, shopifyKey])
+    ]);
+
+    // SECURITY: Deduplication (Prevent Replay Attacks)
+    if (webhookId && alreadyProcessed) {
+      return c.json({ status: 'success', duplicate: true }, 200);
+    }
+
+    const [merchant, shopifyConfig] = configs;
 
     const updateKeys = [];
     const updateValues = [];
+
+    // Mark webhook as processed in the same batch update
+    if (webhookId) {
+        updateKeys.push(`webhook_id:${webhookId}`);
+        updateValues.push({ processed_at: new Date().toISOString() });
+    }
 
     if (merchant) {
         console.log(`[Uninstall] Deactivating merchant record for ${shop}...`);
