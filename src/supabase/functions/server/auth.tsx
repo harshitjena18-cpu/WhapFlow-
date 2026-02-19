@@ -5,6 +5,16 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 const authApp = new Hono();
 
 authApp.post("/signup", async (c) => {
+  // SECURITY: Protect admin signup from unauthorized use
+  // This endpoint uses the service role key to create users, so it MUST be protected.
+  const authHeader = c.req.header("Authorization");
+  const serviceKey = getEnv("SUPABASE_SERVICE_ROLE_KEY");
+
+  if (!serviceKey || !authHeader || authHeader !== `Bearer ${serviceKey}`) {
+    console.error("[Auth] Unauthorized attempt to call /signup");
+    return c.json({ error: "Unauthorized: Invalid or missing token" }, 401);
+  }
+
   const { email, password, user_metadata } = await c.req.json();
 
   const supabaseUrl = getEnv("SUPABASE_URL");

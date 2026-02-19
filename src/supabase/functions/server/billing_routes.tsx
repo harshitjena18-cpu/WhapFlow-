@@ -5,8 +5,13 @@ import { getMerchantCredentials, shopifyGraphql, verifyWebhookHmac } from "./sho
 import { PlanLevel, PLAN_LIMITS } from "./billing.ts";
 import { getEnv } from "../../../lib/env.ts";
 import { API_DOMAIN, APP_DOMAIN, SERVER_BASE_PATH, SHOPIFY_DOMAIN_REGEX } from "./constants.ts";
+import { verifyShopifySession } from "./middleware.ts";
 
 const app = new Hono();
+
+// SECURITY: Apply session verification to sensitive billing routes
+app.use("/create-subscription", verifyShopifySession);
+app.use("/status", verifyShopifySession);
 
 // CONFIG
 // In production, use env vars. For now, hardcode or derive.
@@ -64,7 +69,10 @@ app.get("/plans", (c) => {
  */
 app.post("/create-subscription", async (c) => {
   try {
-    const { plan, shop } = await c.req.json();
+    const body = await c.req.json();
+    // SECURITY: Use verified shop domain from middleware
+    const shop = (c.get("verified_shop") as string) || body.shop;
+    const { plan } = body;
     
     if (!plan || !shop) {
       return c.json({ error: "Missing plan or shop" }, 400);
@@ -159,7 +167,8 @@ app.post("/create-subscription", async (c) => {
  * GET /api/billing/status?shop=example.myshopify.com
  */
 app.get("/status", async (c) => {
-  const shop = c.req.query("shop");
+  // SECURITY: Use verified shop domain from middleware
+  const shop = (c.get("verified_shop") as string) || c.req.query("shop");
   if (!shop) return c.json({ error: "Shop required" }, 400);
 
   // SECURITY: Validate shop domain to prevent multi-tenancy leaks
