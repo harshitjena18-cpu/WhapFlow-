@@ -44,7 +44,8 @@ webhooksApp.post("/shopify", async (c) => {
 
     const payload = JSON.parse(rawBody);
 
-    // 1. Extract key data points
+    // 1. PERFORMANCE: Massively parallelize deduplication check, I/O fetching, and PII encryption.
+    // This reduces the number of sequential await points from ~6 to 2.
     const customerPhone = payload.customer?.phone || payload.phone || "No phone provided";
     const customerName = payload.customer ? `${payload.customer.first_name} ${payload.customer.last_name}` : "Guest";
     const customerEmail = payload.customer?.email || payload.email || "";
@@ -94,15 +95,14 @@ webhooksApp.post("/shopify", async (c) => {
       product: `${firstProduct} (+${Math.max(0, (payload.line_items?.length || 0) - 1)} others)`,
       value: `${cartValue} ${currency}`,
     });
-    // 3. PERSISTENCE: Save to Database
-    console.log('\n💾 PERSISTENCE: Saving abandoned cart to database...');
 
+    // 3. PERSISTENCE Prep
     const cartId = payload.id ? String(payload.id) : crypto.randomUUID();
     const cartKey = `abandoned_cart:${cartId}`;
 
     const abandonedCartData = {
       id: cartId,
-      shop: shop, // CRITICAL: Link cart to store
+      shop: shop,
       customer_name: encName,
       customer_email: encEmail,
       phone: encPhone,
