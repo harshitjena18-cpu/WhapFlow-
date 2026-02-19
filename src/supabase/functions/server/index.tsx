@@ -158,6 +158,7 @@ app.get(`${SERVER_BASE_PATH}/api/webhooks/whatsapp`, (c) => {
 });
 
 // POST: Status Updates & Messages
+// SECURITY: Secured with HMAC signature verification
 app.post(`${SERVER_BASE_PATH}/api/webhooks/whatsapp`, async (c) => {
   try {
     const signature = c.req.header("X-Hub-Signature-256");

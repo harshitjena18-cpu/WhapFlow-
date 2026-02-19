@@ -2,7 +2,7 @@ import { CheckCircle2, Circle, Lock, ArrowRight, Loader2, PlayCircle } from 'luc
 import { Button } from '../ui/button';
 import { Link, useNavigate } from 'react-router';
 import { useState } from 'react';
-import { toast } from "sonner@2.0.3";
+import { toast } from "sonner";
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 
 interface ReadinessData {

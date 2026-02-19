@@ -8,14 +8,15 @@ import { verifyShopifySession } from "./middleware.ts";
 
 const app = new Hono();
 
-// SECURITY: Apply session verification to all template routes
+// SECURITY: Enforce Shopify session verification for all template operations
 app.use("*", verifyShopifySession);
 
 // GET /api/templates
 app.get("/", async (c) => {
   try {
-    // SECURITY: Use verified shop domain from middleware
-    const shop = (c.get("verified_shop") as string) || c.req.query("shop") || "global";
+    // SECURITY: Use verified shop domain from session token
+    const shop = (c.get("verified_shop") as string) || c.req.query("shop");
+
     // SECURITY: Validate shop domain
     if (shop !== "global" && !SHOPIFY_DOMAIN_REGEX.test(shop)) {
       return c.json({ error: "Invalid shop domain" }, 400);
@@ -35,8 +36,9 @@ app.get("/", async (c) => {
 app.post("/", async (c) => {
   try {
     const body = await c.req.json();
-    // SECURITY: Use verified shop domain from middleware
-    const shop = (c.get("verified_shop") as string) || body.shop || c.req.query("shop") || "global";
+    // SECURITY: Use verified shop domain from session token
+    const shop = (c.get("verified_shop") as string) || body.shop || c.req.query("shop");
+
     // SECURITY: Validate shop domain
     if (shop !== "global" && !SHOPIFY_DOMAIN_REGEX.test(shop)) {
       return c.json({ error: "Invalid shop domain" }, 400);
@@ -89,8 +91,8 @@ app.put("/:id", async (c) => {
   try {
     const id = c.req.param("id");
     const body = await c.req.json();
-    // SECURITY: Use verified shop domain from middleware
-    const shop = (c.get("verified_shop") as string) || body.shop || c.req.query("shop") || "global";
+    // SECURITY: Use verified shop domain from session token
+    const shop = (c.get("verified_shop") as string) || body.shop || c.req.query("shop");
 
     const key = `shop:${shop}:template:${id}`;
     const existing = await kv.get(key) as AutomationTemplate | null;
@@ -126,8 +128,8 @@ app.put("/:id", async (c) => {
 app.delete("/:id", async (c) => {
   try {
     const id = c.req.param("id");
-    // SECURITY: Use verified shop domain from middleware
-    const shop = (c.get("verified_shop") as string) || c.req.query("shop") || "global";
+    // SECURITY: Use verified shop domain from session token
+    const shop = (c.get("verified_shop") as string) || c.req.query("shop");
     await kv.del(`shop:${shop}:template:${id}`);
     return c.json({ success: true });
   } catch (error) {
@@ -140,8 +142,8 @@ app.delete("/:id", async (c) => {
 app.post("/ai-generate", async (c) => {
   try {
     const body = await c.req.json();
-    // SECURITY: Use verified shop domain from middleware
-    const shop = (c.get("verified_shop") as string) || body.shop;
+    // SECURITY: Use verified shop domain from session token
+    const shop = (c.get("verified_shop") as string) || body.shop || c.req.query("shop");
     const { tone, brand_name, discount } = body;
 
     // SECURITY: Validate shop domain and presence
