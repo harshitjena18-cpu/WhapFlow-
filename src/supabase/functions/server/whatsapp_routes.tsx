@@ -67,7 +67,7 @@ app.post("/webhooks/whatsapp", async (c) => {
     const signature = c.req.header("X-Hub-Signature-256");
     const rawBody = await c.req.text();
 
-    // SECURITY: Verify HMAC signature to prevent spoofing
+    // SECURITY: Verify HMAC signature from WhatsApp/Meta
     const isValid = await verifyWhatsAppSignature(rawBody, signature || null);
     if (!isValid) {
       console.error("[WhatsApp Webhook] HMAC verification failed");

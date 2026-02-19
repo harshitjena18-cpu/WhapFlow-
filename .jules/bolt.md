@@ -62,3 +62,7 @@
 1. Parallelize all independent dependencies (merchant credentials, billing config) AND PII decryption into a single `Promise.all` block.
 2. Hoist static data objects outside of React components to prevent re-allocation.
 3. Use `React.memo` for list items (e.g., `MetricCard`) that don't change when siblings do.
+
+## 2026-03-08 - [KV Payload Optimization & JSONB Path Fix]
+**Learning:** Database access methods like `select("*")` or `select("key, value")` when only the `value` is needed create unnecessary network overhead in Edge Functions. Additionally, Supabase/PostgREST requires explicit `value->field` syntax for JSONB filtering; using just the field name attempts to query a non-existent column, causing uniqueness checks to fail silently (returning 0 results).
+**Action:** Always use targeted `.select("value")` for KV read operations where the key is already known or irrelevant to the caller. Ensure all JSONB filters use the correct arrow operators (`value->`) to enable database-side filtering.

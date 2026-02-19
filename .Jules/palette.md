@@ -13,3 +13,7 @@
 ## 2025-05-18 - [Tokenized Variables UX]
 **Learning:** Representing technical placeholders (like {{customer_name}}) as pill-shaped "tokens" rather than plain text or standard buttons makes them feel more like distinct, reusable entities. Combining these with tooltips that describe the underlying data source provides immediate clarity without cluttering the UI.
 **Action:** Use the "Chip/Pill" pattern for variable insertion UI, ensuring each token has a descriptive tooltip and an accessible `aria-label`.
+
+## 2025-05-19 - [Accessible Tooltips on Interactive Components]
+**Learning:** When using `TooltipTrigger asChild` with interactive components like `Switch` or `Button`, wrapping the child in a `div` or `span` can break keyboard focus propagation to the tooltip trigger. The tooltip will work on hover but fail to show on Tab focus, reducing accessibility for keyboard users.
+**Action:** Always ensure the interactive component is the direct child of `TooltipTrigger` when `asChild` is used, and avoid redundant wrapper elements that swallow focus events.
