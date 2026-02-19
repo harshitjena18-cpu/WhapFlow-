@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Automation } from '../types';
-import { Play, Pause, Settings, Zap } from 'lucide-react';
+import { Play, Pause, Settings, Zap, Loader2 } from 'lucide-react';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
-import { toast } from "sonner@2.0.3";
+import { toast } from "sonner";
 import { Switch } from './ui/switch';
+import { Button } from './ui/button';
 import {
   Tooltip,
   TooltipContent,
@@ -13,6 +14,7 @@ import {
 export function AutomationsView() {
   const [automations, setAutomations] = useState<Automation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isUpdating, setIsUpdating] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     fetchAutomations();
@@ -37,6 +39,9 @@ export function AutomationsView() {
   };
 
   const toggleAutomation = async (id: string) => {
+    // Set updating state
+    setIsUpdating(prev => ({ ...prev, [id]: true }));
+
     // Optimistic update
     setAutomations(
       automations.map((automation) =>
@@ -58,18 +63,22 @@ export function AutomationsView() {
         throw new Error('Failed to toggle');
       }
       
-      toast.success('Automation updated');
+      const automation = automations.find(a => a.id === id);
+      const action = automation?.enabled ? 'disabled' : 'enabled';
+      toast.success(`Automation ${action} successfully`);
     } catch (error) {
       toast.error('Failed to update automation');
       // Revert on failure
       fetchAutomations();
+    } finally {
+      setIsUpdating(prev => ({ ...prev, [id]: false }));
     }
   };
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#25D366]"></div>
+        <Loader2 className="w-8 h-8 animate-spin text-[#25D366]" />
       </div>
     );
   }
@@ -155,6 +164,7 @@ export function AutomationsView() {
                       <Switch
                         checked={automation.enabled}
                         onCheckedChange={() => toggleAutomation(automation.id)}
+                        disabled={isUpdating[automation.id]}
                         aria-label={`Toggle ${automation.name}`}
                         className="data-[state=checked]:bg-[#25D366]"
                       />
@@ -167,15 +177,17 @@ export function AutomationsView() {
                   </Tooltip>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <button
-                        className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-gray-400 hover:text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
                         aria-label="Settings"
                       >
                         <Settings className="w-5 h-5" />
-                      </button>
+                      </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Automation Settings</p>
+                      <p>Automation Settings (Coming Soon)</p>
                     </TooltipContent>
                   </Tooltip>
                 </div>
