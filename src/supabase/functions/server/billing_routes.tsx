@@ -70,8 +70,8 @@ app.get("/plans", (c) => {
 app.post("/create-subscription", async (c) => {
   try {
     const body = await c.req.json();
-    // SECURITY: Use verified shop domain from middleware
-    const shop = (c.get("verified_shop") as string) || body.shop;
+    // SECURITY: Use verified shop domain from session token (guaranteed by middleware)
+    const shop = c.get("verified_shop") as string;
     const { plan } = body;
     
     if (!plan || !shop) {
@@ -79,7 +79,7 @@ app.post("/create-subscription", async (c) => {
     }
 
     // SECURITY: Validate shop domain to prevent multi-tenancy leaks
-    if (shop !== "global" && !SHOPIFY_DOMAIN_REGEX.test(shop)) {
+    if (!SHOPIFY_DOMAIN_REGEX.test(shop)) {
       return c.json({ error: "Invalid shop domain" }, 400);
     }
     
@@ -164,15 +164,15 @@ app.post("/create-subscription", async (c) => {
 
 /**
  * STEP 6: BILLING STATUS CHECK
- * GET /api/billing/status?shop=example.myshopify.com
+ * GET /api/billing/status
  */
 app.get("/status", async (c) => {
-  // SECURITY: Use verified shop domain from middleware
-  const shop = (c.get("verified_shop") as string) || c.req.query("shop");
-  if (!shop) return c.json({ error: "Shop required" }, 400);
+  // SECURITY: Use verified shop domain from session token (guaranteed by middleware)
+  const shop = c.get("verified_shop") as string;
+  if (!shop) return c.json({ error: "Shop domain required" }, 400);
 
   // SECURITY: Validate shop domain to prevent multi-tenancy leaks
-  if (shop !== "global" && !SHOPIFY_DOMAIN_REGEX.test(shop)) {
+  if (!SHOPIFY_DOMAIN_REGEX.test(shop)) {
     return c.json({ error: "Invalid shop domain" }, 400);
   }
 
