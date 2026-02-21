@@ -110,7 +110,8 @@ app.get("/callback", async (c) => {
     const tokenData = await tokenResponse.json();
 
     if (!tokenResponse.ok) {
-      console.error("[OAuth] Token exchange failed:", tokenData);
+      // SECURITY: Avoid logging full 'tokenData' as it may contain sensitive error details or credentials
+      console.error(`[OAuth] Token exchange failed: Status ${tokenResponse.status}`);
       return c.text("Error: Failed to exchange access token", 500);
     }
 

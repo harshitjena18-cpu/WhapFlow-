@@ -167,7 +167,8 @@ export async function shopifyGraphql(
     const result = await response.json();
 
     if (!response.ok) {
-      console.error(`[ShopifyGraphQL] HTTP Error: ${response.status}`, result);
+      // SECURITY: Avoid logging full 'result' as it may contain PII from the query or sensitive error details
+      console.error(`[ShopifyGraphQL] HTTP Error: ${response.status}`);
       throw new Error(`Shopify GraphQL HTTP Error: ${response.status}`);
     }
     

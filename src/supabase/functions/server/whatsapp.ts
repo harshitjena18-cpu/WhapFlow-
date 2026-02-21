@@ -59,7 +59,8 @@ export const sendWhatsAppTemplate = async ({
     const data = await response.json();
 
     if (!response.ok) {
-      console.error("❌ WhatsApp API Error:", JSON.stringify(data, null, 2));
+      // SECURITY: Avoid logging full 'data' as it contains customer PII (phone number)
+      console.error(`❌ WhatsApp API Error: Status ${response.status}`);
       return { success: false, error: data };
     }
 

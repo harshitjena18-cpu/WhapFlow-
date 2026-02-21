@@ -7,3 +7,8 @@
 **Vulnerability:** Template CRUD endpoints (`/api/templates`) relied on the untrusted `shop` query parameter for scoping database operations, allowing any authenticated merchant to manipulate templates of other shops.
 **Learning:** Middleware alone is not enough; handlers must be explicitly updated to prioritize the verified identity (from the JWT `dest` claim) over user-provided parameters to effectively prevent IDOR.
 **Prevention:** Enforce `verifyShopifySession` on all merchant-facing API sub-apps and always use `c.get("verified_shop")` as the primary source of truth for multi-tenant scoping in handlers.
+
+## 2025-05-17 - [Sensitive Data Leakage in Integration Error Logs]
+**Vulnerability:** Error handlers for external APIs (Shopify Admin, WhatsApp Cloud) were logging full response objects, which often contained customer PII (phone numbers) or sensitive credentials.
+**Learning:** Defaulting to logging full API responses on failure is a common developer shortcut that creates high-risk PII leaks in production log management systems.
+**Prevention:** Always redact integration error logs. Log only HTTP status codes or generic error messages; never pass the raw response body directly to `console.log` or `console.error`.
