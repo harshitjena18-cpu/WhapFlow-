@@ -112,9 +112,11 @@ export async function updatePlan(shop: string, newPlan: PlanLevel, subscriptionI
 /**
  * Increment usage for a specific metric.
  * Returns updated config.
+ *
+ * PERFORMANCE: Supports an optional pre-fetched config to avoid redundant database round-trips.
  */
-export async function incrementUsage(metric: 'ai' | 'whatsapp', shop: string = "global"): Promise<BillingConfig> {
-  const config = await getBillingConfig(shop);
+export async function incrementUsage(metric: 'ai' | 'whatsapp', shop: string = "global", preFetchedConfig?: BillingConfig | null): Promise<BillingConfig> {
+  const config = await getBillingConfig(shop, preFetchedConfig);
   
   if (metric === 'ai') {
     config.ai_generations_used += 1;

@@ -154,14 +154,22 @@ app.post("/ai-generate", async (c) => {
     // SECURITY: Simple Rate Limiting (Prevent OpenAI credit exhaustion)
     const ip = c.req.header("x-forwarded-for") || "anonymous";
     const rateKey = `rate_limit:ai_gen:${shop}:${ip}`;
-    const hits = (await kv.get(rateKey) || 0) as number;
+    const billingKey = `${billing.BILLING_KEY_PREFIX}${shop}`;
+
+    // PERFORMANCE: Batch all independent KV lookups into a single mget call.
+    // This reduces the number of concurrent database requests and total latency.
+    const [rateLimitData, billingData] = await kv.mget([rateKey, billingKey]);
+
+    const hits = (rateLimitData || 0) as number;
     if (hits > 10) { // Limit to 10 generations per hour per shop/ip
       return c.json({ error: "Rate limit exceeded. Please try again later." }, 429);
     }
-    await kv.set(rateKey, hits + 1); // Ideally this would expire, but we'll use a daily/hourly key suffix
 
-    // 1. Check Billing Limits
-    const limitCheck = await billing.checkLimit('ai', shop);
+    // Use pre-fetched billing data to avoid another KV round-trip
+    const config = await billing.getBillingConfig(shop, billingData);
+
+    // 1. Check Billing Limits using pre-fetched config
+    const limitCheck = billing.checkLimitWithConfig('ai', config);
     if (!limitCheck.allowed) {
       console.warn("AI Limit Reached:", limitCheck.error);
       return c.json({
@@ -200,21 +208,26 @@ Discount Offer: ${discount || 'None'}
 
 Generate 3 different variations.`;
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: "Generate the templates now." }
-        ],
-        response_format: { type: "json_object" }
-      })
-    });
+    // PERFORMANCE: Parallelize the slow OpenAI API call with the rate limit persistence.
+    // This hides the latency of the KV set operation.
+    const [response] = await Promise.all([
+      fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: "Generate the templates now." }
+          ],
+          response_format: { type: "json_object" }
+        })
+      }),
+      kv.set(rateKey, hits + 1)
+    ]);
 
     const data = await response.json();
 
@@ -223,12 +236,10 @@ Generate 3 different variations.`;
       throw new Error(data.error.message);
     }
 
-    // Increment Usage
-    await billing.incrementUsage('ai', shop);
-
-    // Get updated config for response
-    const config = await billing.getBillingConfig(shop);
-    const limits = billing.PLAN_LIMITS[config.plan];
+    // PERFORMANCE: Use the updated configuration returned by incrementUsage.
+    // We also pass the pre-fetched 'config' to avoid another KV round-trip inside incrementUsage.
+    const updatedConfig = await billing.incrementUsage('ai', shop, config);
+    const limits = billing.PLAN_LIMITS[updatedConfig.plan];
 
     const content = data.choices[0].message.content;
     let suggestions;
@@ -244,7 +255,7 @@ Generate 3 different variations.`;
     return c.json({
       suggestions,
       usage: {
-        ai_generations_used: config.ai_generations_used,
+        ai_generations_used: updatedConfig.ai_generations_used,
         ai_generations_limit: limits.ai_generations
       }
     }); // Return updated usage to frontend
