@@ -11,8 +11,8 @@ app.use("*", verifyShopifySession);
 // GET /api/integrations/status
 app.get("/status", async (c) => {
   try {
-    // SECURITY: Use verified shop domain from middleware
-    const shop = (c.get("verified_shop") as string) || c.req.query("shop") || "global";
+    // SECURITY: Use verified shop domain from session token (guaranteed by middleware)
+    const shop = c.get("verified_shop") as string;
     // SECURITY: Scoping configurations by shop to prevent multi-tenancy leaks
     const shopifyKey = `shop:${shop}:config:shopify`;
     const whatsappKey = `shop:${shop}:config:whatsapp`;
@@ -63,8 +63,8 @@ app.get("/status", async (c) => {
 app.post("/status", async (c) => {
   try {
     const body = await c.req.json();
-    // SECURITY: Use verified shop domain from middleware
-    const shop = (c.get("verified_shop") as string) || body.shop || c.req.query("shop") || "global";
+    // SECURITY: Use verified shop domain from session token (guaranteed by middleware)
+    const shop = c.get("verified_shop") as string;
 
     // SECURITY: Scoping configurations by shop to prevent multi-tenancy leaks
     const shopifyKey = `shop:${shop}:config:shopify`;

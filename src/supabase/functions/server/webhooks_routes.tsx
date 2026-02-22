@@ -51,16 +51,19 @@ webhooksApp.post("/shopify", async (c) => {
     const customerEmail = payload.customer?.email || payload.email || "";
 
     // PERFORMANCE: Parallelize all independent dependencies and deduplication check.
-    // Optimized: Merged deduplication check into the main batch lookup to reduce DB round-trips.
+    // This reduces the number of sequential asynchronous operations in the critical path.
+    // We merge the deduplication check into the main mget to further reduce concurrent requests.
+    const keysToFetch = [
+      `merchant:${shop}`,
+      `shop:${shop}:config:whatsapp`,
+      `${billing.BILLING_KEY_PREFIX}${shop}`
+    ];
+    if (webhookId) keysToFetch.push(`webhook_id:${webhookId}`);
+
     const [configsResult, encryptionResult] = await Promise.all([
-      // Batch fetch dependencies including deduplication check
+      // Batch fetch dependencies and deduplication check to reduce round-trip latency
       Promise.all([
-        kv.mget([
-          webhookId ? `webhook_id:${webhookId}` : "null_key",
-          `merchant:${shop}`,
-          `shop:${shop}:config:whatsapp`,
-          `${billing.BILLING_KEY_PREFIX}${shop}`
-        ]),
+        kv.mget(keysToFetch),
         kv.getByPrefix(`shop:${shop}:template:`)
       ]),
 
@@ -73,8 +76,9 @@ webhooksApp.post("/shopify", async (c) => {
     ]);
 
     const [configs, rawTemplates] = configsResult;
-    const [dedupCheck, merchantData, whatsappConfig, preFetchedBilling] = configs;
     const [encName, encEmail, encPhone] = encryptionResult;
+
+    const [merchantData, whatsappConfig, preFetchedBilling, dedupCheck] = configs;
 
     // Check deduplication result
     if (webhookId && dedupCheck) {
@@ -215,12 +219,13 @@ webhooksApp.post("/app/uninstalled", async (c) => {
     const merchantKey = `merchant:${shop}`;
     const shopifyKey = `shop:${shop}:config:shopify`;
 
-    // PERFORMANCE: Merge deduplication check into the main merchant/config batch fetch to reduce DB round-trips.
-    const configs = await kv.mget([
-      webhookId ? `webhook_id:${webhookId}` : "null_key",
-      merchantKey,
-      shopifyKey
-    ]);
+    // PERFORMANCE: Batch merchant validation and deduplication check to reduce round-trip latency
+    const keysToBatch = [merchantKey, shopifyKey];
+    if (webhookId) keysToBatch.push(`webhook_id:${webhookId}`);
+
+    const configs = await kv.mget(keysToBatch);
+
+    const [merchant, shopifyConfig, alreadyProcessed] = configs;
 
     const [alreadyProcessed, merchant, shopifyConfig] = configs;
 

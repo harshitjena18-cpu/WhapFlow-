@@ -10,9 +10,9 @@ app.use("*", verifyShopifySession);
 // GET /api/ai/usage
 app.get("/usage", async (c) => {
   try {
-    // SECURITY: Use verified shop domain from middleware
-    const shop = (c.get("verified_shop") as string) || c.req.query("shop");
-    if (!shop) return c.json({ error: "Shop parameter required" }, 400);
+    // SECURITY: Use verified shop domain from session token (guaranteed by middleware)
+    const shop = c.get("verified_shop") as string;
+    if (!shop) return c.json({ error: "Shop domain required" }, 400);
 
     const config = await billing.getBillingConfig(shop);
     const limits = billing.PLAN_LIMITS[config.plan];

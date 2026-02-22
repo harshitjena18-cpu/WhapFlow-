@@ -1,6 +1,7 @@
 import { Context, Next } from "npm:hono";
 import { verify } from "npm:hono/jwt";
 import { getEnv } from "../../../lib/env.ts";
+import { SHOPIFY_DOMAIN_REGEX } from "./constants.ts";
 
 /**
  * verifyShopifySession Middleware
@@ -40,9 +41,16 @@ export const verifyShopifySession = async (c: Context, next: Next) => {
     const dest = payload.dest as string;
     const shop = new URL(dest).hostname;
 
+    // SECURITY: Validate shop domain format to prevent SSRF or unauthorized domains
+    if (!SHOPIFY_DOMAIN_REGEX.test(shop)) {
+      console.error(`[Auth] Invalid shop domain in token: ${shop}`);
+      return c.json({ error: "Unauthorized: Invalid shop domain" }, 401);
+    }
+
     // 4. Multi-tenancy check: Verify that the 'shop' query param matches the token
     const requestedShop = c.req.query("shop");
-    if (requestedShop && requestedShop !== "global" && requestedShop !== shop) {
+    // SECURITY: Tightened multi-tenancy check to prevent unauthorized access to other shops or global data.
+    if (requestedShop && requestedShop !== shop) {
       console.warn(`[Auth] Multi-tenancy breach attempt: Token for ${shop} used for ${requestedShop}`);
       return c.json({ error: "Forbidden: Shop mismatch" }, 403);
     }
