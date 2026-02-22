@@ -87,6 +87,15 @@ app.get("/callback", async (c) => {
     return c.text("Error: Request origin cannot be verified (State Mismatch)", 403);
   }
 
+  // SECURITY: Clear state cookie after verification to prevent reuse or replay attacks
+  setCookie(c, "shopify_oauth_state", "", {
+    path: "/",
+    secure: true,
+    httpOnly: true,
+    maxAge: 0,
+    sameSite: "Lax",
+  });
+
   // 3. Verify HMAC
   const success = await verifyHmac(c.req.query(), clientSecret);
   if (!success) {
