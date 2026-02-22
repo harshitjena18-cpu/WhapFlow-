@@ -125,13 +125,20 @@ export function AutomationsView() {
                       {automation.name}
                     </h3>
                     <span
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg border ${
-                        automation.enabled
-                          ? 'bg-[#25D366] text-white border-[#25D366]'
-                          : 'bg-gray-50 text-gray-600 border-gray-200'
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg border transition-colors duration-200 ${
+                        isUpdating[automation.id]
+                          ? 'bg-blue-50 text-blue-600 border-blue-200'
+                          : automation.enabled
+                            ? 'bg-[#25D366] text-white border-[#25D366]'
+                            : 'bg-gray-50 text-gray-600 border-gray-200'
                       }`}
                     >
-                      {automation.enabled ? (
+                      {isUpdating[automation.id] ? (
+                        <>
+                          <Loader2 className="w-3 h-3 animate-spin" aria-hidden="true" />
+                          Updating...
+                        </>
+                      ) : automation.enabled ? (
                         <>
                           <Play className="w-3 h-3" aria-hidden="true" />
                           Active
@@ -171,7 +178,7 @@ export function AutomationsView() {
                     </TooltipTrigger>
                     <TooltipContent>
                       <p>
-                        {automation.enabled ? "Disable" : "Enable"} Automation
+                        {isUpdating[automation.id] ? "Updating..." : automation.enabled ? "Disable Automation" : "Enable Automation"}
                       </p>
                     </TooltipContent>
                   </Tooltip>
