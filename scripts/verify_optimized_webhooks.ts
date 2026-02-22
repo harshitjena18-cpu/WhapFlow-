@@ -39,16 +39,20 @@ async function simulatedShopifyWebhook(webhookId: string, shop: string, payload:
     // Step 1: HMAC check (assumed passed)
 
     // Step 2: Parallelized Fetch
-    const [dedupCheck, configsResult, encryptionResult] = await Promise.all([
-      webhookId ? mockKV.get(`webhook_id:${webhookId}`) : Promise.resolve(null),
+    // Optimized: Merged deduplication check into the main batch lookup to reduce DB round-trips.
+    const [configsResult, encryptionResult] = await Promise.all([
+      // Batch fetch dependencies including deduplication check
       Promise.all([
         mockKV.mget([
+          webhookId ? `webhook_id:${webhookId}` : "null_key",
           `merchant:${shop}`,
           `shop:${shop}:config:whatsapp`,
           `billing:${shop}`
         ]),
         mockKV.getByPrefix(`shop:${shop}:template:`)
       ]),
+
+      // SECURITY: Encrypt PII at rest
       Promise.all([
         mockEncrypt(payload.customer.first_name),
         mockEncrypt(payload.customer.email),
@@ -56,12 +60,13 @@ async function simulatedShopifyWebhook(webhookId: string, shop: string, payload:
       ])
     ]);
 
+    const [configs, _rawTemplates] = configsResult;
+    const [dedupCheck, _merchantData, _whatsappConfig, _preFetchedBilling] = configs;
+
     if (dedupCheck) {
         console.log("Duplicate detected!");
         return { status: 'success', duplicate: true };
     }
-
-    const [configs, rawTemplates] = configsResult;
     const [encName, encEmail, encPhone] = encryptionResult;
 
     const cartKey = `abandoned_cart:${payload.id}`;
