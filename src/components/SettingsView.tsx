@@ -5,6 +5,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Switch } from './ui/switch';
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { toast } from 'sonner';
 
 export function SettingsView() {
@@ -56,12 +57,12 @@ export function SettingsView() {
                <p className="text-sm font-medium text-gray-900">Current Plan: <span className="font-bold">Free</span></p>
                <p className="text-sm text-gray-500 mt-1">Upgrade to unlock automation and higher limits.</p>
              </div>
-             <button 
+             <Button
                onClick={() => navigate('/billing')}
-               className="px-6 py-2.5 bg-purple-600 text-white rounded-xl hover:bg-purple-700 font-semibold text-sm transition-colors shadow-sm"
+               className="px-6 py-2.5 h-auto bg-purple-600 text-white rounded-xl hover:bg-purple-700 font-semibold text-sm transition-all shadow-sm active:scale-95"
              >
                View Plans
-             </button>
+             </Button>
           </div>
         </div>
 
@@ -163,12 +164,19 @@ export function SettingsView() {
             </div>
           </div>
           <div className="px-8 py-8 flex flex-wrap gap-3">
-            <button className="px-6 py-3 border border-gray-200 text-gray-900 rounded-xl hover:bg-gray-50 font-semibold text-sm transition-colors">
+            <Button variant="outline" className="px-6 py-3 h-auto border-gray-200 text-gray-900 rounded-xl hover:bg-gray-50 font-semibold text-sm transition-colors">
               Change Password
-            </button>
-            <button className="px-6 py-3 border border-gray-200 text-gray-900 rounded-xl hover:bg-gray-50 font-semibold text-sm transition-colors">
-              Enable Two-Factor Auth
-            </button>
+            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" className="px-6 py-3 h-auto border-gray-200 text-gray-900 rounded-xl hover:bg-gray-50 font-semibold text-sm transition-colors">
+                  Enable Two-Factor Auth
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Add an extra layer of security to your account</p>
+              </TooltipContent>
+            </Tooltip>
           </div>
         </div>
 

@@ -29,3 +29,7 @@
 ## 2024-05-24 - [Visual Usage Indicators and Accessible Informational Tooltips]
 **Learning:** Usage metrics (e.g., limits, quotas) are more intuitive when paired with visual `Progress` indicators, providing immediate peripheral feedback on consumption. When adding tooltips to text labels for context, wrapping the trigger in a `<button type="button">` with an `aria-label` ensures the information is discoverable via keyboard and screen readers.
 **Action:** Use `Progress` components for consumption-based metrics. Always ensure tooltip triggers are focusable elements if they provide essential context; use buttons for static text labels to maintain accessibility.
+
+## 2025-06-16 - [Tactile Feedback via Micro-Animations]
+**Learning:** Purely functional buttons can feel "stiff" in a modern web interface. Adding subtle micro-animations, such as a slight scale down (`active:scale-95`) on click, provides immediate tactile feedback that makes the interface feel more responsive and high-quality.
+**Action:** Apply subtle `active` scale transitions to primary or call-to-action buttons to enhance the perceived responsiveness of the UI.
