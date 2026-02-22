@@ -14,11 +14,11 @@ app.use("*", verifyShopifySession);
 // GET /api/templates
 app.get("/", async (c) => {
   try {
-    // SECURITY: Use verified shop domain from session token
-    const shop = (c.get("verified_shop") as string) || c.req.query("shop");
+    // SECURITY: Use verified shop domain from session token (guaranteed by middleware)
+    const shop = c.get("verified_shop") as string;
 
     // SECURITY: Validate shop domain
-    if (shop !== "global" && !SHOPIFY_DOMAIN_REGEX.test(shop)) {
+    if (!SHOPIFY_DOMAIN_REGEX.test(shop)) {
       return c.json({ error: "Invalid shop domain" }, 400);
     }
     // SECURITY: Scoping templates by shop to prevent multi-tenancy leaks
@@ -36,11 +36,11 @@ app.get("/", async (c) => {
 app.post("/", async (c) => {
   try {
     const body = await c.req.json();
-    // SECURITY: Use verified shop domain from session token
-    const shop = (c.get("verified_shop") as string) || body.shop || c.req.query("shop");
+    // SECURITY: Use verified shop domain from session token (guaranteed by middleware)
+    const shop = c.get("verified_shop") as string;
 
     // SECURITY: Validate shop domain
-    if (shop !== "global" && !SHOPIFY_DOMAIN_REGEX.test(shop)) {
+    if (!SHOPIFY_DOMAIN_REGEX.test(shop)) {
       return c.json({ error: "Invalid shop domain" }, 400);
     }
     const { template_name, display_name, delay_minutes } = body;
@@ -91,8 +91,8 @@ app.put("/:id", async (c) => {
   try {
     const id = c.req.param("id");
     const body = await c.req.json();
-    // SECURITY: Use verified shop domain from session token
-    const shop = (c.get("verified_shop") as string) || body.shop || c.req.query("shop");
+    // SECURITY: Use verified shop domain from session token (guaranteed by middleware)
+    const shop = c.get("verified_shop") as string;
 
     const key = `shop:${shop}:template:${id}`;
     const existing = await kv.get(key) as AutomationTemplate | null;
@@ -128,8 +128,8 @@ app.put("/:id", async (c) => {
 app.delete("/:id", async (c) => {
   try {
     const id = c.req.param("id");
-    // SECURITY: Use verified shop domain from session token
-    const shop = (c.get("verified_shop") as string) || c.req.query("shop");
+    // SECURITY: Use verified shop domain from session token (guaranteed by middleware)
+    const shop = c.get("verified_shop") as string;
     await kv.del(`shop:${shop}:template:${id}`);
     return c.json({ success: true });
   } catch (error) {
@@ -142,13 +142,13 @@ app.delete("/:id", async (c) => {
 app.post("/ai-generate", async (c) => {
   try {
     const body = await c.req.json();
-    // SECURITY: Use verified shop domain from session token
-    const shop = (c.get("verified_shop") as string) || body.shop || c.req.query("shop");
+    // SECURITY: Use verified shop domain from session token (guaranteed by middleware)
+    const shop = c.get("verified_shop") as string;
     const { tone, brand_name, discount } = body;
 
-    // SECURITY: Validate shop domain and presence
+    // SECURITY: Validate shop domain presence
     if (!shop || !SHOPIFY_DOMAIN_REGEX.test(shop)) {
-      return c.json({ error: "Invalid or missing shop parameter" }, 400);
+      return c.json({ error: "Invalid or missing shop domain" }, 400);
     }
 
     // SECURITY: Simple Rate Limiting (Prevent OpenAI credit exhaustion)

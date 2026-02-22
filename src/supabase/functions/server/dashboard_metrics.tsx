@@ -13,11 +13,11 @@ dashboardMetricsApp.use("*", verifyShopifySession);
 // GET /metrics (mounted at /api/dashboard)
 dashboardMetricsApp.get("/metrics", async (c) => {
   try {
-    // SECURITY: Use verified shop domain
-    const shop = (c.get("verified_shop") as string) || c.req.query("shop");
+    // SECURITY: Use verified shop domain from session token (guaranteed by middleware)
+    const shop = c.get("verified_shop") as string;
 
     if (!shop) {
-      return c.json({ error: "Missing shop parameter" }, 400);
+      return c.json({ error: "Missing shop domain" }, 400);
     }
 
     // 1. PERFORMANCE: Fetch all dependencies in parallel and batch KV gets to minimize round-trip latency.

@@ -70,3 +70,7 @@
 ## 2026-03-12 - [Critical Path Webhook Latency Reduction]
 **Learning:** In high-traffic webhook handlers, every sequential await adds significant wall-clock time due to network round-trips to the KV store. By moving the deduplication check, PII encryption, and multi-key configuration fetching into a single `Promise.all` block, and batching subsequent writes into a single `kv.mset`, total latency can be reduced by ~50-60%.
 **Action:** Identify critical paths with sequential awaits for independent operations. Use `Promise.all` to parallelize fetches (even if it means slightly more work for error/duplicate cases) and `kv.mset` to batch writes.
+
+## 2026-03-15 - [Consolidated I/O Batching & Queue Limits]
+**Learning:** Even when operations are parallelized via `Promise.all`, using individual `kv.get` calls alongside `kv.mget` triggers separate database round-trips. Consolidating all independent key lookups into a *single* `kv.mget` call reduces the total number of concurrent requests and lowers the latency floor for the entire operation. Additionally, defensive limits on range queries (like queue scanning) are essential for memory safety in high-volume environments.
+**Action:** Audit `Promise.all` blocks for mixed `kv.get` and `kv.mget` calls and merge them. Always apply a `limit` to `kv.scanQueue` and other range-based lookups to prevent OOM errors.
