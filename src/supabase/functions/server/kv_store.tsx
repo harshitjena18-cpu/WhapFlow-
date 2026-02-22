@@ -93,7 +93,7 @@ export const scanQueue = async <T = any>(endKey: string, limit?: number): Promis
   // PERFORMANCE: Select only 'value' to reduce network payload
   let query = supabase.from("kv_store_c8eef56a")
     .select("value")
-    .like("key", "queue:v1:%")
+    .gte("key", "queue:v1:")
     .lte("key", endKey);
 
   if (limit) {
