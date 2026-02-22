@@ -45,9 +45,10 @@ export async function processPendingJobs<T = unknown>(handler: (payload: T) => P
   console.log(`[Queue] Checking for jobs scheduled before ${now.toISOString()}...`);
 
   // Optimized Fetch: Uses DB range query instead of memory filter
-  const dueJobs = await kv.scanQueue(endKey);
+  // PERFORMANCE: Added limit to prevent OOM and ensure predictable processing cycles
+  const dueJobs = await kv.scanQueue(endKey, 100);
 
-  console.log(`[Queue] Found ${dueJobs.length} due jobs.`);
+  console.log(`[Queue] Found ${dueJobs.length} due jobs (capped at 100).`);
 
   // Process jobs concurrently with a limit to avoid overwhelming resources
   const CONCURRENCY_LIMIT = 5;
