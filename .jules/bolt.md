@@ -74,3 +74,7 @@
 ## 2026-03-15 - [Consolidated I/O Batching & Queue Limits]
 **Learning:** Even when operations are parallelized via `Promise.all`, using individual `kv.get` calls alongside `kv.mget` triggers separate database round-trips. Consolidating all independent key lookups into a *single* `kv.mget` call reduces the total number of concurrent requests and lowers the latency floor for the entire operation. Additionally, defensive limits on range queries (like queue scanning) are essential for memory safety in high-volume environments.
 **Action:** Audit `Promise.all` blocks for mixed `kv.get` and `kv.mget` calls and merge them. Always apply a `limit` to `kv.scanQueue` and other range-based lookups to prevent OOM errors.
+
+## 2026-03-22 - [AI Generation Latency & Pre-fetched State Reuse]
+**Learning:** Latency in AI routes often stems from sequential KV lookups for rate limiting and billing, combined with slow LLM API calls. By batching metadata lookups (mget) and parallelizing rate-limit persistence with the LLM API call, significant time can be saved. Furthermore, passing pre-fetched config objects to downstream services (like incrementUsage) eliminates redundant I/O, allowing for a "single-fetch" request pattern.
+**Action:** Identify routes with sequential I/O for metadata/limits. Implement "pre-fetched" parameter support in core services to avoid redundant KV hits when data is already available in the request context.
