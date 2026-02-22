@@ -166,7 +166,8 @@ export async function executeAutomation(payload: AutomationPayload) {
       updateKeys.push(cartKey);
       updateValues.push(currentCart);
     } else {
-      console.error(`❌ AUTOMATION FAILED: WhatsApp API Error for cart ${cartId}`, result.error);
+      // SECURITY: result.error is already sanitized/redacted in whatsapp.ts
+      console.error(`❌ AUTOMATION FAILED: WhatsApp API Error for cart ${cartId}: ${result.error}`);
       currentCart.status = 'failed';
       currentCart.last_error = result.error;
       updateKeys.push(cartKey);

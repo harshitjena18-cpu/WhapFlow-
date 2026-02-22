@@ -83,7 +83,8 @@ app.get("/callback", async (c) => {
   // 2. Verify State
   const savedState = getCookie(c, "shopify_oauth_state");
   if (state !== savedState) {
-    console.error(`[OAuth] State mismatch. Received: ${state}, Expected: ${savedState}`);
+    // SECURITY: Redact state tokens in logs to prevent session hijacking or token exposure
+    console.error(`[OAuth] State mismatch for shop: ${shop}`);
     return c.text("Error: Request origin cannot be verified (State Mismatch)", 403);
   }
 

@@ -59,9 +59,11 @@ export const sendWhatsAppTemplate = async ({
     const data = await response.json();
 
     if (!response.ok) {
-      // SECURITY: Avoid logging full 'data' as it contains customer PII (phone number)
+      // SECURITY: Redact full response 'data' as it contains customer PII (phone number)
       console.error(`❌ WhatsApp API Error: Status ${response.status}`);
-      return { success: false, error: data };
+      // Return only the error message or a sanitized version
+      const errorMessage = data.error?.message || "Unknown WhatsApp API Error";
+      return { success: false, error: errorMessage };
     }
 
     // SECURITY: Log only wamid to avoid leaking PII in response data
