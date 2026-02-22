@@ -1,6 +1,7 @@
 import { Bell, Globe, Lock, User, CreditCard, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { useState } from 'react';
+import { useAuth } from '../hooks/useAuth';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -10,6 +11,7 @@ import { toast } from 'sonner';
 
 export function SettingsView() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [isSaving, setIsSaving] = useState(false);
   const [notifications, setNotifications] = useState({
     'Email notifications': true,
@@ -88,7 +90,9 @@ export function SettingsView() {
                 <Input
                   id="full-name"
                   type="text"
-                  defaultValue="John Doe"
+                  defaultValue={user?.user_metadata?.full_name || ""}
+                  placeholder="John Doe"
+                  key={user?.user_metadata?.full_name}
                   className="px-4 py-6 border-gray-200 rounded-xl focus-visible:ring-[#25D366]/20 focus-visible:border-[#25D366]"
                 />
               </div>
@@ -99,8 +103,11 @@ export function SettingsView() {
                 <Input
                   id="email"
                   type="email"
-                  defaultValue="john@whapflow.com"
-                  className="px-4 py-6 border-gray-200 rounded-xl focus-visible:ring-[#25D366]/20 focus-visible:border-[#25D366]"
+                  defaultValue={user?.email || ""}
+                  placeholder="john@whapflow.com"
+                  key={user?.email}
+                  readOnly
+                  className="px-4 py-6 border-gray-200 rounded-xl focus-visible:ring-[#25D366]/20 focus-visible:border-[#25D366] bg-gray-50"
                 />
               </div>
             </div>
