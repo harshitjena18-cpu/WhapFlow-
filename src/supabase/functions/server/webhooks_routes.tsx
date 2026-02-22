@@ -227,8 +227,6 @@ webhooksApp.post("/app/uninstalled", async (c) => {
 
     const [merchant, shopifyConfig, alreadyProcessed] = configs;
 
-    const [alreadyProcessed, merchant, shopifyConfig] = configs;
-
     // SECURITY: Deduplication (Prevent Replay Attacks)
     if (webhookId && alreadyProcessed) {
       return c.json({ status: 'success', duplicate: true }, 200);
