@@ -94,7 +94,11 @@ export function Sidebar() {
 
         {/* User Profile */}
         <div className="px-4 py-6 border-t border-gray-100">
-          <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+          <Link
+            to="/settings"
+            aria-label="View Profile Settings"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 transition-all active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-[#25D366]/50"
+          >
             <div className="w-9 h-9 bg-[#25D366] rounded-full flex items-center justify-center flex-shrink-0">
               <span className="text-white font-semibold text-xs">JD</span>
             </div>
@@ -102,7 +106,7 @@ export function Sidebar() {
               <p className="text-sm font-medium text-gray-900 truncate">John Doe</p>
               <p className="text-xs text-gray-500 truncate">john@whapflow.com</p>
             </div>
-          </div>
+          </Link>
         </div>
       </aside>
     </>

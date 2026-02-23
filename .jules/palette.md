@@ -33,3 +33,7 @@
 ## 2025-06-16 - [Tactile Feedback via Micro-Animations]
 **Learning:** Purely functional buttons can feel "stiff" in a modern web interface. Adding subtle micro-animations, such as a slight scale down (`active:scale-95`) on click, provides immediate tactile feedback that makes the interface feel more responsive and high-quality.
 **Action:** Apply subtle `active` scale transitions to primary or call-to-action buttons to enhance the perceived responsiveness of the UI.
+
+## 2025-05-15 - Profile Navigation Semantic and Accessibility
+**Learning:** Bespoke profile/user sections in sidebars are often implemented as clickable `div`s, which prevents them from being correctly identified as navigation elements by screen readers and lacks native keyboard focus behavior.
+**Action:** Always use semantic `Link` or `button` elements for interactive user profile sections and ensure they have explicit `aria-label`s and tactile feedback (`active:scale`) to match the rest of the navigation.
