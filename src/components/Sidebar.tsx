@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { WhapflowLogo } from './WhapflowLogo';
+import { useAuth } from '../hooks/useAuth';
 
 const navItems = [
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
@@ -24,6 +25,25 @@ const navItems = [
 
 export function Sidebar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { user, loading } = useAuth();
+
+  const getInitials = (email?: string, name?: string) => {
+    if (name) {
+      const parts = name.split(' ');
+      if (parts.length >= 2) {
+        return (parts[0][0] + parts[1][0]).toUpperCase();
+      }
+      return name.slice(0, 2).toUpperCase();
+    }
+    if (email) {
+      return email.slice(0, 2).toUpperCase();
+    }
+    return 'US';
+  };
+
+  const displayName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
+  const displayEmail = user?.email || '';
+  const initials = getInitials(user?.email, user?.user_metadata?.full_name);
 
   return (
     <>
@@ -94,19 +114,25 @@ export function Sidebar() {
 
         {/* User Profile */}
         <div className="px-4 py-6 border-t border-gray-100">
-          <Link
-            to="/settings"
-            aria-label="View Profile Settings"
-            className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 transition-all active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-[#25D366]/50"
-          >
-            <div className="w-9 h-9 bg-[#25D366] rounded-full flex items-center justify-center flex-shrink-0">
-              <span className="text-white font-semibold text-xs">JD</span>
+          {loading ? (
+             <div className="flex items-center gap-3 px-3 py-2 rounded-lg">
+                <div className="w-9 h-9 bg-gray-200 rounded-full animate-pulse" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 bg-gray-200 rounded w-24 animate-pulse" />
+                  <div className="h-3 bg-gray-200 rounded w-32 animate-pulse" />
+                </div>
+             </div>
+          ) : (
+            <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+              <div className="w-9 h-9 bg-[#25D366] rounded-full flex items-center justify-center flex-shrink-0">
+                <span className="text-white font-semibold text-xs">{initials}</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 truncate">{displayName}</p>
+                <p className="text-xs text-gray-500 truncate">{displayEmail}</p>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">John Doe</p>
-              <p className="text-xs text-gray-500 truncate">john@whapflow.com</p>
-            </div>
-          </Link>
+          )}
         </div>
       </aside>
     </>

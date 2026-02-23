@@ -41,14 +41,14 @@ export async function enqueueJob<T = unknown>(payload: T, delayMinutes: number) 
 export async function processPendingJobs<T = unknown>(handler: (payload: T) => Promise<void>) {
   const now = new Date();
   const endKey = `queue:v1:${now.toISOString()}`; // Fetch anything scheduled up to "now"
+  const BATCH_SIZE = 100;
 
   console.log(`[Queue] Checking for jobs scheduled before ${now.toISOString()}...`);
 
-  // Optimized Fetch: Uses DB range query instead of memory filter
-  // PERFORMANCE: Added limit to prevent OOM and ensure predictable processing cycles
-  const dueJobs = await kv.scanQueue(endKey, 100);
+  // Optimized Fetch: Uses DB range query with limit to prevent OOM
+  const dueJobs = await kv.scanQueue(endKey, BATCH_SIZE);
 
-  console.log(`[Queue] Found ${dueJobs.length} due jobs (capped at 100).`);
+  console.log(`[Queue] Found ${dueJobs.length} due jobs (capped at ${BATCH_SIZE}).`);
 
   // Process jobs concurrently with a limit to avoid overwhelming resources
   const CONCURRENCY_LIMIT = 5;

@@ -55,7 +55,7 @@ export async function executeAutomation(payload: AutomationPayload) {
   try {
     console.log(`🚀 EXECUTE AUTOMATION for cart ${cartId} (Shop: ${shop})`);
 
-    // 1. PERFORMANCE: Fetch all required data in parallel and batch KV gets to minimize latency.
+    // 1. PERFORMANCE: Fetch all required data in parallel. Use targeted DB query for templates.
     // This reduces the number of concurrent database requests from 3 to 2.
     const [configs, rawTemplates] = await Promise.all([
       kv.mget([
@@ -63,7 +63,7 @@ export async function executeAutomation(payload: AutomationPayload) {
         `${billing.BILLING_KEY_PREFIX}${shop}`,
         cartKey
       ]),
-      kv.getByPrefix<AutomationTemplate>(`shop:${shop}:template:`)
+      kv.getByPrefixAndValue<AutomationTemplate>(`shop:${shop}:template:`, "value->enabled", true, 1)
     ]);
 
     const [merchantData, preFetchedBilling, currentCart] = configs;
@@ -198,14 +198,12 @@ export async function executeAutomation(payload: AutomationPayload) {
 export async function processWhatsAppStatuses(statuses: WhatsAppStatus[]) {
   if (statuses.length === 0) return;
 
-  const wamids = statuses.map(s => s.id);
-  const msgMapKeys = wamids.map(id => `msg_map:${id}`);
-
-  // PERFORMANCE: Batch fetch all cart ID mappings in a single request
+  // PERFORMANCE: Batch fetch all cart ID mappings in a single request (Single pass map)
+  const msgMapKeys = statuses.map(s => `msg_map:${s.id}`);
   const cartIds = await kv.mget(msgMapKeys);
 
-  const validUpdates: { cartId: string, newStatus: string }[] = [];
-  const cartKeys: string[] = [];
+  // Map cartId -> newStatus. Last update wins if duplicates exist.
+  const updatesByCartId = new Map<string, string>();
 
   for (let i = 0; i < statuses.length; i++) {
     const cartId = cartIds[i];
@@ -213,35 +211,42 @@ export async function processWhatsAppStatuses(statuses: WhatsAppStatus[]) {
     const newStatus = statuses[i].status;
 
     if (cartId) {
-      validUpdates.push({ cartId, newStatus });
-      cartKeys.push(`abandoned_cart:${cartId}`);
+      updatesByCartId.set(cartId, newStatus);
       console.log(`[WhatsApp Status] Message ${wamid} (${newStatus}) linked to cart ${cartId}`);
     } else {
       console.log(`[WhatsApp Status] No cart found for message ${wamid}`);
     }
   }
 
-  if (cartKeys.length === 0) return;
+  if (updatesByCartId.size === 0) return;
 
-  // PERFORMANCE: Batch fetch all associated carts in a single request
-  const carts = await kv.mget(cartKeys);
+  // PERFORMANCE: Batch fetch only unique associated carts
+  const uniqueCartIds = Array.from(updatesByCartId.keys());
+  const uniqueCartKeys = uniqueCartIds.map(id => `abandoned_cart:${id}`);
+
+  const carts = await kv.mget(uniqueCartKeys);
 
   const updateKeys: string[] = [];
   const updateValues: any[] = [];
   const now = new Date().toISOString();
 
-  for (let i = 0; i < validUpdates.length; i++) {
+  for (let i = 0; i < uniqueCartIds.length; i++) {
     const cart = carts[i];
+    const cartId = uniqueCartIds[i];
+
     if (cart) {
-      cart.delivery_status = validUpdates[i].newStatus;
-      cart.updated_at = now;
-      updateKeys.push(`abandoned_cart:${validUpdates[i].cartId}`);
-      updateValues.push(cart);
-      console.log(`[WhatsApp Status] Prepared update for cart ${validUpdates[i].cartId} status: ${validUpdates[i].newStatus}`);
+      const newStatus = updatesByCartId.get(cartId);
+      if (newStatus) {
+        cart.delivery_status = newStatus;
+        cart.updated_at = now;
+        updateKeys.push(uniqueCartKeys[i]);
+        updateValues.push(cart);
+        console.log(`[WhatsApp Status] Prepared update for cart ${cartId} status: ${newStatus}`);
+      }
     }
   }
 
-  // PERFORMANCE: Batch persist all updated carts in a single request
+  // PERFORMANCE: Batch persist only unique updated carts
   if (updateKeys.length > 0) {
     await kv.mset(updateKeys, updateValues);
     console.log(`[WhatsApp Status] Successfully persisted ${updateKeys.length} cart updates.`);
