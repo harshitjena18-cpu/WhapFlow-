@@ -5,6 +5,7 @@ import { secureHeaders } from "npm:hono/secure-headers";
 import { processPendingJobs } from "./queue.ts";
 import { executeAutomation, processWhatsAppStatuses } from "./automation.ts";
 import { getEnv } from "../../../lib/env.ts";
+import { getErrorMessage } from "../../../lib/error.ts";
 import { sendWhatsAppTemplate, verifyWhatsAppSignature } from "./whatsapp.ts";
 
 import authApp from "./auth.tsx";
@@ -63,7 +64,8 @@ app.use(
 
 // Global Error Handler
 app.onError((err, c) => {
-  console.error("🔥 Global Error Handler:", err);
+  // SECURITY: Redact PII from error messages before logging
+  console.error("🔥 Global Error Handler:", getErrorMessage(err));
   // SECURITY: Do not leak internal error messages to the client
   return c.json({ error: "Internal Server Error" }, 500);
 });

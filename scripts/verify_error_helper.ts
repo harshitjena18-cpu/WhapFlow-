@@ -51,6 +51,14 @@ try {
   assert(msg7 === undefined, 'Should return undefined for number');
   console.log('Test 7 Passed');
 
+  // Test 8: PII Redaction
+  const error8 = new Error('User john@doe.com with phone 1234567890 failed');
+  const msg8 = getErrorMessage(error8);
+  assert(msg8?.includes('[REDACTED_EMAIL]') === true, 'Should redact email');
+  assert(msg8?.includes('[REDACTED_PHONE]') === true, 'Should redact phone');
+  assert(msg8?.includes('john@doe.com') === false, 'Should not contain raw email');
+  console.log('Test 8 Passed');
+
   console.log('All tests passed!');
 } catch (e: any) {
   console.error('Verification failed:', e.message);

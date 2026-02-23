@@ -2,6 +2,7 @@ import * as kv from "./kv_store.tsx";
 import * as billing from "./billing.ts";
 import { BILLING_KEY_PREFIX } from "./billing.ts";
 import { decrypt } from "./crypto.ts";
+import { getErrorMessage } from "../../../lib/error.ts";
 import { checkOrderExists, getMerchantCredentials } from "./shopify_client.ts";
 import { sendWhatsAppTemplate } from "./whatsapp.ts";
 import { enqueueJob } from "./queue.ts";
@@ -181,13 +182,15 @@ export async function executeAutomation(payload: AutomationPayload) {
     }
 
   } catch (err) {
-    console.error(`❌ CRITICAL AUTOMATION ERROR for cart ${cartId}:`, err);
+    // SECURITY: Use getErrorMessage to redact PII from the error before logging and persistence
+    const errorMsg = getErrorMessage(err);
+    console.error(`❌ CRITICAL AUTOMATION ERROR for cart ${cartId}:`, errorMsg);
     try {
       // Attempt to record failure state so the job isn't silently lost
       const cart = await kv.get(cartKey);
       if (cart) {
         cart.status = 'failed';
-        cart.last_error = String(err);
+        cart.last_error = errorMsg;
         await kv.set(cartKey, cart);
       }
     } catch (_e) { /* Ignore secondary storage error */ }
