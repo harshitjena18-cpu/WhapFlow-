@@ -55,7 +55,7 @@ export async function executeAutomation(payload: AutomationPayload) {
   try {
     console.log(`🚀 EXECUTE AUTOMATION for cart ${cartId} (Shop: ${shop})`);
 
-    // 1. PERFORMANCE: Fetch all required data in parallel and batch KV gets to minimize latency.
+    // 1. PERFORMANCE: Fetch all required data in parallel. Use targeted DB query for templates.
     // This reduces the number of concurrent database requests from 3 to 2.
     const [configs, rawTemplates] = await Promise.all([
       kv.mget([
@@ -63,7 +63,7 @@ export async function executeAutomation(payload: AutomationPayload) {
         `${billing.BILLING_KEY_PREFIX}${shop}`,
         cartKey
       ]),
-      kv.getByPrefix<AutomationTemplate>(`shop:${shop}:template:`)
+      kv.getByPrefixAndValue<AutomationTemplate>(`shop:${shop}:template:`, "value->enabled", true, 1)
     ]);
 
     const [merchantData, preFetchedBilling, currentCart] = configs;
