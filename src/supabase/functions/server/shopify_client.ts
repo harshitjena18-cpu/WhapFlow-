@@ -2,6 +2,7 @@ import * as kv from "./kv_store.tsx";
 import { decrypt } from "./crypto.ts";
 import { Merchant } from "./types.ts";
 import { Buffer } from "node:buffer";
+import { redactPII, getErrorMessage } from "../../../lib/error.ts";
 
 // Module-level cache for HMAC CryptoKeys to minimize import overhead (~2-5ms per call)
 let _cachedHmacKey: CryptoKey | null = null;
@@ -87,7 +88,8 @@ export async function checkOrderExists(
     return false;
 
   } catch (error) {
-    console.error(`[ShopifyClient] Error checking orders for ${shop}:`, error);
+    // SECURITY: Redact PII from error messages before logging
+    console.error(`[ShopifyClient] Error checking orders for ${shop}:`, getErrorMessage(error));
     // FAIL SAFE: If error, assume order exists to block message
     return true; 
   }
@@ -175,15 +177,18 @@ export async function shopifyGraphql(
     // Check for userErrors (common in mutations) but don't throw, let caller handle
     // However, if there are top-level "errors", we should probably throw or return them.
     if (result.errors && result.errors.length > 0) {
-       console.error(`[ShopifyGraphQL] GraphQL Errors:`, result.errors);
-       // Aggregate all error messages
-       const errorMessages = result.errors.map((e: any) => e.message || JSON.stringify(e)).join("; ");
-       throw new Error(`GraphQL Error: ${errorMessages}`);
+       // SECURITY: Avoid logging the full 'errors' object as it contains PII (query strings/variables)
+       console.error(`[ShopifyGraphQL] GraphQL Errors: ${result.errors.length} errors occurred`);
+
+       // Aggregate all error messages and redact PII
+       const errorMessages = result.errors.map((e: any) => e.message || "Unknown GraphQL Error").join("; ");
+       throw new Error(`GraphQL Error: ${redactPII(errorMessages)}`);
     }
 
     return result.data;
   } catch (error) {
-    console.error(`[ShopifyGraphQL] Network/System Error for ${shop}:`, error);
+    // SECURITY: Use getErrorMessage to redact PII from the logged error
+    console.error(`[ShopifyGraphQL] Network/System Error for ${shop}:`, getErrorMessage(error));
     throw error;
   }
 }
