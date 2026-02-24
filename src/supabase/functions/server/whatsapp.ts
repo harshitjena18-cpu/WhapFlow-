@@ -92,7 +92,14 @@ export async function verifyWhatsAppSignature(rawBody: string, signatureHeader: 
   }
 
   // Header format: sha256=<signature_hex>
-  const [method, signature] = signatureHeader.split("=");
+  const equalIndex = signatureHeader.indexOf("=");
+  if (equalIndex === -1) {
+    return false;
+  }
+
+  const method = signatureHeader.substring(0, equalIndex);
+  const signature = signatureHeader.substring(equalIndex + 1);
+
   if (method !== "sha256" || !signature) {
       return false;
   }

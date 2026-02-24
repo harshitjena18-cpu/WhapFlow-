@@ -2,6 +2,7 @@ import { Hono } from "npm:hono";
 import * as kv from "./kv_store.tsx";
 import * as billing from "./billing.ts";
 import { getEnv } from "../../../lib/env.ts";
+import { getErrorMessage } from "../../../lib/error.ts";
 import { verifyWebhookHmac, getMerchantCredentials } from "./shopify_client.ts";
 import { encrypt } from "./crypto.ts";
 import { scheduleAutomation, processWhatsAppStatuses, AutomationTemplate } from "./automation.ts";
@@ -176,7 +177,8 @@ webhooksApp.post("/shopify", async (c) => {
     return c.json({ status: 'success', received: true }, 200);
 
   } catch (error) {
-    console.error('[Shopify Webhook] Error processing payload:', error);
+    // SECURITY: Use getErrorMessage to redact PII from the logged error
+    console.error('[Shopify Webhook] Error processing payload:', getErrorMessage(error));
     return c.json({ error: 'Invalid payload' }, 400);
   }
 });
@@ -270,7 +272,8 @@ webhooksApp.post("/app/uninstalled", async (c) => {
     return c.json({ status: 'success' }, 200);
 
   } catch (error) {
-    console.error('[Uninstall Webhook] Error:', error);
+    // SECURITY: Redact PII from the error message before logging
+    console.error('[Uninstall Webhook] Error:', getErrorMessage(error));
     return c.json({ error: 'Internal Server Error' }, 500);
   }
 });
@@ -321,7 +324,8 @@ webhooksApp.post("/whatsapp", async (c) => {
 
     return c.json({ status: 'ok' });
   } catch (error) {
-    console.error("[WhatsApp Webhook] Error processing POST:", error);
+    // SECURITY: Redact PII from the error message before logging
+    console.error("[WhatsApp Webhook] Error processing POST:", getErrorMessage(error));
     return c.json({ error: "Internal Error" }, 500);
   }
 });
