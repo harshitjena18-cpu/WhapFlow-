@@ -78,3 +78,7 @@
 ## 2026-03-22 - [AI Generation Latency & Pre-fetched State Reuse]
 **Learning:** Latency in AI routes often stems from sequential KV lookups for rate limiting and billing, combined with slow LLM API calls. By batching metadata lookups (mget) and parallelizing rate-limit persistence with the LLM API call, significant time can be saved. Furthermore, passing pre-fetched config objects to downstream services (like incrementUsage) eliminates redundant I/O, allowing for a "single-fetch" request pattern.
 **Action:** Identify routes with sequential I/O for metadata/limits. Implement "pre-fetched" parameter support in core services to avoid redundant KV hits when data is already available in the request context.
+
+## 2026-03-25 - [Atomic Webhook I/O Batching]
+**Learning:** Sequential await points in the critical path of webhooks (like Fetch -> Save -> Enqueue) create a significant latency floor. By refactoring the logic to perform all checks upfront and using a "prepare-then-batch" pattern, we can merge multiple persistence operations (Cart, Dedupe, and Job) into a single atomic `kv.mset`.
+**Action:** Always look for opportunities to merge sequential writes into a single batch. Use "prepare" helpers (like `createJob`) to generate data and keys in-memory before persisting.
