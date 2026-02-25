@@ -37,3 +37,7 @@
 ## 2025-05-15 - Profile Navigation Semantic and Accessibility
 **Learning:** Bespoke profile/user sections in sidebars are often implemented as clickable `div`s, which prevents them from being correctly identified as navigation elements by screen readers and lacks native keyboard focus behavior.
 **Action:** Always use semantic `Link` or `button` elements for interactive user profile sections and ensure they have explicit `aria-label`s and tactile feedback (`active:scale`) to match the rest of the navigation.
+
+## 2025-06-20 - Global Tactile Consistency and Mobile Auto-Close
+**Learning:** UX delight is amplified by consistent tactile feedback across all interactive elements, not just primary buttons. Adding subtle scale transitions to secondary actions like mobile menu toggles and profile links creates a cohesive "physical" feel. Additionally, ensure navigation triggers in sidebars (including profile links) automatically close mobile menus to minimize user effort.
+**Action:** Apply `active:scale` transitions to all bespoke interactive components. Ensure all sidebar navigation elements, including user profile links, trigger mobile menu closure on click.
