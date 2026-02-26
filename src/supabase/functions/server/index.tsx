@@ -103,11 +103,20 @@ app.post(`${SERVER_BASE_PATH}/api/whatsapp/send`, async (c) => {
     const authHeader = c.req.header("Authorization");
     const shop = c.req.query("shop") || "global";
 
-    // SECURITY: Protect demo endpoint from unauthorized use
-    // Verify against service role key for internal/admin access
+    // SECURITY: Transitioning to WHATSAPP_API_KEY for better isolation and least privilege.
+    // Falls back to service key with a warning during migration to prevent disruption.
+    const whatsappApiKey = getEnv("WHATSAPP_API_KEY");
     const serviceKey = getEnv("SUPABASE_SERVICE_ROLE_KEY");
-    if (!serviceKey || !authHeader || authHeader !== `Bearer ${serviceKey}`) {
+
+    const isWhatsappAuth = !!whatsappApiKey && authHeader === `Bearer ${whatsappApiKey}`;
+    const isServiceAuth = !!serviceKey && authHeader === `Bearer ${serviceKey}`;
+
+    if (!isWhatsappAuth && !isServiceAuth) {
       return c.json({ error: "Unauthorized: Invalid or missing token" }, 401);
+    }
+
+    if (isServiceAuth && !isWhatsappAuth) {
+      console.warn(`[Security] Demo endpoint called with deprecated Service Role Key. Please migrate to WHATSAPP_API_KEY.`);
     }
 
     // SECURITY: Validate shop domain
