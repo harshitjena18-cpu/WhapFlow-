@@ -8,7 +8,8 @@ import {
   Settings,
   MessageCircle,
   Menu,
-  X
+  X,
+  ChevronRight
 } from 'lucide-react';
 import { useState } from 'react';
 import { WhapflowLogo } from './WhapflowLogo';
@@ -123,15 +124,20 @@ export function Sidebar() {
                 </div>
              </div>
           ) : (
-            <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
-              <div className="w-9 h-9 bg-[#25D366] rounded-full flex items-center justify-center flex-shrink-0">
+            <Link
+              to="/settings"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 transition-all duration-200 active:scale-[0.98] group"
+              aria-label="View profile settings"
+            >
+              <div className="w-9 h-9 bg-[#25D366] rounded-full flex items-center justify-center flex-shrink-0 group-hover:shadow-sm transition-all">
                 <span className="text-white font-semibold text-xs">{initials}</span>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">{displayName}</p>
+                <p className="text-sm font-medium text-gray-900 truncate group-hover:text-[#25D366] transition-colors">{displayName}</p>
                 <p className="text-xs text-gray-500 truncate">{displayEmail}</p>
               </div>
-            </div>
+              <ChevronRight className="w-3.5 h-3.5 text-gray-400 group-hover:text-gray-600 transition-colors" />
+            </Link>
           )}
         </div>
       </aside>
