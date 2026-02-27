@@ -3,6 +3,17 @@ import { verify } from "npm:hono/jwt";
 import { getEnv } from "../../../lib/env.ts";
 import { SHOPIFY_DOMAIN_REGEX } from "./constants.ts";
 
+// PERFORMANCE: Module-level constants for environment variables to avoid redundant globalThis/process.env lookups
+const SHOPIFY_CLIENT_ID = getEnv("SHOPIFY_CLIENT_ID");
+const SHOPIFY_JWT_PUBLIC_KEY = getEnv("SHOPIFY_JWT_PUBLIC_KEY");
+const SHOPIFY_CLIENT_SECRET = getEnv("SHOPIFY_CLIENT_SECRET");
+
+// PERFORMANCE: Pre-calculate derived auth config to minimize per-request overhead
+// RS256 is required by the Security Blueprint. In production, we'd use Shopify's JWKS.
+// For MVP/Sentinel purposes, we support both RS256 (if key provided) and HS256 fallback.
+const PUBLIC_KEY_OR_SECRET = SHOPIFY_JWT_PUBLIC_KEY || SHOPIFY_CLIENT_SECRET;
+const AUTH_ALGORITHM = SHOPIFY_JWT_PUBLIC_KEY ? "RS256" : "HS256";
+
 /**
  * verifyShopifySession Middleware
  *
@@ -16,12 +27,10 @@ export const verifyShopifySession = async (c: Context, next: Next) => {
   }
 
   const token = authHeader.split(" ")[1];
-  const clientId = getEnv("SHOPIFY_CLIENT_ID");
 
-  // RS256 is required by the Security Blueprint. In production, we'd use Shopify's JWKS.
-  // For MVP/Sentinel purposes, we support both RS256 (if key provided) and HS256 fallback.
-  const publicKeyOrSecret = getEnv("SHOPIFY_JWT_PUBLIC_KEY") || getEnv("SHOPIFY_CLIENT_SECRET");
-  const algorithm = getEnv("SHOPIFY_JWT_PUBLIC_KEY") ? "RS256" : "HS256";
+  const clientId = SHOPIFY_CLIENT_ID;
+  const publicKeyOrSecret = PUBLIC_KEY_OR_SECRET;
+  const algorithm = AUTH_ALGORITHM;
 
   if (!publicKeyOrSecret || !clientId) {
     console.error("[Auth] Missing SHOPIFY_CLIENT_ID or Secret/Public Key");
