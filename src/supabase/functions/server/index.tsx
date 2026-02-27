@@ -103,11 +103,20 @@ app.post(`${SERVER_BASE_PATH}/api/whatsapp/send`, async (c) => {
     const authHeader = c.req.header("Authorization");
     const shop = c.req.query("shop") || "global";
 
-    // SECURITY: Protect demo endpoint from unauthorized use
-    // Verify against service role key for internal/admin access
+    // SECURITY: Protect demo endpoint from unauthorized use.
+    // Prioritize WHATSAPP_API_KEY for scoped access; fallback to SUPABASE_SERVICE_ROLE_KEY with a warning.
+    const apiKey = getEnv("WHATSAPP_API_KEY");
     const serviceKey = getEnv("SUPABASE_SERVICE_ROLE_KEY");
-    if (!serviceKey || !authHeader || authHeader !== `Bearer ${serviceKey}`) {
+
+    const isAuthorized = (apiKey && authHeader === `Bearer ${apiKey}`) ||
+                         (serviceKey && authHeader === `Bearer ${serviceKey}`);
+
+    if (!isAuthorized) {
       return c.json({ error: "Unauthorized: Invalid or missing token" }, 401);
+    }
+
+    if (serviceKey && authHeader === `Bearer ${serviceKey}` && authHeader !== `Bearer ${apiKey}`) {
+      console.warn("[WhatsApp Security] Access granted via SERVICE_ROLE_KEY. Please migrate to WHATSAPP_API_KEY.");
     }
 
     // SECURITY: Validate shop domain
