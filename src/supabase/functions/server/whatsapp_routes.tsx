@@ -12,11 +12,20 @@ const app = new Hono();
 app.post("/whatsapp/send", async (c) => {
   try {
     const authHeader = c.req.header("Authorization");
+    const apiKey = getEnv("WHATSAPP_API_KEY");
     const serviceKey = getEnv("SUPABASE_SERVICE_ROLE_KEY");
 
-    // SECURITY: Protect endpoint from unauthorized use
-    if (!serviceKey || !authHeader || authHeader !== `Bearer ${serviceKey}`) {
+    // SECURITY: Protect endpoint from unauthorized use.
+    // Prioritize WHATSAPP_API_KEY for scoped access; fallback to SUPABASE_SERVICE_ROLE_KEY with a warning.
+    const isAuthorized = (apiKey && authHeader === `Bearer ${apiKey}`) ||
+                         (serviceKey && authHeader === `Bearer ${serviceKey}`);
+
+    if (!isAuthorized) {
       return c.json({ error: "Unauthorized: Invalid or missing token" }, 401);
+    }
+
+    if (serviceKey && authHeader === `Bearer ${serviceKey}` && authHeader !== `Bearer ${apiKey}`) {
+      console.warn("[WhatsApp Security] Access granted via SERVICE_ROLE_KEY. Please migrate to WHATSAPP_API_KEY.");
     }
 
     const { phoneNumber, templateId } = await c.req.json();
