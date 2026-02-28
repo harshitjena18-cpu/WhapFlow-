@@ -3,6 +3,16 @@ import { verify } from "npm:hono/jwt";
 import { getEnv } from "../../../lib/env.ts";
 import { SHOPIFY_DOMAIN_REGEX } from "./constants.ts";
 
+// PERFORMANCE: Hoist environment variables to module level to avoid redundant lookups on every request.
+// In Edge Functions, these are initialized once per isolate.
+const SHOPIFY_CLIENT_ID = getEnv("SHOPIFY_CLIENT_ID");
+const SHOPIFY_JWT_PUBLIC_KEY = getEnv("SHOPIFY_JWT_PUBLIC_KEY");
+const SHOPIFY_CLIENT_SECRET = getEnv("SHOPIFY_CLIENT_SECRET");
+
+// PERFORMANCE: Pre-calculate the algorithm and the key/secret once to avoid conditional logic in the hot path.
+const AUTH_ALGORITHM = SHOPIFY_JWT_PUBLIC_KEY ? "RS256" : "HS256";
+const PUBLIC_KEY_OR_SECRET = SHOPIFY_JWT_PUBLIC_KEY || SHOPIFY_CLIENT_SECRET;
+
 /**
  * verifyShopifySession Middleware
  *
@@ -16,24 +26,19 @@ export const verifyShopifySession = async (c: Context, next: Next) => {
   }
 
   const token = authHeader.split(" ")[1];
-  const clientId = getEnv("SHOPIFY_CLIENT_ID");
 
-  // RS256 is required by the Security Blueprint. In production, we'd use Shopify's JWKS.
-  // For MVP/Sentinel purposes, we support both RS256 (if key provided) and HS256 fallback.
-  const publicKeyOrSecret = getEnv("SHOPIFY_JWT_PUBLIC_KEY") || getEnv("SHOPIFY_CLIENT_SECRET");
-  const algorithm = getEnv("SHOPIFY_JWT_PUBLIC_KEY") ? "RS256" : "HS256";
-
-  if (!publicKeyOrSecret || !clientId) {
+  // PERFORMANCE: Use pre-calculated constants instead of calling getEnv and branching on every request.
+  if (!PUBLIC_KEY_OR_SECRET || !SHOPIFY_CLIENT_ID) {
     console.error("[Auth] Missing SHOPIFY_CLIENT_ID or Secret/Public Key");
     return c.json({ error: "Server Configuration Error" }, 500);
   }
 
   try {
     // 1. Verify JWT Signature
-    const payload = await verify(token, publicKeyOrSecret, algorithm as any);
+    const payload = await verify(token, PUBLIC_KEY_OR_SECRET, AUTH_ALGORITHM as any);
 
     // 2. Validate Audience (App API Key)
-    if (payload.aud !== clientId) {
+    if (payload.aud !== SHOPIFY_CLIENT_ID) {
       return c.json({ error: "Unauthorized: Invalid Audience" }, 401);
     }
 
