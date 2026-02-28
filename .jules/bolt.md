@@ -78,3 +78,7 @@
 ## 2026-03-22 - [AI Generation Latency & Pre-fetched State Reuse]
 **Learning:** Latency in AI routes often stems from sequential KV lookups for rate limiting and billing, combined with slow LLM API calls. By batching metadata lookups (mget) and parallelizing rate-limit persistence with the LLM API call, significant time can be saved. Furthermore, passing pre-fetched config objects to downstream services (like incrementUsage) eliminates redundant I/O, allowing for a "single-fetch" request pattern.
 **Action:** Identify routes with sequential I/O for metadata/limits. Implement "pre-fetched" parameter support in core services to avoid redundant KV hits when data is already available in the request context.
+
+## 2026-03-25 - [Middleware Hoisting & Hot Path Optimization]
+**Learning:** Middleware functions are executed on every authenticated request, making them the most sensitive "hot path" in the application. Sequential `getEnv` calls and conditional branching within the request handler introduce micro-latencies that accumulate at scale. Hoisting these lookups to module-level constants allows the Edge Function isolate to initialize them once, significantly reducing the per-request overhead.
+**Action:** Identify all middleware and global request handlers. Move static configuration and environment variable lookups to the module scope (outside the handler) to leverage isolate-level caching in serverless environments.
