@@ -162,10 +162,11 @@ const defaultAutomations = [
 
 // GET /dashboard/data
 dashboardApp.get("/data", async (c) => {
-  // SECURITY: Use verified shop domain from middleware instead of untrusted query parameter
-  const shop = (c.get("verified_shop") as string) || c.req.query("shop");
+  // SECURITY: Use verified shop domain from middleware exclusively.
+  // Fallback to untrusted query parameter is removed to prevent IDOR vulnerabilities.
+  const shop = c.get("verified_shop") as string;
 
-  if (!shop) return c.json({ error: "Missing shop parameter" }, 400);
+  if (!shop) return c.json({ error: "Unauthorized: Missing verified shop context" }, 401);
 
   // SECURITY: Extra validation for shop domain
   if (shop !== "global" && !SHOPIFY_DOMAIN_REGEX.test(shop)) {
@@ -220,10 +221,10 @@ dashboardApp.get("/data", async (c) => {
 
 // GET /dashboard/automations
 dashboardApp.get("/automations", async (c) => {
-  // SECURITY: Use verified shop domain
-  const shop = (c.get("verified_shop") as string) || c.req.query("shop");
+  // SECURITY: Use verified shop domain exclusively.
+  const shop = c.get("verified_shop") as string;
 
-  if (!shop) return c.json({ error: "Missing shop parameter" }, 400);
+  if (!shop) return c.json({ error: "Unauthorized: Missing verified shop context" }, 401);
 
   // SECURITY: Validate shop domain to prevent multi-tenancy leaks
   if (shop !== "global" && !SHOPIFY_DOMAIN_REGEX.test(shop)) {
@@ -254,10 +255,10 @@ dashboardApp.get("/automations", async (c) => {
 
 // POST /dashboard/automations/:id/toggle
 dashboardApp.post("/automations/:id/toggle", async (c) => {
-  // SECURITY: Use verified shop domain
-  const shop = (c.get("verified_shop") as string) || c.req.query("shop");
+  // SECURITY: Use verified shop domain exclusively.
+  const shop = c.get("verified_shop") as string;
 
-  if (!shop) return c.json({ error: "Missing shop parameter" }, 400);
+  if (!shop) return c.json({ error: "Unauthorized: Missing verified shop context" }, 401);
 
   // SECURITY: Validate shop domain to prevent multi-tenancy leaks
   if (shop !== "global" && !SHOPIFY_DOMAIN_REGEX.test(shop)) {
