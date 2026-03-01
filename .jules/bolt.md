@@ -78,3 +78,7 @@
 ## 2026-03-22 - [AI Generation Latency & Pre-fetched State Reuse]
 **Learning:** Latency in AI routes often stems from sequential KV lookups for rate limiting and billing, combined with slow LLM API calls. By batching metadata lookups (mget) and parallelizing rate-limit persistence with the LLM API call, significant time can be saved. Furthermore, passing pre-fetched config objects to downstream services (like incrementUsage) eliminates redundant I/O, allowing for a "single-fetch" request pattern.
 **Action:** Identify routes with sequential I/O for metadata/limits. Implement "pre-fetched" parameter support in core services to avoid redundant KV hits when data is already available in the request context.
+
+## 2026-03-23 - [Middleware Environment Hoisting & Pre-calculation]
+**Learning:** The `verifyShopifySession` middleware is part of the "hot path" for every authenticated request. Repeatedly calling `getEnv` and executing conditional logic for algorithm selection adds unnecessary overhead. Hoisting these environment variables to the module level and pre-calculating the authentication key and algorithm reduces the per-request latency of the middleware.
+**Action:** Hoist environment variables and pre-calculate derived constants at the module level in middleware and other request-heavy components.
