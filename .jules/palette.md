@@ -37,3 +37,7 @@
 ## 2025-05-15 - Profile Navigation Semantic and Accessibility
 **Learning:** Bespoke profile/user sections in sidebars are often implemented as clickable `div`s, which prevents them from being correctly identified as navigation elements by screen readers and lacks native keyboard focus behavior.
 **Action:** Always use semantic `Link` or `button` elements for interactive user profile sections and ensure they have explicit `aria-label`s and tactile feedback (`active:scale`) to match the rest of the navigation.
+
+## 2025-05-15 - [Interactive Profile Affordance]
+**Learning:** Transitioning a profile section from a static container to an interactive element requires more than just a link. Adding a `ChevronRight` icon that animates on hover (`translate-x-0.5`) provides a strong visual "affordance" that the element is clickable, significantly improving discoverability for first-time users.
+**Action:** Supplement interactive navigation elements with visual cues like chevrons and hover states (shadows, transforms) to clearly communicate clickability.
