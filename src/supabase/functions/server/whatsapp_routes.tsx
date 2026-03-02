@@ -1,5 +1,6 @@
 import { Hono } from "npm:hono";
 import { getEnv } from "../../../lib/env.ts";
+import { getErrorMessage } from "../../../lib/error.ts";
 import { processWhatsAppStatuses } from "./automation.ts";
 import { sendWhatsAppTemplate, verifyWhatsAppSignature } from "./whatsapp.ts";
 
@@ -86,7 +87,8 @@ app.post("/webhooks/whatsapp", async (c) => {
 
     return c.json({ status: 'ok' });
   } catch (error) {
-    console.error("[WhatsApp Webhook] Error processing POST:", error);
+    // SECURITY: Redact PII from the error message before logging
+    console.error("[WhatsApp Webhook] Error processing POST:", getErrorMessage(error));
     return c.json({ error: "Internal Error" }, 500);
   }
 });

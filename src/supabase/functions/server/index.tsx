@@ -184,7 +184,8 @@ app.post(`${SERVER_BASE_PATH}/api/webhooks/whatsapp`, async (c) => {
 
     return c.json({ status: 'ok' });
   } catch (error) {
-    console.error("[WhatsApp Webhook] Error processing POST:", error);
+    // SECURITY: Use getErrorMessage to redact PII from the error before logging
+    console.error("[WhatsApp Webhook] Error processing POST:", getErrorMessage(error));
     return c.json({ error: "Internal Error" }, 500);
   }
 });
