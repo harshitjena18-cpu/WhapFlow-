@@ -76,9 +76,9 @@
 **Action:** Audit `Promise.all` blocks for mixed `kv.get` and `kv.mget` calls and merge them. Always apply a `limit` to `kv.scanQueue` and other range-based lookups to prevent OOM errors.
 
 ## 2026-03-22 - [AI Generation Latency & Pre-fetched State Reuse]
-**Learning:** Latency in AI routes often stems from sequential KV lookups for rate limiting and billing, combined with slow LLM API calls. By batching metadata lookups (mget) and parallelizing rate-limit persistence with the LLM API call, significant time can be saved. Furthermore, passing pre-fetched config objects to downstream services (like incrementUsage) eliminates redundant I/O, allowing for a "single-fetch" request pattern.
+**Learning:** Latency in AI routes often stems from sequential KV lookups for rate limiting and billing, combined with slow LLM API calls. By batching metadata lookups (mget) and parallelizing rate-limit persistence with the LLM API call, significant time can be saved. Furthermore, passing pre-fetched config objects to downstream services (like incrementUsage) eliminates redundant I/O, allowing for a "single-fetch" before the request pattern.
 **Action:** Identify routes with sequential I/O for metadata/limits. Implement "pre-fetched" parameter support in core services to avoid redundant KV hits when data is already available in the request context.
 
-## 2026-03-25 - [Atomic Webhook I/O Batching]
-**Learning:** Sequential await points in the critical path of webhooks (like Fetch -> Save -> Enqueue) create a significant latency floor. By refactoring the logic to perform all checks upfront and using a "prepare-then-batch" pattern, we can merge multiple persistence operations (Cart, Dedupe, and Job) into a single atomic `kv.mset`.
-**Action:** Always look for opportunities to merge sequential writes into a single batch. Use "prepare" helpers (like `createJob`) to generate data and keys in-memory before persisting.
+## 2026-03-25 - [Middleware Hot-path Optimizations]
+**Learning:** Request-level middleware like `verifyShopifySession` executes on every authenticated call. Expensive operations like `new URL()` parsing and repeated environment variable lookups (even via `Deno.env.get`) add cumulative latency. Optimized string manipulation for hostname extraction and module-level configuration caching reduce the per-request latency floor.
+**Action:** Audit middleware and high-frequency hooks for redundant I/O or expensive object construction (URL, Date, Regex). Cache static config and prefer string manipulation in hot-paths when the input format is strictly validated.

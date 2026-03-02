@@ -22,3 +22,8 @@
 **Vulnerability:** Shopify GraphQL error responses containing customer PII (emails/phone numbers) in the query or variables were logged in full. Additionally, the automation runner persisted raw error objects to the database.
 **Learning:** Centralized error helpers should include PII redaction logic to ensure defense-in-depth across the entire application, as developers may forget to manually redact in every catch block.
 **Prevention:** Use a `redactPII` utility in the global `getErrorMessage` helper and ensure all external API clients (Shopify, WhatsApp, OpenAI) explicitly redact or omit full error objects from logs.
+
+## 2025-05-23 - [Redundant Query Parameter Fallback in Dashboard Routes]
+**Vulnerability:** Dashboard API handlers used a fallback to an untrusted `shop` query parameter when the `verified_shop` context was missing, creating a potential IDOR vector if middleware was bypassed.
+**Learning:** Even with security middleware in place, handlers should not provide fallbacks to untrusted inputs. A missing verified identity should always result in an explicit authorization failure (Fail-Closed).
+**Prevention:** Remove all `|| c.req.query("shop")` fallbacks in protected routes and strictly rely on the context value provided by the verification middleware.

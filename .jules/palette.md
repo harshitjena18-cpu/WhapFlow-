@@ -35,5 +35,5 @@
 **Action:** Apply subtle `active` scale transitions to primary or call-to-action buttons to enhance the perceived responsiveness of the UI.
 
 ## 2025-05-15 - Profile Navigation Semantic and Accessibility
-**Learning:** Bespoke profile/user sections in sidebars are often implemented as clickable `div`s, which prevents them from being correctly identified as navigation elements by screen readers and lacks native keyboard focus behavior.
-**Action:** Always use semantic `Link` or `button` elements for interactive user profile sections and ensure they have explicit `aria-label`s and tactile feedback (`active:scale`) to match the rest of the navigation.
+**Learning:** Bespoke profile/user sections in sidebars are often implemented as clickable `div`s, which prevents them from being correctly identified as navigation elements by screen readers and lacks native keyboard focus behavior. Ensuring these sections are interactive across all sidebar states (expanded or collapsed) is critical for consistency.
+**Action:** Always use semantic `Link` or `button` elements for interactive user profile sections and ensure they have explicit `aria-label`s and tactile feedback (`active:scale`) to match the rest of the navigation. Verify that routing is consistent (e.g., using the same `/settings` path) across all instances of the profile link.

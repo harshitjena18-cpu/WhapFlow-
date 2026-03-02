@@ -3,6 +3,11 @@ import { verify } from "npm:hono/jwt";
 import { getEnv } from "../../../lib/env.ts";
 import { SHOPIFY_DOMAIN_REGEX } from "./constants.ts";
 
+// Module-level cache for configuration to avoid redundant getEnv lookups on every request
+let _cachedClientId: string | undefined;
+let _cachedPublicKeyOrSecret: string | undefined;
+let _cachedAlgorithm: string | undefined;
+
 /**
  * verifyShopifySession Middleware
  *
@@ -16,12 +21,18 @@ export const verifyShopifySession = async (c: Context, next: Next) => {
   }
 
   const token = authHeader.split(" ")[1];
-  const clientId = getEnv("SHOPIFY_CLIENT_ID");
 
-  // RS256 is required by the Security Blueprint. In production, we'd use Shopify's JWKS.
-  // For MVP/Sentinel purposes, we support both RS256 (if key provided) and HS256 fallback.
-  const publicKeyOrSecret = getEnv("SHOPIFY_JWT_PUBLIC_KEY") || getEnv("SHOPIFY_CLIENT_SECRET");
-  const algorithm = getEnv("SHOPIFY_JWT_PUBLIC_KEY") ? "RS256" : "HS256";
+  // PERFORMANCE: Use module-level cache for environment variables to avoid repeated globalThis lookups
+  if (!_cachedClientId) _cachedClientId = getEnv("SHOPIFY_CLIENT_ID");
+  if (!_cachedPublicKeyOrSecret) {
+    const pubKey = getEnv("SHOPIFY_JWT_PUBLIC_KEY");
+    _cachedPublicKeyOrSecret = pubKey || getEnv("SHOPIFY_CLIENT_SECRET");
+    _cachedAlgorithm = pubKey ? "RS256" : "HS256";
+  }
+
+  const clientId = _cachedClientId;
+  const publicKeyOrSecret = _cachedPublicKeyOrSecret;
+  const algorithm = _cachedAlgorithm;
 
   if (!publicKeyOrSecret || !clientId) {
     console.error("[Auth] Missing SHOPIFY_CLIENT_ID or Secret/Public Key");
@@ -38,8 +49,10 @@ export const verifyShopifySession = async (c: Context, next: Next) => {
     }
 
     // 3. Extract and normalize the shop domain from the 'dest' claim
+    // PERFORMANCE: Optimized string manipulation to extract hostname without the overhead of 'new URL()'
+    // This reduces latency in the request-level middleware hot path.
     const dest = payload.dest as string;
-    const shop = new URL(dest).hostname;
+    const shop = dest.replace(/^https?:\/\//, '').split('/')[0];
 
     // SECURITY: Validate shop domain format to prevent SSRF or unauthorized domains
     if (!SHOPIFY_DOMAIN_REGEX.test(shop)) {
