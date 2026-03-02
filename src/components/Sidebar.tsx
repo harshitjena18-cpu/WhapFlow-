@@ -51,7 +51,7 @@ export function Sidebar() {
       {/* Mobile menu button */}
       <button
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        className="lg:hidden fixed top-6 right-6 z-50 p-3 rounded-xl bg-white border border-gray-100 hover:bg-gray-50 transition-all"
+        className="lg:hidden fixed top-6 right-6 z-50 p-3 rounded-xl bg-white border border-gray-100 hover:bg-gray-50 transition-all active:scale-95"
         aria-label="Toggle menu"
       >
         {isMobileMenuOpen ? (
@@ -126,17 +126,17 @@ export function Sidebar() {
           ) : (
             <Link
               to="/settings"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 transition-all duration-200 active:scale-[0.98] group"
-              aria-label="View profile settings"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 transition-all active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-[#25D366]/20"
+              aria-label="User Profile and Settings"
             >
-              <div className="w-9 h-9 bg-[#25D366] rounded-full flex items-center justify-center flex-shrink-0 group-hover:shadow-sm transition-all">
+              <div className="w-9 h-9 bg-[#25D366] rounded-full flex items-center justify-center flex-shrink-0">
                 <span className="text-white font-semibold text-xs">{initials}</span>
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 truncate group-hover:text-[#25D366] transition-colors">{displayName}</p>
                 <p className="text-xs text-gray-500 truncate">{displayEmail}</p>
               </div>
-              <ChevronRight className="w-3.5 h-3.5 text-gray-400 group-hover:text-gray-600 transition-colors" />
             </Link>
           )}
         </div>

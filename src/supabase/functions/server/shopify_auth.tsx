@@ -3,6 +3,7 @@ import { setCookie, getCookie } from "npm:hono/cookie";
 import * as kv from "./kv_store.tsx";
 import { encrypt } from "./crypto.ts";
 import { getEnv } from "../../../lib/env.ts";
+import { getErrorMessage } from "../../../lib/error.ts";
 import { API_DOMAIN, APP_DOMAIN, SERVER_BASE_PATH } from "./constants.ts";
 
 const app = new Hono();
@@ -169,7 +170,8 @@ app.get("/callback", async (c) => {
     return c.redirect(`${APP_DOMAIN}/dashboard`);
 
   } catch (error) {
-    console.error("[OAuth] Unexpected error:", error);
+    // SECURITY: Use getErrorMessage to redact PII from the logged error
+    console.error("[OAuth] Unexpected error:", getErrorMessage(error));
     return c.text("Internal Server Error", 500);
   }
 });
@@ -273,7 +275,8 @@ async function registerWebhooks(shop: string, accessToken: string) {
         console.log(`[Webhooks] Successfully registered ${hook.topic}`);
       }
     } catch (err) {
-      console.error(`[Webhooks] Network error registering ${hook.topic}:`, err);
+      // SECURITY: Redact PII from the network error before logging
+      console.error(`[Webhooks] Network error registering ${hook.topic}:`, getErrorMessage(err));
     }
   }));
 }
