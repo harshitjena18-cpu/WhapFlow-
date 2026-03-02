@@ -42,7 +42,7 @@ dashboardMetricsApp.get("/metrics", async (c) => {
     const templates = (rawTemplates || []) as AutomationTemplate[];
 
     // SECURITY: Verify merchant exists to prevent unauthorized data access
-    if (!merchant && shop !== "global") {
+    if (!merchant) {
       return c.json({ error: "Unauthorized: Merchant not found" }, 401);
     }
 

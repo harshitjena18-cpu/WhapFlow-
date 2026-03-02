@@ -5,6 +5,7 @@
 
 import { getEnv } from "../../../lib/env.ts";
 import { Buffer } from "node:buffer";
+import { getErrorMessage } from "../../../lib/error.ts";
 
 interface SendMessageParams {
   to: string;
@@ -69,10 +70,10 @@ export const sendWhatsAppTemplate = async ({
     // SECURITY: Log only wamid to avoid leaking PII in response data
     const wamid = data.messages?.[0]?.id;
     console.log("✅ WhatsApp Message Sent. ID:", wamid);
-    return { success: true, data, wamid };
+    return { success: true, wamid };
   } catch (error) {
-    console.error("❌ Network/Server Error sending WhatsApp:", error);
-    return { success: false, error };
+    console.error("❌ Network/Server Error sending WhatsApp:", getErrorMessage(error));
+    return { success: false, error: getErrorMessage(error) };
   }
 };
 
@@ -127,7 +128,7 @@ export async function verifyWhatsAppSignature(rawBody: string, signatureHeader: 
       msgData
     );
   } catch (error) {
-    console.error("[WhatsApp Webhook] HMAC verification error:", error);
+    console.error("[WhatsApp Webhook] HMAC verification error:", getErrorMessage(error));
     return false;
   }
 }

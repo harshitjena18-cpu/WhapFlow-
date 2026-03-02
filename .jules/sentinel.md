@@ -22,3 +22,8 @@
 **Vulnerability:** Shopify GraphQL error responses containing customer PII (emails/phone numbers) in the query or variables were logged in full. Additionally, the automation runner persisted raw error objects to the database.
 **Learning:** Centralized error helpers should include PII redaction logic to ensure defense-in-depth across the entire application, as developers may forget to manually redact in every catch block.
 **Prevention:** Use a `redactPII` utility in the global `getErrorMessage` helper and ensure all external API clients (Shopify, WhatsApp, OpenAI) explicitly redact or omit full error objects from logs.
+
+## 2025-05-25 - [Strict Multi-Tenancy and Information Disclosure Prevention]
+**Vulnerability:** Dashboard routes relied on untrusted query parameters and allowed a "global" bypass. WhatsApp API responses leaked full Meta response data (containing PII) and raw error objects to clients.
+**Learning:** Defaulting to a "global" scope or trusting client-provided parameters for identity, even as a fallback, creates significant IDOR risks. Returning full upstream API responses often inadvertently leaks customer PII or internal system metadata.
+**Prevention:** Derive identity exclusively from verified session contexts. Explicitly sanitize all upstream API responses to return only minimal required fields (e.g., IDs) and use centralized error helpers to redact PII from all logs and client-facing error messages.

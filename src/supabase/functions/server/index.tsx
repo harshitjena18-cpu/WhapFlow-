@@ -101,7 +101,7 @@ Deno.cron("Process Queue", "* * * * *", async () => {
 app.post(`${SERVER_BASE_PATH}/api/whatsapp/send`, async (c) => {
   try {
     const authHeader = c.req.header("Authorization");
-    const shop = c.req.query("shop") || "global";
+    const shop = c.req.query("shop");
 
     // SECURITY: Protect demo endpoint from unauthorized use
     // Verify against service role key for internal/admin access
@@ -110,8 +110,12 @@ app.post(`${SERVER_BASE_PATH}/api/whatsapp/send`, async (c) => {
       return c.json({ error: "Unauthorized: Invalid or missing token" }, 401);
     }
 
+    if (!shop) {
+      return c.json({ error: "Missing shop parameter" }, 400);
+    }
+
     // SECURITY: Validate shop domain
-    if (shop !== "global" && !SHOPIFY_DOMAIN_REGEX.test(shop)) {
+    if (!SHOPIFY_DOMAIN_REGEX.test(shop)) {
       return c.json({ error: "Invalid shop domain" }, 400);
     }
 
@@ -127,7 +131,7 @@ app.post(`${SERVER_BASE_PATH}/api/whatsapp/send`, async (c) => {
     });
     
     if (result.success) {
-      return c.json({ success: true, message: 'Message sent', data: result.data }, 200);
+      return c.json({ success: true, message: 'Message sent', wamid: result.wamid }, 200);
     } else {
       return c.json({ error: 'WhatsApp API Error', details: result.error }, 500);
     }
