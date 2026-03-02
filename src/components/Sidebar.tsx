@@ -8,7 +8,8 @@ import {
   Settings,
   MessageCircle,
   Menu,
-  X
+  X,
+  ChevronRight
 } from 'lucide-react';
 import { useState } from 'react';
 import { WhapflowLogo } from './WhapflowLogo';
@@ -133,7 +134,7 @@ export function Sidebar() {
                 <span className="text-white font-semibold text-xs">{initials}</span>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">{displayName}</p>
+                <p className="text-sm font-medium text-gray-900 truncate group-hover:text-[#25D366] transition-colors">{displayName}</p>
                 <p className="text-xs text-gray-500 truncate">{displayEmail}</p>
               </div>
             </Link>
