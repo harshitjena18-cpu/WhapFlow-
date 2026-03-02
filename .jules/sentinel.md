@@ -23,7 +23,7 @@
 **Learning:** Centralized error helpers should include PII redaction logic to ensure defense-in-depth across the entire application, as developers may forget to manually redact in every catch block.
 **Prevention:** Use a `redactPII` utility in the global `getErrorMessage` helper and ensure all external API clients (Shopify, WhatsApp, OpenAI) explicitly redact or omit full error objects from logs.
 
-## 2025-05-24 - [Privilege Escalation via Shared Service Role Key]
-**Vulnerability:** Functional API endpoints for sending WhatsApp messages were secured using the same `SUPABASE_SERVICE_ROLE_KEY` used for database administrative access. A leak of this key would grant full access to the database.
-**Learning:** Using a single high-privilege key for both internal infra (DB) and specific functional APIs violates the principle of least privilege and increases the blast radius of a credential leak.
-**Prevention:** Always use scoped, feature-specific API keys (e.g., `WHATSAPP_API_KEY`) for external-facing or functional endpoints. Implement a graceful migration path by allowing legacy keys with a warning before fully deprecating them.
+## 2025-05-23 - [Redundant Query Parameter Fallback in Dashboard Routes]
+**Vulnerability:** Dashboard API handlers used a fallback to an untrusted `shop` query parameter when the `verified_shop` context was missing, creating a potential IDOR vector if middleware was bypassed.
+**Learning:** Even with security middleware in place, handlers should not provide fallbacks to untrusted inputs. A missing verified identity should always result in an explicit authorization failure (Fail-Closed).
+**Prevention:** Remove all `|| c.req.query("shop")` fallbacks in protected routes and strictly rely on the context value provided by the verification middleware.

@@ -103,15 +103,10 @@ app.post(`${SERVER_BASE_PATH}/api/whatsapp/send`, async (c) => {
     const authHeader = c.req.header("Authorization");
     const shop = c.req.query("shop") || "global";
 
-    // SECURITY: Transitioning to WHATSAPP_API_KEY for better isolation and least privilege.
-    // Falls back to service key with a warning during migration to prevent disruption.
-    const whatsappApiKey = getEnv("WHATSAPP_API_KEY");
-    const serviceKey = getEnv("SUPABASE_SERVICE_ROLE_KEY");
-
-    const isWhatsappAuth = !!whatsappApiKey && authHeader === `Bearer ${whatsappApiKey}`;
-    const isServiceAuth = !!serviceKey && authHeader === `Bearer ${serviceKey}`;
-
-    if (!isWhatsappAuth && !isServiceAuth) {
+    // SECURITY: Protect demo endpoint from unauthorized use
+    // Verify against API key for internal/admin access
+    const apiKey = getEnv("WHATSAPP_API_KEY");
+    if (!apiKey || !authHeader || authHeader !== `Bearer ${apiKey}`) {
       return c.json({ error: "Unauthorized: Invalid or missing token" }, 401);
     }
 
@@ -193,7 +188,8 @@ app.post(`${SERVER_BASE_PATH}/api/webhooks/whatsapp`, async (c) => {
 
     return c.json({ status: 'ok' });
   } catch (error) {
-    console.error("[WhatsApp Webhook] Error processing POST:", error);
+    // SECURITY: Use getErrorMessage to redact PII from the error before logging
+    console.error("[WhatsApp Webhook] Error processing POST:", getErrorMessage(error));
     return c.json({ error: "Internal Error" }, 500);
   }
 });
