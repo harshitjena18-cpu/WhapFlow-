@@ -78,3 +78,7 @@
 ## 2026-03-22 - [AI Generation Latency & Pre-fetched State Reuse]
 **Learning:** Latency in AI routes often stems from sequential KV lookups for rate limiting and billing, combined with slow LLM API calls. By batching metadata lookups (mget) and parallelizing rate-limit persistence with the LLM API call, significant time can be saved. Furthermore, passing pre-fetched config objects to downstream services (like incrementUsage) eliminates redundant I/O, allowing for a "single-fetch" request pattern.
 **Action:** Identify routes with sequential I/O for metadata/limits. Implement "pre-fetched" parameter support in core services to avoid redundant KV hits when data is already available in the request context.
+
+## 2026-03-25 - [Promise-based Crypto Caching & Micro-overhead Reduction]
+**Learning:** Even with module-level `CryptoKey` caching, concurrent requests (thundering herd) can trigger multiple redundant `subtle.deriveKey` operations before the first one completes and populates the cache. Using a promise-based cache (`_v3KeyPromise`) ensures all concurrent callers await the same operation. Additionally, hoisting `TextEncoder`/`TextDecoder` and pre-encoding static HKDF parameters (`salt`, `info`) eliminates micro-latencies that compound in high-traffic paths.
+**Action:** Use promise-based caching for all expensive asynchronous initializations. Hoist `TextEncoder` and pre-encode static strings to `Uint8Array` at the module level.
