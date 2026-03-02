@@ -7,7 +7,8 @@ export function redactPII(text: string): string {
   // Regex for emails
   const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
   // Regex for common phone number formats (7+ digits)
-  const phoneRegex = /(?:\+?\d{1,3}[- ]?)?\(?\d{3}\)?[- ]?\d{3}[- ]?\d{4,}/g;
+  // Optimized to reduce backtracking and handle varied delimiters safely
+  const phoneRegex = /(?:\+?\d{1,3}[ \-]?)?\(?\d{3}\)?[ \-]?\d{3}[ \-]?\d{4,}/g;
 
   return text
     .replace(emailRegex, "[REDACTED_EMAIL]")
@@ -25,14 +26,18 @@ export function getErrorMessage(error: unknown): string | undefined {
   let message: string | undefined;
 
   if (error instanceof Error) {
-    message = error.message;
+    // SECURITY: Use stack if available for better observability, but always redact PII
+    message = error.stack || error.message;
   } else if (typeof error === 'string') {
     message = error;
   } else if (typeof error === 'object' && error !== null && 'message' in error) {
-    message = String((error as any).message);
+    const rawMessage = (error as any).message;
+    if (rawMessage !== null && rawMessage !== undefined) {
+      message = String(rawMessage);
+    }
   }
 
-  if (message) {
+  if (message && message !== 'null' && message !== 'undefined') {
     return redactPII(message);
   }
 

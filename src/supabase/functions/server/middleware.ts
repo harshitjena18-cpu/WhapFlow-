@@ -3,9 +3,9 @@ import { verify } from "npm:hono/jwt";
 import { getEnv } from "../../../lib/env.ts";
 import { SHOPIFY_DOMAIN_REGEX } from "./constants.ts";
 
-// PERFORMANCE: Module-level cache for environment variables to avoid redundant global lookups
-let _cachedClientId: string | null | undefined;
-let _cachedPublicKeyOrSecret: string | null | undefined;
+// Module-level cache for configuration to avoid redundant getEnv lookups on every request
+let _cachedClientId: string | undefined;
+let _cachedPublicKeyOrSecret: string | undefined;
 let _cachedAlgorithm: string | undefined;
 
 /**
@@ -22,23 +22,15 @@ export const verifyShopifySession = async (c: Context, next: Next) => {
 
   const token = authHeader.split(" ")[1];
 
-  // PERFORMANCE: Use cached environment variables to avoid redundant globalThis/process lookups in the hot path.
-  // We use 'null' to represent a deliberate absence of the variable after the initial check.
-  if (_cachedClientId === undefined) {
-    _cachedClientId = getEnv("SHOPIFY_CLIENT_ID") || null;
+  // PERFORMANCE: Use module-level cache for environment variables to avoid repeated globalThis lookups
+  if (!_cachedClientId) _cachedClientId = getEnv("SHOPIFY_CLIENT_ID");
+  if (!_cachedPublicKeyOrSecret) {
+    const pubKey = getEnv("SHOPIFY_JWT_PUBLIC_KEY");
+    _cachedPublicKeyOrSecret = pubKey || getEnv("SHOPIFY_CLIENT_SECRET");
+    _cachedAlgorithm = pubKey ? "RS256" : "HS256";
   }
-  const clientId = _cachedClientId;
 
-  if (_cachedPublicKeyOrSecret === undefined) {
-    const publicKey = getEnv("SHOPIFY_JWT_PUBLIC_KEY");
-    if (publicKey) {
-      _cachedPublicKeyOrSecret = publicKey;
-      _cachedAlgorithm = "RS256";
-    } else {
-      _cachedPublicKeyOrSecret = getEnv("SHOPIFY_CLIENT_SECRET") || null;
-      _cachedAlgorithm = "HS256";
-    }
-  }
+  const clientId = _cachedClientId;
   const publicKeyOrSecret = _cachedPublicKeyOrSecret;
   const algorithm = _cachedAlgorithm;
 
@@ -57,8 +49,8 @@ export const verifyShopifySession = async (c: Context, next: Next) => {
     }
 
     // 3. Extract and normalize the shop domain from the 'dest' claim
-    // PERFORMANCE: Use efficient string manipulation instead of the more expensive 'new URL()' constructor.
-    // This is safe for Shopify 'dest' claims which are guaranteed to be valid HTTPS URLs.
+    // PERFORMANCE: Optimized string manipulation to extract hostname without the overhead of 'new URL()'
+    // This reduces latency in the request-level middleware hot path.
     const dest = payload.dest as string;
     const shop = dest.replace(/^https?:\/\//, '').split('/')[0];
 

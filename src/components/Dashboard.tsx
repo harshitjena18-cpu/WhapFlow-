@@ -148,8 +148,12 @@ export function Dashboard() {
 
         {/* User Profile */}
         <div className="p-4 border-t border-gray-100">
-          <div className="flex items-center gap-4 p-3 rounded-xl hover:bg-gray-50 cursor-pointer transition-colors duration-200 overflow-hidden">
-            <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-emerald-500 rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
+          <Link
+            to="/settings"
+            aria-label="User Profile and Settings"
+            className="flex items-center gap-4 p-3 rounded-xl hover:bg-gray-50 transition-all duration-200 overflow-hidden active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-[#25D366]/20"
+          >
+            <div className="w-10 h-10 bg-gradient-to-br from-[#25D366] to-[#20BD5A] rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
               <span className="text-white font-semibold text-sm">JD</span>
             </div>
             <div className={`flex-1 min-w-0 transition-opacity duration-300 ${
@@ -158,7 +162,7 @@ export function Dashboard() {
               <p className="text-sm font-semibold text-gray-900 truncate">John Doe</p>
               <p className="text-xs text-gray-500 truncate">john@store.com</p>
             </div>
-          </div>
+          </Link>
         </div>
       </aside>
 
