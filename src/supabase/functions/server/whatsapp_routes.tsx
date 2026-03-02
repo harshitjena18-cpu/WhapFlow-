@@ -12,10 +12,11 @@ const app = new Hono();
 app.post("/whatsapp/send", async (c) => {
   try {
     const authHeader = c.req.header("Authorization");
-    const serviceKey = getEnv("SUPABASE_SERVICE_ROLE_KEY");
+    // SECURITY: Use a dedicated API key instead of the service role key
+    const apiKey = getEnv("WHATSAPP_API_KEY");
 
     // SECURITY: Protect endpoint from unauthorized use
-    if (!serviceKey || !authHeader || authHeader !== `Bearer ${serviceKey}`) {
+    if (!apiKey || !authHeader || authHeader !== `Bearer ${apiKey}`) {
       return c.json({ error: "Unauthorized: Invalid or missing token" }, 401);
     }
 
