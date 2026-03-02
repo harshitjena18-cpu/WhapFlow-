@@ -1,5 +1,6 @@
 import { Hono } from "npm:hono";
 import { getEnv } from "../../../lib/env.ts";
+import { getErrorMessage } from "../../../lib/error.ts";
 import { processWhatsAppStatuses } from "./automation.ts";
 import { sendWhatsAppTemplate, verifyWhatsAppSignature } from "./whatsapp.ts";
 
@@ -12,10 +13,11 @@ const app = new Hono();
 app.post("/whatsapp/send", async (c) => {
   try {
     const authHeader = c.req.header("Authorization");
-    const serviceKey = getEnv("SUPABASE_SERVICE_ROLE_KEY");
+    // SECURITY: Use a dedicated API key instead of the service role key
+    const apiKey = getEnv("WHATSAPP_API_KEY");
 
     // SECURITY: Protect endpoint from unauthorized use
-    if (!serviceKey || !authHeader || authHeader !== `Bearer ${serviceKey}`) {
+    if (!apiKey || !authHeader || authHeader !== `Bearer ${apiKey}`) {
       return c.json({ error: "Unauthorized: Invalid or missing token" }, 401);
     }
 
@@ -85,7 +87,8 @@ app.post("/webhooks/whatsapp", async (c) => {
 
     return c.json({ status: 'ok' });
   } catch (error) {
-    console.error("[WhatsApp Webhook] Error processing POST:", error);
+    // SECURITY: Redact PII from the error message before logging
+    console.error("[WhatsApp Webhook] Error processing POST:", getErrorMessage(error));
     return c.json({ error: "Internal Error" }, 500);
   }
 });
