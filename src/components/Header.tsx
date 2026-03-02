@@ -1,5 +1,6 @@
 import { Bell, Search } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router';
 
 export function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -60,7 +61,11 @@ export function Header() {
           <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
         </button>
         <div className="h-8 w-px bg-gray-200/50 mx-1 hidden md:block"></div>
-        <div className="hidden md:flex items-center gap-3">
+        <Link
+          to="/settings"
+          aria-label="User Profile and Settings"
+          className="hidden md:flex items-center gap-3 px-3 py-1.5 rounded-xl hover:bg-white/50 transition-all duration-200 active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-purple-500/20"
+        >
           <div className="text-right">
             <p className="text-sm font-medium text-gray-900">Whapflow Store</p>
             <p className="text-xs text-gray-500">Shopify Connected</p>
@@ -68,7 +73,7 @@ export function Header() {
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center text-indigo-600 font-bold text-xs border border-indigo-200/50">
             WS
           </div>
-        </div>
+        </Link>
       </div>
     </header>
   );
