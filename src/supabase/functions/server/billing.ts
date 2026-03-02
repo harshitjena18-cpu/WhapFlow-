@@ -64,12 +64,11 @@ export const BILLING_KEY_PREFIX = "billing:config:";
 
 /**
  * Get current billing config, performing a lazy reset if needed.
- * Supports multi-tenancy via 'shop' parameter. 
- * Falls back to global key if shop is not provided (legacy/admin support).
+ * Supports multi-tenancy via 'shop' parameter.
  *
  * PERFORMANCE: Supports an optional pre-fetched config to avoid redundant database round-trips.
  */
-export async function getBillingConfig(shop: string = "global", preFetchedConfig?: BillingConfig | null): Promise<BillingConfig> {
+export async function getBillingConfig(shop: string, preFetchedConfig?: BillingConfig | null): Promise<BillingConfig> {
   const key = `${BILLING_KEY_PREFIX}${shop}`;
   let config = preFetchedConfig !== undefined ? preFetchedConfig : (await kv.get(key) as BillingConfig | null);
 
@@ -115,7 +114,7 @@ export async function updatePlan(shop: string, newPlan: PlanLevel, subscriptionI
  *
  * PERFORMANCE: Supports an optional pre-fetched config to avoid redundant database round-trips.
  */
-export async function incrementUsage(metric: 'ai' | 'whatsapp', shop: string = "global", preFetchedConfig?: BillingConfig | null): Promise<BillingConfig> {
+export async function incrementUsage(metric: 'ai' | 'whatsapp', shop: string, preFetchedConfig?: BillingConfig | null): Promise<BillingConfig> {
   const config = await getBillingConfig(shop, preFetchedConfig);
   
   if (metric === 'ai') {
@@ -131,7 +130,7 @@ export async function incrementUsage(metric: 'ai' | 'whatsapp', shop: string = "
 /**
  * Check if an operation is allowed under current plan limits.
  */
-export async function checkLimit(metric: 'ai' | 'whatsapp' | 'automation', shop: string = "global"): Promise<{ allowed: boolean; error?: string }> {
+export async function checkLimit(metric: 'ai' | 'whatsapp' | 'automation', shop: string): Promise<{ allowed: boolean; error?: string }> {
   const config = await getBillingConfig(shop);
   return checkLimitWithConfig(metric, config);
 }

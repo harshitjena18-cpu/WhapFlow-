@@ -13,7 +13,7 @@ import {
 } from "./types.ts";
 
 // Helper: Ensure only one template is enabled for a specific shop
-export async function disableOtherTemplates(exceptId: string, shop: string = "global") {
+export async function disableOtherTemplates(exceptId: string, shop: string) {
   // SECURITY: Scoping by shop prevents cross-merchant template disabling
   const prefix = `shop:${shop}:template:`;
 
