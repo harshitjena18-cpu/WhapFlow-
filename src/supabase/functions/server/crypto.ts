@@ -34,7 +34,7 @@ function getSecret() {
 }
 
 /** Derives a cached master key using HKDF (V3) */
-async function getV3Key(): Promise<CryptoKey> {
+function getV3Key(): Promise<CryptoKey> {
   const secret = getSecret();
 
   // Invalidate cache if secret changes
@@ -44,7 +44,7 @@ async function getV3Key(): Promise<CryptoKey> {
     _cachedSecret = secret;
   }
 
-  if (_cachedV3Key) return _cachedV3Key;
+  if (_cachedV3Key) return Promise.resolve(_cachedV3Key);
 
   // PERFORMANCE: Use a promise-based cache to prevent redundant derivation
   // during concurrent calls (thundering herd)
