@@ -5,7 +5,8 @@ import { getEnv } from "../../../lib/env.ts";
 import { getErrorMessage } from "../../../lib/error.ts";
 import { verifyWebhookHmac, getMerchantCredentials } from "./shopify_client.ts";
 import { encrypt } from "./crypto.ts";
-import { scheduleAutomation, processWhatsAppStatuses, AutomationTemplate } from "./automation.ts";
+import { processWhatsAppStatuses, AutomationTemplate } from "./automation.ts";
+import { createJob } from "./queue.ts";
 import { verifyWhatsAppSignature } from "./whatsapp.ts";
 
 const webhooksApp = new Hono();
@@ -62,10 +63,11 @@ webhooksApp.post("/shopify", async (c) => {
     if (webhookId) keysToFetch.push(`webhook_id:${webhookId}`);
 
     const [configsResult, encryptionResult] = await Promise.all([
-      // Batch fetch dependencies and deduplication check to reduce round-trip latency
+      // PERFORMANCE: Fetch configurations and targeted template in a single batch to minimize latency
       Promise.all([
         kv.mget(keysToFetch),
-        kv.getByPrefix(`shop:${shop}:template:`)
+        // PERFORMANCE: Fetch only the enabled template using targeted DB-side filtering
+        kv.getByPrefixAndValue<AutomationTemplate>(`shop:${shop}:template:`, "value->enabled", true, 1)
       ]),
 
       // SECURITY: Encrypt PII at rest
@@ -76,7 +78,7 @@ webhooksApp.post("/shopify", async (c) => {
       ])
     ]);
 
-    const [configs, rawTemplates] = configsResult;
+    const [configs, enabledTemplates] = configsResult;
     const [encName, encEmail, encPhone] = encryptionResult;
 
     const [merchantData, whatsappConfig, preFetchedBilling, dedupCheck] = configs;
@@ -116,35 +118,28 @@ webhooksApp.post("/shopify", async (c) => {
       created_at: new Date().toISOString()
     };
 
-    // PERFORMANCE: Batch all writes (deduplication mark + cart save) in a single request
+    // PERFORMANCE: Prepare batch writes (deduplication mark + cart save)
     const updateKeys = [cartKey];
     const updateValues: any[] = [abandonedCartData];
     if (webhookId) {
       updateKeys.push(`webhook_id:${webhookId}`);
       updateValues.push({ processed_at: new Date().toISOString() });
     }
-    await kv.mset(updateKeys, updateValues);
 
-    console.log(`✅ SUCCESS: Cart saved with ID [${cartId}]`);
-    console.log('Status: "pending" (Waiting for automation trigger)');
-    console.log('-----------------------------------\n');
-
-    // 4. AUTOMATION DELAY: Wait, then check logic
-
-    // CHECK INTEGRATIONS & LIMITS (Parallelized for performance)
+    // 4. AUTOMATION CHECKS (Before persisting, to allow batching the job)
     console.log('\n🔍 AUTOMATION CHECKS: Verifying integration status and limits...');
-
 
     // Use pre-fetched data to avoid redundant KV round-trips
     const [merchant, billingConfig] = await Promise.all([
       getMerchantCredentials(shop, merchantData),
       billing.getBillingConfig(shop, preFetchedBilling)
     ]);
-    const templates = (rawTemplates || []) as AutomationTemplate[];
+    const enabledTemplate = enabledTemplates?.[0] as AutomationTemplate | undefined;
 
     // Check if THIS shop is connected
     if (!merchant || !merchant.shopify_connected) {
        console.log(`⏹️ AUTOMATION PAUSED: Merchant ${shop} not connected/active.`);
+       await kv.mset(updateKeys, updateValues); // PERFORMANCE: Consolidate persistence
        return c.json({ status: 'success', received: true, automation: 'paused_merchant_inactive' }, 200);
     }
 
@@ -152,6 +147,7 @@ webhooksApp.post("/shopify", async (c) => {
     const whatsappConnected = whatsappConfig?.connection_status === 'connected';
     if (!whatsappConnected) {
       console.log("⏹️ AUTOMATION PAUSED: WhatsApp integration not connected.");
+      await kv.mset(updateKeys, updateValues); // PERFORMANCE: Consolidate persistence
       return c.json({ status: 'success', received: true, automation: 'paused_integrations_missing' }, 200);
     }
 
@@ -159,20 +155,37 @@ webhooksApp.post("/shopify", async (c) => {
     const automationCheck = billing.checkLimitWithConfig('automation', billingConfig);
     if (!automationCheck.allowed) {
       console.log(`⏹️ AUTOMATION PAUSED: ${automationCheck.error}`);
+      await kv.mset(updateKeys, updateValues); // PERFORMANCE: Consolidate persistence
       return c.json({ status: 'success', received: true, automation: 'paused_plan_limit' }, 200);
     }
 
-    // FETCH ENABLED TEMPLATE
-    const enabledTemplate = (templates as AutomationTemplate[]).find(t => t.enabled);
-
     if (!enabledTemplate) {
         console.log("⏹️ AUTOMATION SKIPPED: No enabled template found.");
-        // Do NOT start delay timer
+        await kv.mset(updateKeys, updateValues); // PERFORMANCE: Consolidate persistence
     } else {
         console.log(`✅ TEMPLATE FOUND: ${enabledTemplate.display_name} (${enabledTemplate.template_name})`);
         console.log(`   - Delay: ${enabledTemplate.delay_minutes} minutes`);
-        await scheduleAutomation({ cartId, cartKey, templateName: enabledTemplate.template_name, shop }, enabledTemplate.delay_minutes);
+
+        // PERFORMANCE: Create job and batch it with the cart/dedupe persistence
+        // This eliminates one sequential await point and one database write round-trip.
+        const job = createJob({
+          cartId,
+          cartKey,
+          templateName: enabledTemplate.template_name,
+          shop
+        }, enabledTemplate.delay_minutes);
+
+        updateKeys.push(job.key);
+        updateValues.push(job);
+
+        // Atomic batch update for Cart, Deduplication, and Job
+        await kv.mset(updateKeys, updateValues);
+        console.log(`⚡ [Shopify Webhook] Optimized: Persisted Cart, Webhook Dedupe, and Job in a single batch.`);
     }
+
+    console.log(`✅ SUCCESS: Cart saved with ID [${cartId}]`);
+    console.log('Status: "pending" (Waiting for automation trigger)');
+    console.log('-----------------------------------\n');
 
     return c.json({ status: 'success', received: true }, 200);
 

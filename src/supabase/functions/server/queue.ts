@@ -9,28 +9,34 @@ export interface Job<T = unknown> {
 }
 
 /**
- * Add a job to the queue.
+ * Create a job object without persisting it to the database.
+ * PERFORMANCE: Allows batching the job creation with other database writes.
  */
-export async function enqueueJob<T = unknown>(payload: T, delayMinutes: number) {
+export function createJob<T = unknown>(payload: T, delayMinutes: number): Job<T> {
   const id = crypto.randomUUID();
   const now = new Date();
   const scheduledFor = new Date(now.getTime() + delayMinutes * 60 * 1000).toISOString();
 
   // Key format: queue:v1:{scheduled_for_timestamp}:{random_id}
-  // We use timestamp in key to allow potential range queries if we improved the KV store,
-  // but for now we'll just scan.
+  // We use timestamp in key to allow efficient range queries in scanQueue.
   const key = `queue:v1:${scheduledFor}:${id}`;
 
-  const job: Job<T> = {
+  return {
     id,
     key,
     payload,
     scheduled_for: scheduledFor,
     created_at: now.toISOString()
   };
+}
 
-  await kv.set(key, job);
-  console.log(`[Queue] Enqueued job ${id} for ${scheduledFor}`);
+/**
+ * Add a job to the queue.
+ */
+export async function enqueueJob<T = unknown>(payload: T, delayMinutes: number) {
+  const job = createJob(payload, delayMinutes);
+  await kv.set(job.key, job);
+  console.log(`[Queue] Enqueued job ${job.id} for ${job.scheduled_for}`);
   return job;
 }
 
