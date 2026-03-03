@@ -105,8 +105,13 @@ app.post(`${SERVER_BASE_PATH}/api/whatsapp/send`, async (c) => {
 
     // SECURITY: Protect demo endpoint from unauthorized use
     // Verify against API key for internal/admin access
-    const apiKey = getEnv("WHATSAPP_API_KEY");
-    if (!apiKey || !authHeader || authHeader !== `Bearer ${apiKey}`) {
+    const whatsappApiKey = getEnv("WHATSAPP_API_KEY");
+    const serviceRoleKey = getEnv("SUPABASE_SERVICE_ROLE_KEY");
+
+    const isWhatsappAuth = !!whatsappApiKey && authHeader === `Bearer ${whatsappApiKey}`;
+    const isServiceAuth = !!serviceRoleKey && authHeader === `Bearer ${serviceRoleKey}`;
+
+    if (!isWhatsappAuth && !isServiceAuth) {
       return c.json({ error: "Unauthorized: Invalid or missing token" }, 401);
     }
 
