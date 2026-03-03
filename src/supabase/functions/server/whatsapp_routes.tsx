@@ -3,6 +3,7 @@ import { getEnv } from "../../../lib/env.ts";
 import { getErrorMessage } from "../../../lib/error.ts";
 import { processWhatsAppStatuses } from "./automation.ts";
 import { sendWhatsAppTemplate, verifyWhatsAppSignature } from "./whatsapp.ts";
+import { SHOPIFY_DOMAIN_REGEX } from "./constants.ts";
 
 const app = new Hono();
 
@@ -13,11 +14,17 @@ const app = new Hono();
 app.post("/whatsapp/send", async (c) => {
   try {
     const authHeader = c.req.header("Authorization");
+    const shop = c.req.query("shop") || "global";
+
     // SECURITY: Use a dedicated API key instead of the service role key
-    const apiKey = getEnv("WHATSAPP_API_KEY");
+    const whatsappApiKey = getEnv("WHATSAPP_API_KEY");
+    const serviceRoleKey = getEnv("SUPABASE_SERVICE_ROLE_KEY");
+
+    const isWhatsappAuth = !!whatsappApiKey && authHeader === `Bearer ${whatsappApiKey}`;
+    const isServiceAuth = !!serviceRoleKey && authHeader === `Bearer ${serviceRoleKey}`;
 
     // SECURITY: Protect endpoint from unauthorized use
-    if (!apiKey || !authHeader || authHeader !== `Bearer ${apiKey}`) {
+    if (!isWhatsappAuth && !isServiceAuth) {
       return c.json({ error: "Unauthorized: Invalid or missing token" }, 401);
     }
 
@@ -25,7 +32,15 @@ app.post("/whatsapp/send", async (c) => {
       console.warn(`[Security] Endpoint called with deprecated Service Role Key. Please migrate to WHATSAPP_API_KEY.`);
     }
 
+    // SECURITY: Validate shop domain to prevent multi-tenancy leaks or unauthorized use
+    if (shop !== "global" && !SHOPIFY_DOMAIN_REGEX.test(shop)) {
+      return c.json({ error: "Invalid shop domain" }, 400);
+    }
+
     const { phoneNumber, templateId } = await c.req.json();
+
+    // SECURITY: Redact phoneNumber from logs
+    console.log(`[WhatsApp] Intent to send template "${templateId}" to [REDACTED] (Shop: ${shop})`);
 
     // Call the shared helper
     const result = await sendWhatsAppTemplate({
