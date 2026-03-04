@@ -5,6 +5,7 @@
 
 import { getEnv } from "../../../lib/env.ts";
 import { Buffer } from "node:buffer";
+import { getErrorMessage } from "../../../lib/error.ts";
 
 interface SendMessageParams {
   to: string;
@@ -71,8 +72,10 @@ export const sendWhatsAppTemplate = async ({
     console.log("✅ WhatsApp Message Sent. ID:", wamid);
     return { success: true, data, wamid };
   } catch (error) {
-    console.error("❌ Network/Server Error sending WhatsApp:", error);
-    return { success: false, error };
+    // SECURITY: Redact PII from the error message before logging or returning
+    const errorMessage = getErrorMessage(error);
+    console.error("❌ Network/Server Error sending WhatsApp:", errorMessage);
+    return { success: false, error: errorMessage };
   }
 };
 

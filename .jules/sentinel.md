@@ -27,3 +27,8 @@
 **Vulnerability:** Dashboard API handlers used a fallback to an untrusted `shop` query parameter when the `verified_shop` context was missing, creating a potential IDOR vector if middleware was bypassed.
 **Learning:** Even with security middleware in place, handlers should not provide fallbacks to untrusted inputs. A missing verified identity should always result in an explicit authorization failure (Fail-Closed).
 **Prevention:** Remove all `|| c.req.query("shop")` fallbacks in protected routes and strictly rely on the context value provided by the verification middleware.
+
+## 2025-05-24 - [ReferenceError in WhatsApp Security Path and Over-Permissive Fallback]
+**Vulnerability:** WhatsApp send endpoints utilized undefined variables (`isServiceAuth`, `isWhatsappAuth`) in warning logs and security checks, leading to a `ReferenceError` (service crash) when called. Additionally, the endpoints allowed the use of the `SUPABASE_SERVICE_ROLE_KEY` for scoped WhatsApp operations.
+**Learning:** Broken security logic not only risks bypasses but also availability. Relying on high-privilege keys for specific service tasks increases the blast radius of a credential leak.
+**Prevention:** Always derive security state variables directly from the request context before use. Strictly enforce scoped API keys (Least Privilege) and remove legacy fallbacks to global administrative keys.

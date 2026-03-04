@@ -102,16 +102,18 @@ app.post(`${SERVER_BASE_PATH}/api/whatsapp/send`, async (c) => {
   try {
     const authHeader = c.req.header("Authorization");
     const shop = c.req.query("shop") || "global";
+    const bearerToken = authHeader?.startsWith("Bearer ") ? authHeader.substring(7) : null;
 
     // SECURITY: Protect demo endpoint from unauthorized use
-    // Verify against API key for internal/admin access
-    const apiKey = getEnv("WHATSAPP_API_KEY");
-    if (!apiKey || !authHeader || authHeader !== `Bearer ${apiKey}`) {
-      return c.json({ error: "Unauthorized: Invalid or missing token" }, 401);
-    }
+    // Verify against API key for internal/admin access.
+    // Strictly enforce WHATSAPP_API_KEY to follow the principle of least privilege.
+    const whatsappApiKey = getEnv("WHATSAPP_API_KEY");
 
-    if (isServiceAuth && !isWhatsappAuth) {
-      console.warn(`[Security] Demo endpoint called with deprecated Service Role Key. Please migrate to WHATSAPP_API_KEY.`);
+    const isWhatsappAuth = !!(whatsappApiKey && bearerToken === whatsappApiKey);
+
+    if (!isWhatsappAuth) {
+      console.error(`[Security] Unauthorized attempt to demo WhatsApp send endpoint. Key mismatch.`);
+      return c.json({ error: "Unauthorized: Invalid or missing token" }, 401);
     }
 
     // SECURITY: Validate shop domain

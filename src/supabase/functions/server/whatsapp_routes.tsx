@@ -13,16 +13,18 @@ const app = new Hono();
 app.post("/whatsapp/send", async (c) => {
   try {
     const authHeader = c.req.header("Authorization");
-    // SECURITY: Use a dedicated API key instead of the service role key
-    const apiKey = getEnv("WHATSAPP_API_KEY");
+    const bearerToken = authHeader?.startsWith("Bearer ") ? authHeader.substring(7) : null;
+
+    // SECURITY: Strictly enforce dedicated WHATSAPP_API_KEY to follow the principle of least privilege.
+    // The SUPABASE_SERVICE_ROLE_KEY is too broad for this scoped operation.
+    const whatsappApiKey = getEnv("WHATSAPP_API_KEY");
+
+    const isWhatsappAuth = !!(whatsappApiKey && bearerToken === whatsappApiKey);
 
     // SECURITY: Protect endpoint from unauthorized use
-    if (!apiKey || !authHeader || authHeader !== `Bearer ${apiKey}`) {
+    if (!isWhatsappAuth) {
+      console.error(`[Security] Unauthorized attempt to WhatsApp send endpoint. Key mismatch.`);
       return c.json({ error: "Unauthorized: Invalid or missing token" }, 401);
-    }
-
-    if (isServiceAuth && !isWhatsappAuth) {
-      console.warn(`[Security] Endpoint called with deprecated Service Role Key. Please migrate to WHATSAPP_API_KEY.`);
     }
 
     const { phoneNumber, templateId } = await c.req.json();
