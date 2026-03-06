@@ -82,3 +82,7 @@
 ## 2026-03-25 - [Middleware Hot-path Optimizations]
 **Learning:** Request-level middleware like `verifyShopifySession` executes on every authenticated call. Expensive operations like `new URL()` parsing and repeated environment variable lookups (even via `Deno.env.get`) add cumulative latency. Optimized string manipulation for hostname extraction and module-level configuration caching reduce the per-request latency floor.
 **Action:** Audit middleware and high-frequency hooks for redundant I/O or expensive object construction (URL, Date, Regex). Cache static config and prefer string manipulation in hot-paths when the input format is strictly validated.
+
+## 2026-03-28 - [Crypto Hot-path and Thundering Herd Optimization]
+**Learning:** Cryptographic key derivation (HKDF) in Edge Functions is a significant latency source (~2-5ms) and can suffer from the "thundering herd" problem when multiple concurrent requests trigger derivation. Promise-based caching of the derivation process ensures only one derivation occurs, while hoisting encoders and optimizing `ArrayBuffer` handling further reduces GC pressure and allocation overhead.
+**Action:** Always implement thundering herd protection for expensive module-level derivations (like CryptoKeys). Hoist `TextEncoder`/`TextDecoder` and avoid redundant `Uint8Array` wrapping of `ArrayBuffer` in hot-paths.
