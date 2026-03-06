@@ -187,8 +187,16 @@ export async function shopifyGraphql(
 
     return result.data;
   } catch (error) {
-    // SECURITY: Use getErrorMessage to redact PII from the logged error
-    console.error(`[ShopifyGraphQL] Network/System Error for ${shop}:`, getErrorMessage(error));
-    throw error;
+    // SECURITY: Redact PII while preserving the original stack trace for better observability
+    if (error instanceof Error) {
+      error.message = redactPII(error.message);
+      if (error.stack) error.stack = redactPII(error.stack);
+      console.error(`[ShopifyGraphQL] Network/System Error for ${shop}:`, error.message);
+      throw error;
+    }
+
+    const errorMessage = getErrorMessage(error) || "Unknown Error";
+    console.error(`[ShopifyGraphQL] Network/System Error for ${shop}:`, errorMessage);
+    throw new Error(errorMessage);
   }
 }

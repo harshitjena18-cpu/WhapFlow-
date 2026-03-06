@@ -27,3 +27,8 @@
 **Vulnerability:** Dashboard API handlers used a fallback to an untrusted `shop` query parameter when the `verified_shop` context was missing, creating a potential IDOR vector if middleware was bypassed.
 **Learning:** Even with security middleware in place, handlers should not provide fallbacks to untrusted inputs. A missing verified identity should always result in an explicit authorization failure (Fail-Closed).
 **Prevention:** Remove all `|| c.req.query("shop")` fallbacks in protected routes and strictly rely on the context value provided by the verification middleware.
+
+## 2025-05-24 - [Stack Trace Preservation during PII Redaction]
+**Vulnerability:** Hardening error handlers by wrapping caught errors in `new Error(redactPII(error.message))` effectively prevents PII leaks but destroys the original stack trace, severely hindering production debugging.
+**Learning:** Security and observability must be balanced. Mutating the `message` and `stack` properties of the original `Error` object before re-throwing preserves the trace while ensuring data privacy.
+**Prevention:** In critical catch blocks, check if the error is an `instanceof Error`. If so, redact its `message` and `stack` in-place using `redactPII` before re-throwing. Use `getErrorMessage` as a fallback for non-Error types.
