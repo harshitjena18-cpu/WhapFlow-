@@ -21,10 +21,6 @@ app.post("/whatsapp/send", async (c) => {
       return c.json({ error: "Unauthorized: Invalid or missing token" }, 401);
     }
 
-    if (isServiceAuth && !isWhatsappAuth) {
-      console.warn(`[Security] Endpoint called with deprecated Service Role Key. Please migrate to WHATSAPP_API_KEY.`);
-    }
-
     const { phoneNumber, templateId } = await c.req.json();
 
     // Call the shared helper
@@ -35,7 +31,8 @@ app.post("/whatsapp/send", async (c) => {
     });
 
     if (result.success) {
-      return c.json({ success: true, message: 'Message sent', data: result.data }, 200);
+      // SECURITY: Return only the wamid, avoiding leakage of internal WhatsApp response data
+      return c.json({ success: true, message: 'Message sent', wamid: result.wamid }, 200);
     } else {
       return c.json({ error: 'WhatsApp API Error', details: result.error }, 500);
     }
