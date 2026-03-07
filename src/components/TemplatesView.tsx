@@ -700,9 +700,9 @@ export function TemplatesView() {
                 )}
 
                 <div className="space-y-3">
-                  <Label>Message Tone</Label>
+                  <Label htmlFor="ai-tone">Message Tone</Label>
                   <Select value={aiTone} onValueChange={setAiTone}>
-                    <SelectTrigger>
+                    <SelectTrigger id="ai-tone">
                       <SelectValue placeholder="Select tone" />
                     </SelectTrigger>
                     <SelectContent>
@@ -715,8 +715,9 @@ export function TemplatesView() {
                 </div>
 
                 <div className="space-y-3">
-                  <Label>Brand Name (Optional)</Label>
+                  <Label htmlFor="ai-brand">Brand Name (Optional)</Label>
                   <Input 
+                    id="ai-brand"
                     placeholder="e.g. Whapflow Store" 
                     value={aiBrand}
                     onChange={(e) => setAiBrand(e.target.value)}
@@ -724,8 +725,9 @@ export function TemplatesView() {
                 </div>
 
                 <div className="space-y-3">
-                  <Label>Discount Offer (Optional)</Label>
+                  <Label htmlFor="ai-discount">Discount Offer (Optional)</Label>
                   <Input 
+                    id="ai-discount"
                     placeholder="e.g. 10% OFF, Free Shipping" 
                     value={aiDiscount}
                     onChange={(e) => setAiDiscount(e.target.value)}
