@@ -19,7 +19,7 @@ import webhooksApp from "./webhooks_routes.tsx";
 import whatsappApp from "./whatsapp_routes.tsx";
 import aiApp from "./ai_routes.tsx";
 
-import { SERVER_BASE_PATH, SHOPIFY_DOMAIN_REGEX, APP_DOMAIN, API_DOMAIN } from "./constants.ts";
+import { SERVER_BASE_PATH, SHOPIFY_DOMAIN_REGEX, APP_DOMAIN, API_DOMAIN, LOCALHOST_REGEX } from "./constants.ts";
 
 const app = new Hono();
 
@@ -37,8 +37,8 @@ app.use(
       // Allow requests with no origin (e.g. mobile apps, curl)
       if (!origin) return origin;
 
-      // Localhost for development
-      if (origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:")) {
+      // Localhost for development (Strict regex check to prevent bypass)
+      if (LOCALHOST_REGEX.test(origin)) {
         return origin;
       }
 
@@ -106,12 +106,14 @@ app.post(`${SERVER_BASE_PATH}/api/whatsapp/send`, async (c) => {
     // SECURITY: Protect demo endpoint from unauthorized use
     // Verify against API key for internal/admin access
     const apiKey = getEnv("WHATSAPP_API_KEY");
-    if (!apiKey || !authHeader || authHeader !== `Bearer ${apiKey}`) {
-      return c.json({ error: "Unauthorized: Invalid or missing token" }, 401);
-    }
+    const serviceRoleKey = getEnv("SUPABASE_SERVICE_ROLE_KEY");
 
-    if (isServiceAuth && !isWhatsappAuth) {
-      console.warn(`[Security] Demo endpoint called with deprecated Service Role Key. Please migrate to WHATSAPP_API_KEY.`);
+    if (!apiKey || !authHeader || authHeader !== `Bearer ${apiKey}`) {
+      // SECURITY: Trigger a warning if the old service role key is used to help migration
+      if (serviceRoleKey && authHeader === `Bearer ${serviceRoleKey}`) {
+         console.warn(`[Security] Blocked demo endpoint attempt with deprecated Service Role Key. Please migrate to WHATSAPP_API_KEY.`);
+      }
+      return c.json({ error: "Unauthorized: Invalid or missing token" }, 401);
     }
 
     // SECURITY: Validate shop domain
