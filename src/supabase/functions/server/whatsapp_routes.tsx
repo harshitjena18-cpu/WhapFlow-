@@ -15,14 +15,15 @@ app.post("/whatsapp/send", async (c) => {
     const authHeader = c.req.header("Authorization");
     // SECURITY: Use a dedicated API key instead of the service role key
     const apiKey = getEnv("WHATSAPP_API_KEY");
+    const serviceRoleKey = getEnv("SUPABASE_SERVICE_ROLE_KEY");
 
     // SECURITY: Protect endpoint from unauthorized use
     if (!apiKey || !authHeader || authHeader !== `Bearer ${apiKey}`) {
+      // SECURITY: Trigger a warning if the old service role key is used to help migration
+      if (serviceRoleKey && authHeader === `Bearer ${serviceRoleKey}`) {
+        console.warn(`[Security] Blocked endpoint attempt with deprecated Service Role Key. Please migrate to WHATSAPP_API_KEY.`);
+      }
       return c.json({ error: "Unauthorized: Invalid or missing token" }, 401);
-    }
-
-    if (isServiceAuth && !isWhatsappAuth) {
-      console.warn(`[Security] Endpoint called with deprecated Service Role Key. Please migrate to WHATSAPP_API_KEY.`);
     }
 
     const { phoneNumber, templateId } = await c.req.json();

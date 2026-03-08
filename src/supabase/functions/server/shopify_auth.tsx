@@ -1,5 +1,6 @@
 import { Hono } from "npm:hono";
 import { setCookie, getCookie } from "npm:hono/cookie";
+import { Buffer } from "node:buffer";
 import * as kv from "./kv_store.tsx";
 import { encrypt } from "./crypto.ts";
 import { getEnv } from "../../../lib/env.ts";
@@ -204,10 +205,8 @@ async function verifyHmac(query: Record<string, string>, secret: string) {
   }
 
   // Convert hex HMAC to Uint8Array for constant-time verification
-  const hmacBytes = new Uint8Array(hmac.length / 2);
-  for (let i = 0; i < hmac.length; i += 2) {
-    hmacBytes[i / 2] = parseInt(hmac.substring(i, i + 2), 16);
-  }
+  // PERFORMANCE: Use Buffer.from for efficient hex-to-Uint8Array conversion
+  const hmacBytes = Buffer.from(hmac, "hex");
 
   // Type narrowing for TypeScript safety
   if (!_cachedHmacKey) {

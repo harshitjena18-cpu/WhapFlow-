@@ -27,3 +27,8 @@
 **Vulnerability:** Dashboard API handlers used a fallback to an untrusted `shop` query parameter when the `verified_shop` context was missing, creating a potential IDOR vector if middleware was bypassed.
 **Learning:** Even with security middleware in place, handlers should not provide fallbacks to untrusted inputs. A missing verified identity should always result in an explicit authorization failure (Fail-Closed).
 **Prevention:** Remove all `|| c.req.query("shop")` fallbacks in protected routes and strictly rely on the context value provided by the verification middleware.
+
+## 2025-05-30 - [CORS Bypass via Insecure Prefix Matching]
+**Vulnerability:** CORS origin validation used `.startsWith("http://localhost:")`, which allowed bypasses from origins like `http://localhost.attacker.com`.
+**Learning:** Simple prefix or suffix checks on origins are insufficient and easily bypassed. Attackers can register subdomains that satisfy these checks.
+**Prevention:** Use a strict regular expression (e.g., `/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/`) to validate origins for local development.

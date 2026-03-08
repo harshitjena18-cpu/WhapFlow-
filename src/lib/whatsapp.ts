@@ -71,7 +71,8 @@ export const sendWhatsAppMessage = async (request: WhatsAppMessageRequest): Prom
     const data = await response.json();
 
     if (!response.ok) {
-      console.error("[WhatsApp] API Error:", JSON.stringify(data, null, 2));
+      // SECURITY: Log only HTTP status code to prevent leaking PII from the full error response
+      console.error(`[WhatsApp] API Error: Status ${response.status}`);
       return false;
     }
 
