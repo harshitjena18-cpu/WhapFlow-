@@ -82,3 +82,7 @@
 ## 2026-03-25 - [Middleware Hot-path Optimizations]
 **Learning:** Request-level middleware like `verifyShopifySession` executes on every authenticated call. Expensive operations like `new URL()` parsing and repeated environment variable lookups (even via `Deno.env.get`) add cumulative latency. Optimized string manipulation for hostname extraction and module-level configuration caching reduce the per-request latency floor.
 **Action:** Audit middleware and high-frequency hooks for redundant I/O or expensive object construction (URL, Date, Regex). Cache static config and prefer string manipulation in hot-paths when the input format is strictly validated.
+
+## 2026-04-10 - [Crypto Thundering Herd Protection]
+**Learning:** In highly concurrent environments (like Deno Edge Functions handling multiple simultaneous requests), expensive cryptographic key derivation (HKDF) can create a "thundering herd" problem if many requests attempt to derive the same master key simultaneously on a cold start. A promise-based cache (`_v3KeyPromise`) ensures the derivation happens only once, and all concurrent callers await the same result.
+**Action:** Use promise-based caching for any isolate-level static resources that are derived asynchronously to prevent redundant expensive operations during concurrent cold starts.
