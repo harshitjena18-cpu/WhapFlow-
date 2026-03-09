@@ -82,3 +82,7 @@
 ## 2026-03-25 - [Middleware Hot-path Optimizations]
 **Learning:** Request-level middleware like `verifyShopifySession` executes on every authenticated call. Expensive operations like `new URL()` parsing and repeated environment variable lookups (even via `Deno.env.get`) add cumulative latency. Optimized string manipulation for hostname extraction and module-level configuration caching reduce the per-request latency floor.
 **Action:** Audit middleware and high-frequency hooks for redundant I/O or expensive object construction (URL, Date, Regex). Cache static config and prefer string manipulation in hot-paths when the input format is strictly validated.
+
+## 2026-03-28 - [Thundering Herd Protection & Crypto Micro-opts]
+**Learning:** Concurrent cold-starts in serverless functions can lead to a "thundering herd" where multiple requests independently perform the same expensive HKDF key derivation. Implementing a promise-based cache (returning the derivation promise to all concurrent callers) ensures the work is only done once. Additionally, hoisting `TextEncoder`/`TextDecoder` and allowing `b64` helpers to consume `ArrayBuffer` directly (avoiding redundant `Uint8Array` wrapping of `crypto.subtle` output) provides measurable micro-optimization wins in hot paths.
+**Action:** Always use promise-based caching for asynchronous singleton initialization. Hoist encoders/decoders to the module level and minimize redundant object wrapping in cryptographic data paths.
