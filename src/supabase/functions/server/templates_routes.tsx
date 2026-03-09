@@ -5,6 +5,7 @@ import { SHOPIFY_DOMAIN_REGEX } from "./constants.ts";
 import { validateTemplateContent, disableOtherTemplates } from "./automation.ts";
 import { AutomationTemplate } from "./types.ts";
 import { verifyShopifySession } from "./middleware.ts";
+import { getErrorMessage } from "../../../lib/error.ts";
 
 const app = new Hono();
 
@@ -27,7 +28,7 @@ app.get("/", async (c) => {
     templates.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     return c.json(templates);
   } catch (error) {
-    console.error("Error fetching templates:", error);
+    console.error("Error fetching templates:", getErrorMessage(error));
     return c.json({ error: "Failed to fetch templates" }, 500);
   }
 });
@@ -81,7 +82,7 @@ app.post("/", async (c) => {
     await kv.set(`${prefix}${id}`, newTemplate);
     return c.json(newTemplate, 201);
   } catch (error) {
-    console.error("Error creating template:", error);
+    console.error("Error creating template:", getErrorMessage(error));
     return c.json({ error: "Failed to create template" }, 500);
   }
 });
@@ -119,7 +120,7 @@ app.put("/:id", async (c) => {
     await kv.set(key, updated);
     return c.json(updated);
   } catch (error) {
-    console.error("Error updating template:", error);
+    console.error("Error updating template:", getErrorMessage(error));
     return c.json({ error: "Failed to update template" }, 500);
   }
 });
@@ -133,7 +134,7 @@ app.delete("/:id", async (c) => {
     await kv.del(`shop:${shop}:template:${id}`);
     return c.json({ success: true });
   } catch (error) {
-    console.error("Error deleting template:", error);
+    console.error("Error deleting template:", getErrorMessage(error));
     return c.json({ error: "Failed to delete template" }, 500);
   }
 });

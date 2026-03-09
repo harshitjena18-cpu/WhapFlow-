@@ -2,6 +2,7 @@ import { Hono } from "npm:hono";
 import * as kv from "./kv_store.tsx";
 import { SHOPIFY_DOMAIN_REGEX } from "./constants.ts";
 import { verifyShopifySession } from "./middleware.ts";
+import { getErrorMessage } from "../../../lib/error.ts";
 
 const dashboardApp = new Hono();
 
@@ -208,7 +209,7 @@ dashboardApp.get("/data", async (c) => {
       activity: defaultActivityLogs,
     });
   } catch (err) {
-    console.error(`Error fetching dashboard data for ${shop}:`, err);
+    console.error(`Error fetching dashboard data for ${shop}:`, getErrorMessage(err));
     // Fallback to defaults if KV fails
     return c.json({
       metrics: defaultMetrics,

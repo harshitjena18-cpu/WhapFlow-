@@ -6,6 +6,7 @@ import { PlanLevel, PLAN_LIMITS } from "./billing.ts";
 import { getEnv } from "../../../lib/env.ts";
 import { API_DOMAIN, APP_DOMAIN, SERVER_BASE_PATH, SHOPIFY_DOMAIN_REGEX } from "./constants.ts";
 import { verifyShopifySession } from "./middleware.ts";
+import { getErrorMessage } from "../../../lib/error.ts";
 
 const app = new Hono();
 
@@ -57,7 +58,7 @@ app.get("/plans", (c) => {
       }
     });
   } catch (error) {
-    console.error("[Billing] Get Plans Error:", error);
+    console.error("[Billing] Get Plans Error:", getErrorMessage(error));
     return c.json({ error: "Failed to fetch plans" }, 500);
   }
 });
@@ -157,8 +158,8 @@ app.post("/create-subscription", async (c) => {
     });
 
   } catch (error) {
-    console.error("[Billing] Create Subscription Error:", error);
-    return c.json({ error: error.message || "Failed to create subscription" }, 500);
+    console.error("[Billing] Create Subscription Error:", getErrorMessage(error));
+    return c.json({ error: "Failed to create subscription" }, 500);
   }
 });
 
@@ -249,7 +250,7 @@ app.get("/status", async (c) => {
     });
 
   } catch (error) {
-    console.error(`[Billing] Status check failed for ${shop}:`, error);
+    console.error(`[Billing] Status check failed for ${shop}:`, getErrorMessage(error));
     // Fail-safe: Don't downgrade blindly on error, but report error
     return c.json({ error: "Failed to verify billing status" }, 500);
   }

@@ -5,6 +5,7 @@
 
 import { getEnv } from "../../../lib/env.ts";
 import { Buffer } from "node:buffer";
+import { redactPII, getErrorMessage } from "../../../lib/error.ts";
 
 interface SendMessageParams {
   to: string;
@@ -63,16 +64,19 @@ export const sendWhatsAppTemplate = async ({
       console.error(`❌ WhatsApp API Error: Status ${response.status}`);
       // Return only the error message or a sanitized version
       const errorMessage = data.error?.message || "Unknown WhatsApp API Error";
-      return { success: false, error: errorMessage };
+      return { success: false, error: redactPII(errorMessage) };
     }
 
     // SECURITY: Log only wamid to avoid leaking PII in response data
     const wamid = data.messages?.[0]?.id;
     console.log("✅ WhatsApp Message Sent. ID:", wamid);
-    return { success: true, data, wamid };
+
+    // SECURITY: Return only necessary data to avoid leaking PII (like wa_id)
+    return { success: true, data: { wamid }, wamid };
   } catch (error) {
-    console.error("❌ Network/Server Error sending WhatsApp:", error);
-    return { success: false, error };
+    const message = getErrorMessage(error);
+    console.error("❌ Network/Server Error sending WhatsApp:", message);
+    return { success: false, error: message };
   }
 };
 
