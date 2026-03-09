@@ -6,6 +6,13 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Switch } from './ui/switch';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from './ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { toast } from 'sonner';
 
@@ -205,29 +212,39 @@ export function SettingsView() {
               <Label htmlFor="language" className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
                 Language
               </Label>
-              <select
-                id="language"
-                className="w-full md:w-64 px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#25D366] transition-colors bg-white cursor-pointer"
-              >
-                <option>English</option>
-                <option>Spanish</option>
-                <option>French</option>
-                <option>German</option>
-              </select>
+              <Select defaultValue="English">
+                <SelectTrigger
+                  id="language"
+                  className="w-full md:w-64 h-auto px-4 py-3 border-gray-200 rounded-xl text-sm focus-visible:ring-[#25D366]/20 focus-visible:border-[#25D366] transition-colors bg-white"
+                >
+                  <SelectValue placeholder="Select language" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="English">English</SelectItem>
+                  <SelectItem value="Spanish">Spanish</SelectItem>
+                  <SelectItem value="French">French</SelectItem>
+                  <SelectItem value="German">German</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-3">
               <Label htmlFor="timezone" className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
                 Timezone
               </Label>
-              <select
-                id="timezone"
-                className="w-full md:w-64 px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#25D366] transition-colors bg-white cursor-pointer"
-              >
-                <option>UTC-8 (Pacific Time)</option>
-                <option>UTC-5 (Eastern Time)</option>
-                <option>UTC+0 (GMT)</option>
-                <option>UTC+1 (CET)</option>
-              </select>
+              <Select defaultValue="UTC-8 (Pacific Time)">
+                <SelectTrigger
+                  id="timezone"
+                  className="w-full md:w-64 h-auto px-4 py-3 border-gray-200 rounded-xl text-sm focus-visible:ring-[#25D366]/20 focus-visible:border-[#25D366] transition-colors bg-white"
+                >
+                  <SelectValue placeholder="Select timezone" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="UTC-8 (Pacific Time)">UTC-8 (Pacific Time)</SelectItem>
+                  <SelectItem value="UTC-5 (Eastern Time)">UTC-5 (Eastern Time)</SelectItem>
+                  <SelectItem value="UTC+0 (GMT)">UTC+0 (GMT)</SelectItem>
+                  <SelectItem value="UTC+1 (CET)">UTC+1 (CET)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>
