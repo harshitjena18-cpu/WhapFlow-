@@ -4,6 +4,7 @@ import * as billing from "./billing.ts";
 import { getMerchantCredentials } from "./shopify_client.ts";
 import { AutomationTemplate } from "./automation.ts";
 import { verifyShopifySession } from "./middleware.ts";
+import { getErrorMessage } from "../../../lib/error.ts";
 
 const dashboardMetricsApp = new Hono();
 
@@ -111,7 +112,8 @@ dashboardMetricsApp.get("/metrics", async (c) => {
     });
 
   } catch (error) {
-    console.error("Error fetching dashboard metrics:", error);
+    // SECURITY: Use getErrorMessage to redact PII from the logged error
+    console.error("Error fetching dashboard metrics:", getErrorMessage(error));
     return c.json({ error: "Failed to fetch dashboard metrics" }, 500);
   }
 });

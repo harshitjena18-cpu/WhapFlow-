@@ -2,6 +2,7 @@ import { Hono } from "npm:hono";
 import * as kv from "./kv_store.tsx";
 import { DEFAULT_CONFIG } from "./types.ts";
 import { verifyShopifySession } from "./middleware.ts";
+import { getErrorMessage } from "../../../lib/error.ts";
 
 const app = new Hono();
 
@@ -54,7 +55,7 @@ app.get("/status", async (c) => {
 
     return c.json(status);
   } catch (error) {
-    console.error("Error fetching integration status:", error);
+    console.error("Error fetching integration status:", getErrorMessage(error));
     return c.json({ error: "Failed to fetch status" }, 500);
   }
 });
@@ -111,7 +112,7 @@ app.post("/status", async (c) => {
       whatsapp_config: whatsappConfig
     });
   } catch (error) {
-    console.error("Error updating integration status:", error);
+    console.error("Error updating integration status:", getErrorMessage(error));
     return c.json({ error: "Failed to update status" }, 500);
   }
 });

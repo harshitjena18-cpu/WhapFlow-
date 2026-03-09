@@ -1,6 +1,7 @@
 import { Hono } from "npm:hono";
 import * as billing from "./billing.ts";
 import { verifyShopifySession } from "./middleware.ts";
+import { getErrorMessage } from "../../../lib/error.ts";
 
 const app = new Hono();
 
@@ -23,7 +24,7 @@ app.get("/usage", async (c) => {
       ai_usage_reset_at: config.billing_cycle_reset_at
     });
   } catch (error) {
-    console.error("Error fetching AI usage:", error);
+    console.error("Error fetching AI usage:", getErrorMessage(error));
     return c.json({ error: "Failed to fetch usage stats" }, 500);
   }
 });
