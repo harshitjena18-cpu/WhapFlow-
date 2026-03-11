@@ -27,3 +27,8 @@
 **Vulnerability:** Dashboard API handlers used a fallback to an untrusted `shop` query parameter when the `verified_shop` context was missing, creating a potential IDOR vector if middleware was bypassed.
 **Learning:** Even with security middleware in place, handlers should not provide fallbacks to untrusted inputs. A missing verified identity should always result in an explicit authorization failure (Fail-Closed).
 **Prevention:** Remove all `|| c.req.query("shop")` fallbacks in protected routes and strictly rely on the context value provided by the verification middleware.
+
+## 2025-05-24 - [Loose CORS Regex and Broken Security Logic]
+**Vulnerability:** The CORS policy used `startsWith` to validate local origins, potentially allowing bypasses via malicious subdomains (e.g., `http://localhost.evil.com`). Additionally, WhatsApp send endpoints contained ReferenceErrors due to undefined variables in security warning blocks.
+**Learning:** Origin validation must be strict (e.g., using regex with start/end anchors) to prevent "prefix-style" bypasses. Dead or incomplete security logic (like deprecated warning blocks) can cause application crashes (Availability risk) if not properly tested or removed.
+**Prevention:** Use a centrally defined `LOCALHOST_REGEX` with strict anchors for CORS validation. Ensure all authorization logic is fully implemented or removed to prevent ReferenceErrors in production.
