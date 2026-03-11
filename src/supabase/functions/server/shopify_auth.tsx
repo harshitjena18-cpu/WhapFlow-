@@ -1,5 +1,6 @@
 import { Hono } from "npm:hono";
 import { setCookie, getCookie } from "npm:hono/cookie";
+import { Buffer } from "node:buffer";
 import * as kv from "./kv_store.tsx";
 import { encrypt } from "./crypto.ts";
 import { getEnv } from "../../../lib/env.ts";
@@ -8,6 +9,9 @@ import { API_DOMAIN, APP_DOMAIN, SERVER_BASE_PATH } from "./constants.ts";
 
 const app = new Hono();
 
+// PERFORMANCE: Hoist encoders to minimize object creation overhead in the OAuth hot-path
+const ENCODER = new TextEncoder();
+
 // Module-level cache for HMAC CryptoKeys to minimize import overhead
 let _cachedHmacKey: CryptoKey | null = null;
 let _cachedHmacSecret: string | null = null;
@@ -15,10 +19,11 @@ let _cachedHmacSecret: string | null = null;
 // Configuration
 const SHOPIFY_SCOPES = "read_checkouts,read_orders";
 const SHOPIFY_DOMAIN_REGEX = /^[a-zA-Z0-9][a-zA-Z0-9-]*\.myshopify\.com$/;
-// Note: In production, strictly use the environment variable. 
-// For this environment, we default to the provided callback URL structure if not set, 
+// Note: In production, strictly use the environment variable.
+// For this environment, we default to the provided callback URL structure if not set,
 // but the user MUST set SHOPIFY_CLIENT_ID and SHOPIFY_CLIENT_SECRET.
-const REDIRECT_URI = getEnv("SHOPIFY_REDIRECT_URI") || `${API_DOMAIN}/auth/shopify/callback`;
+const REDIRECT_URI =
+  getEnv("SHOPIFY_REDIRECT_URI") || `${API_DOMAIN}/auth/shopify/callback`;
 
 /**
  * STEP 2: OAUTH START ROUTE
@@ -34,7 +39,10 @@ app.get("/", (c) => {
 
   // 1. Validate shop parameter
   if (!shop || !SHOPIFY_DOMAIN_REGEX.test(shop)) {
-    return c.text("Error: Invalid or missing 'shop' parameter. Expected format: my-store.myshopify.com", 400);
+    return c.text(
+      "Error: Invalid or missing 'shop' parameter. Expected format: my-store.myshopify.com",
+      400,
+    );
   }
 
   // 2. Generate secure state
@@ -86,7 +94,10 @@ app.get("/callback", async (c) => {
   if (state !== savedState) {
     // SECURITY: Redact state tokens in logs to prevent session hijacking or token exposure
     console.error(`[OAuth] State mismatch for shop: ${shop}`);
-    return c.text("Error: Request origin cannot be verified (State Mismatch)", 403);
+    return c.text(
+      "Error: Request origin cannot be verified (State Mismatch)",
+      403,
+    );
   }
 
   // SECURITY: Clear state cookie after verification to prevent reuse or replay attacks
@@ -108,21 +119,26 @@ app.get("/callback", async (c) => {
   try {
     // 4. Exchange Access Token
     console.log(`[OAuth] Exchanging code for token with ${shop}...`);
-    const tokenResponse = await fetch(`https://${shop}/admin/oauth/access_token`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        client_id: clientId,
-        client_secret: clientSecret,
-        code: code,
-      }),
-    });
+    const tokenResponse = await fetch(
+      `https://${shop}/admin/oauth/access_token`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client_id: clientId,
+          client_secret: clientSecret,
+          code: code,
+        }),
+      },
+    );
 
     const tokenData = await tokenResponse.json();
 
     if (!tokenResponse.ok) {
       // SECURITY: Avoid logging full 'tokenData' as it may contain sensitive error details or credentials
-      console.error(`[OAuth] Token exchange failed: Status ${tokenResponse.status}`);
+      console.error(
+        `[OAuth] Token exchange failed: Status ${tokenResponse.status}`,
+      );
       return c.text("Error: Failed to exchange access token", 500);
     }
 
@@ -132,7 +148,7 @@ app.get("/callback", async (c) => {
     // STEP 4: MERCHANT REGISTRATION
     // Update global config for MVP (Dashboard compatibility)
     // In a real multi-tenant app, this would be scoped to the user session.
-    
+
     // 1. Update Scoped Config (Scoping by shop to prevent multi-tenancy leaks)
     const shopifyKey = `shop:${shop}:config:shopify`;
     const shopifyConfig = (await kv.get(shopifyKey)) || {};
@@ -151,15 +167,15 @@ app.get("/callback", async (c) => {
       plan: "free",
       shopify_connected: true,
       created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
     };
 
     // PERFORMANCE: Batch persist both configuration and merchant record in a single request
     await kv.mset(
       [shopifyKey, `merchant:${shop}`],
-      [shopifyConfig, merchantRecord]
+      [shopifyConfig, merchantRecord],
     );
-    
+
     // Also set a mapping if needed, or just rely on the global config for the MVP demo.
 
     // STEP 5: REGISTER WEBHOOKS
@@ -168,7 +184,6 @@ app.get("/callback", async (c) => {
     // STEP 6: FINAL REDIRECT
     console.log(`[OAuth] Flow complete. Redirecting to Dashboard.`);
     return c.redirect(`${APP_DOMAIN}/dashboard`);
-
   } catch (error) {
     // SECURITY: Use getErrorMessage to redact PII from the logged error
     console.error("[OAuth] Unexpected error:", getErrorMessage(error));
@@ -182,32 +197,28 @@ app.get("/callback", async (c) => {
 async function verifyHmac(query: Record<string, string>, secret: string) {
   const { hmac, ...rest } = query;
   if (!hmac) return false;
-  
+
   // Sort keys alphabetically
   const keys = Object.keys(rest).sort();
-  const message = keys.map(key => `${key}=${rest[key]}`).join("&");
+  const message = keys.map((key) => `${key}=${rest[key]}`).join("&");
 
-  const encoder = new TextEncoder();
-  const msgData = encoder.encode(message);
+  const msgData = ENCODER.encode(message);
 
   // PERFORMANCE: Cache the imported CryptoKey to avoid overhead during OAuth callback
   if (_cachedHmacSecret !== secret || !_cachedHmacKey) {
-    const keyData = encoder.encode(secret);
+    const keyData = ENCODER.encode(secret);
     _cachedHmacKey = await crypto.subtle.importKey(
       "raw",
       keyData,
       { name: "HMAC", hash: "SHA-256" },
       false,
-      ["verify"]
+      ["verify"],
     );
     _cachedHmacSecret = secret;
   }
 
-  // Convert hex HMAC to Uint8Array for constant-time verification
-  const hmacBytes = new Uint8Array(hmac.length / 2);
-  for (let i = 0; i < hmac.length; i += 2) {
-    hmacBytes[i / 2] = parseInt(hmac.substring(i, i + 2), 16);
-  }
+  // PERFORMANCE: Use Buffer.from for much faster hex-to-Uint8Array conversion than manual loops
+  const hmacBytes = Buffer.from(hmac, "hex");
 
   // Type narrowing for TypeScript safety
   if (!_cachedHmacKey) {
@@ -223,62 +234,69 @@ async function verifyHmac(query: Record<string, string>, secret: string) {
 async function registerWebhooks(shop: string, accessToken: string) {
   // Define webhooks with their specific endpoints
   const WEBHOOKS = [
-    { 
-      topic: "checkouts/create", 
-      address: `${API_DOMAIN}${SERVER_BASE_PATH}/api/webhooks/shopify`
+    {
+      topic: "checkouts/create",
+      address: `${API_DOMAIN}${SERVER_BASE_PATH}/api/webhooks/shopify`,
     },
-    { 
-      topic: "checkouts/update", 
-      address: `${API_DOMAIN}${SERVER_BASE_PATH}/api/webhooks/shopify`
+    {
+      topic: "checkouts/update",
+      address: `${API_DOMAIN}${SERVER_BASE_PATH}/api/webhooks/shopify`,
     },
-    { 
-      topic: "app/uninstalled", 
-      address: `${API_DOMAIN}${SERVER_BASE_PATH}/api/webhooks/app/uninstalled`
+    {
+      topic: "app/uninstalled",
+      address: `${API_DOMAIN}${SERVER_BASE_PATH}/api/webhooks/app/uninstalled`,
     },
     {
       topic: "app_subscriptions/update",
-      address: `${API_DOMAIN}${SERVER_BASE_PATH}/api/billing/webhooks/billing/update`
-    }
+      address: `${API_DOMAIN}${SERVER_BASE_PATH}/api/billing/webhooks/billing/update`,
+    },
   ];
-
 
   console.log(`[Webhooks] Registering topics for ${shop}...`);
 
   // PERFORMANCE: Parallelize webhook registration to reduce latency for the OAuth callback
-  await Promise.all(WEBHOOKS.map(async (hook) => {
-    try {
-      const response = await fetch(`https://${shop}/admin/api/2023-10/webhooks.json`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Shopify-Access-Token": accessToken,
-        },
-        body: JSON.stringify({
-          webhook: {
-            topic: hook.topic,
-            address: hook.address,
-            format: "json",
+  await Promise.all(
+    WEBHOOKS.map(async (hook) => {
+      try {
+        const response = await fetch(
+          `https://${shop}/admin/api/2023-10/webhooks.json`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Shopify-Access-Token": accessToken,
+            },
+            body: JSON.stringify({
+              webhook: {
+                topic: hook.topic,
+                address: hook.address,
+                format: "json",
+              },
+            }),
           },
-        }),
-      });
+        );
 
-      const data = await response.json();
-      
-      if (!response.ok) {
-        // Ignore "address for this topic has already been taken" errors
-        if (JSON.stringify(data).includes("taken")) {
-             console.log(`[Webhooks] Topic ${hook.topic} already registered.`);
+        const data = await response.json();
+
+        if (!response.ok) {
+          // Ignore "address for this topic has already been taken" errors
+          if (JSON.stringify(data).includes("taken")) {
+            console.log(`[Webhooks] Topic ${hook.topic} already registered.`);
+          } else {
+            console.error(`[Webhooks] Failed to register ${hook.topic}:`, data);
+          }
         } else {
-             console.error(`[Webhooks] Failed to register ${hook.topic}:`, data);
+          console.log(`[Webhooks] Successfully registered ${hook.topic}`);
         }
-      } else {
-        console.log(`[Webhooks] Successfully registered ${hook.topic}`);
+      } catch (err) {
+        // SECURITY: Redact PII from the network error before logging
+        console.error(
+          `[Webhooks] Network error registering ${hook.topic}:`,
+          getErrorMessage(err),
+        );
       }
-    } catch (err) {
-      // SECURITY: Redact PII from the network error before logging
-      console.error(`[Webhooks] Network error registering ${hook.topic}:`, getErrorMessage(err));
-    }
-  }));
+    }),
+  );
 }
 
 export default app;

@@ -4,6 +4,9 @@ import { Merchant } from "./types.ts";
 import { Buffer } from "node:buffer";
 import { redactPII, getErrorMessage } from "../../../lib/error.ts";
 
+// PERFORMANCE: Hoist encoders to minimize object creation overhead in the webhook hot-path
+const ENCODER = new TextEncoder();
+
 // Module-level cache for HMAC CryptoKeys to minimize import overhead (~2-5ms per call)
 let _cachedHmacKey: CryptoKey | null = null;
 let _cachedHmacSecret: string | null = null;
@@ -21,8 +24,14 @@ export function escapeShopifySearch(value: string): string {
  *
  * PERFORMANCE: Supports an optional pre-fetched merchant object to avoid redundant database round-trips.
  */
-export async function getMerchantCredentials(shop: string, preFetchedMerchant?: Merchant | null): Promise<Merchant | null> {
-  const merchant = preFetchedMerchant !== undefined ? preFetchedMerchant : (await kv.get(`merchant:${shop}`) as Merchant | null);
+export async function getMerchantCredentials(
+  shop: string,
+  preFetchedMerchant?: Merchant | null,
+): Promise<Merchant | null> {
+  const merchant =
+    preFetchedMerchant !== undefined
+      ? preFetchedMerchant
+      : ((await kv.get(`merchant:${shop}`)) as Merchant | null);
   if (merchant && merchant.access_token) {
     // Decrypt the token if it was stored encrypted
     merchant.access_token = await decrypt(merchant.access_token);
@@ -39,7 +48,7 @@ export async function checkOrderExists(
   accessToken: string,
   cartCreatedAt: string,
   email?: string,
-  phone?: string
+  phone?: string,
 ): Promise<boolean> {
   try {
     // 1. Build Query
@@ -47,7 +56,7 @@ export async function checkOrderExists(
     // Include status:open OR status:closed OR status:cancelled to catch ALL orders
     const clauses = [
       `created_at:>=${cartCreatedAt}`,
-      `(status:open OR status:closed OR status:cancelled)`
+      `(status:open OR status:closed OR status:cancelled)`,
     ];
 
     const contactClauses = [];
@@ -56,13 +65,15 @@ export async function checkOrderExists(
     if (phone) contactClauses.push(`phone:"${escapeShopifySearch(phone)}"`);
 
     if (contactClauses.length > 0) {
-        clauses.push(`(${contactClauses.join(' OR ')})`);
+      clauses.push(`(${contactClauses.join(" OR ")})`);
     } else {
-        console.warn(`[ShopifyClient] No contact info to check order for ${shop}`);
-        return true; // Fail safe: assume order exists/risk of spam
+      console.warn(
+        `[ShopifyClient] No contact info to check order for ${shop}`,
+      );
+      return true; // Fail safe: assume order exists/risk of spam
     }
 
-    const searchQuery = clauses.join(' AND ');
+    const searchQuery = clauses.join(" AND ");
 
     // Only request 'id' and 'first: 1' for maximum efficiency
     const query = `
@@ -76,22 +87,28 @@ export async function checkOrderExists(
     `;
 
     // 2. Call Shopify GraphQL API
-    const data = await shopifyGraphql(shop, accessToken, query, { query: searchQuery });
+    const data = await shopifyGraphql(shop, accessToken, query, {
+      query: searchQuery,
+    });
     const orders = data.orders.nodes || [];
 
     if (orders.length > 0) {
-         // SECURITY: Redact contact info in logs
-         console.log(`[ShopifyClient] MATCH FOUND: Order exists for [REDACTED CONTACT INFO] in ${shop}`);
-         return true;
+      // SECURITY: Redact contact info in logs
+      console.log(
+        `[ShopifyClient] MATCH FOUND: Order exists for [REDACTED CONTACT INFO] in ${shop}`,
+      );
+      return true;
     }
 
     return false;
-
   } catch (error) {
     // SECURITY: Redact PII from error messages before logging
-    console.error(`[ShopifyClient] Error checking orders for ${shop}:`, getErrorMessage(error));
+    console.error(
+      `[ShopifyClient] Error checking orders for ${shop}:`,
+      getErrorMessage(error),
+    );
     // FAIL SAFE: If error, assume order exists to block message
-    return true; 
+    return true;
   }
 }
 
@@ -99,22 +116,25 @@ export async function checkOrderExists(
  * Verify HMAC for Webhooks (Body-based)
  * Uses constant-time comparison to prevent timing attacks.
  */
-export async function verifyWebhookHmac(rawBody: string, hmacHeader: string, secret: string): Promise<boolean> {
+export async function verifyWebhookHmac(
+  rawBody: string,
+  hmacHeader: string,
+  secret: string,
+): Promise<boolean> {
   if (!rawBody || !hmacHeader || !secret) return false;
 
   try {
-    const encoder = new TextEncoder();
-    const msgData = encoder.encode(rawBody);
+    const msgData = ENCODER.encode(rawBody);
 
     // PERFORMANCE: Cache the imported CryptoKey to avoid ~2-5ms overhead of importKey per call
     if (_cachedHmacSecret !== secret || !_cachedHmacKey) {
-      const keyData = encoder.encode(secret);
+      const keyData = ENCODER.encode(secret);
       _cachedHmacKey = await crypto.subtle.importKey(
         "raw",
         keyData,
         { name: "HMAC", hash: "SHA-256" },
         false,
-        ["verify"]
+        ["verify"],
       );
       _cachedHmacSecret = secret;
     }
@@ -131,7 +151,7 @@ export async function verifyWebhookHmac(rawBody: string, hmacHeader: string, sec
       "HMAC",
       _cachedHmacKey,
       signatureBytes,
-      msgData
+      msgData,
     );
   } catch (error) {
     console.error("[ShopifyClient] HMAC verification error:", error);
@@ -146,7 +166,7 @@ export async function shopifyGraphql(
   shop: string,
   accessToken: string,
   query: string,
-  variables: Record<string, any> = {}
+  variables: Record<string, any> = {},
 ) {
   // SECURITY: Defense-in-depth validation of shop domain to prevent SSRF
   if (!/^[a-zA-Z0-9][a-zA-Z0-9-]*\.myshopify\.com$/.test(shop)) {
@@ -154,17 +174,20 @@ export async function shopifyGraphql(
   }
 
   try {
-    const response = await fetch(`https://${shop}/admin/api/2024-01/graphql.json`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Shopify-Access-Token": accessToken,
+    const response = await fetch(
+      `https://${shop}/admin/api/2024-01/graphql.json`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Shopify-Access-Token": accessToken,
+        },
+        body: JSON.stringify({
+          query,
+          variables,
+        }),
       },
-      body: JSON.stringify({
-        query,
-        variables,
-      }),
-    });
+    );
 
     const result = await response.json();
 
@@ -173,22 +196,29 @@ export async function shopifyGraphql(
       console.error(`[ShopifyGraphQL] HTTP Error: ${response.status}`);
       throw new Error(`Shopify GraphQL HTTP Error: ${response.status}`);
     }
-    
+
     // Check for userErrors (common in mutations) but don't throw, let caller handle
     // However, if there are top-level "errors", we should probably throw or return them.
     if (result.errors && result.errors.length > 0) {
-       // SECURITY: Avoid logging the full 'errors' object as it contains PII (query strings/variables)
-       console.error(`[ShopifyGraphQL] GraphQL Errors: ${result.errors.length} errors occurred`);
+      // SECURITY: Avoid logging the full 'errors' object as it contains PII (query strings/variables)
+      console.error(
+        `[ShopifyGraphQL] GraphQL Errors: ${result.errors.length} errors occurred`,
+      );
 
-       // Aggregate all error messages and redact PII
-       const errorMessages = result.errors.map((e: any) => e.message || "Unknown GraphQL Error").join("; ");
-       throw new Error(`GraphQL Error: ${redactPII(errorMessages)}`);
+      // Aggregate all error messages and redact PII
+      const errorMessages = result.errors
+        .map((e: any) => e.message || "Unknown GraphQL Error")
+        .join("; ");
+      throw new Error(`GraphQL Error: ${redactPII(errorMessages)}`);
     }
 
     return result.data;
   } catch (error) {
     // SECURITY: Use getErrorMessage to redact PII from the logged error
-    console.error(`[ShopifyGraphQL] Network/System Error for ${shop}:`, getErrorMessage(error));
+    console.error(
+      `[ShopifyGraphQL] Network/System Error for ${shop}:`,
+      getErrorMessage(error),
+    );
     throw error;
   }
 }
