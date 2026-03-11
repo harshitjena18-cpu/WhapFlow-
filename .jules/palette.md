@@ -37,3 +37,7 @@
 ## 2025-05-15 - Profile Navigation Semantic and Accessibility
 **Learning:** Bespoke profile/user sections in sidebars are often implemented as clickable `div`s, which prevents them from being correctly identified as navigation elements by screen readers and lacks native keyboard focus behavior. Ensuring these sections are interactive across all sidebar states (expanded or collapsed) is critical for consistency.
 **Action:** Always use semantic `Link` or `button` elements for interactive user profile sections and ensure they have explicit `aria-label`s and tactile feedback (`active:scale`) to match the rest of the navigation. Verify that routing is consistent (e.g., using the same `/settings` path) across all instances of the profile link.
+
+## 2025-05-15 - [Radix Select Migration and Label Accessibility]
+**Learning:** When replacing native HTML `<select>` elements with Radix-based `Select` components, accessibility for associated `<Label>` elements is not automatically preserved. The `SelectTrigger` must explicitly receive the `id` that matches the label's `htmlFor` attribute. Additionally, custom select triggers often lack the `cursor: pointer` style by default, which can make them feel non-interactive compared to native elements.
+**Action:** Always pass the original `id` to the `SelectTrigger` when migrating from native selects. Explicitly add `cursor-pointer` to the `SelectTrigger` classes to ensure clear interactive cues for users.
