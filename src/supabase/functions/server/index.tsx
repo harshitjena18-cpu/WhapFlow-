@@ -19,7 +19,7 @@ import webhooksApp from "./webhooks_routes.tsx";
 import whatsappApp from "./whatsapp_routes.tsx";
 import aiApp from "./ai_routes.tsx";
 
-import { SERVER_BASE_PATH, SHOPIFY_DOMAIN_REGEX, APP_DOMAIN, API_DOMAIN } from "./constants.ts";
+import { SERVER_BASE_PATH, SHOPIFY_DOMAIN_REGEX, APP_DOMAIN, API_DOMAIN, LOCALHOST_REGEX } from "./constants.ts";
 
 const app = new Hono();
 
@@ -38,7 +38,7 @@ app.use(
       if (!origin) return origin;
 
       // Localhost for development
-      if (origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:")) {
+      if (LOCALHOST_REGEX.test(origin)) {
         return origin;
       }
 
@@ -108,10 +108,6 @@ app.post(`${SERVER_BASE_PATH}/api/whatsapp/send`, async (c) => {
     const apiKey = getEnv("WHATSAPP_API_KEY");
     if (!apiKey || !authHeader || authHeader !== `Bearer ${apiKey}`) {
       return c.json({ error: "Unauthorized: Invalid or missing token" }, 401);
-    }
-
-    if (isServiceAuth && !isWhatsappAuth) {
-      console.warn(`[Security] Demo endpoint called with deprecated Service Role Key. Please migrate to WHATSAPP_API_KEY.`);
     }
 
     // SECURITY: Validate shop domain
