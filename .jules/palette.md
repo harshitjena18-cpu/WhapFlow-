@@ -37,3 +37,7 @@
 ## 2025-05-15 - Profile Navigation Semantic and Accessibility
 **Learning:** Bespoke profile/user sections in sidebars are often implemented as clickable `div`s, which prevents them from being correctly identified as navigation elements by screen readers and lacks native keyboard focus behavior. Ensuring these sections are interactive across all sidebar states (expanded or collapsed) is critical for consistency.
 **Action:** Always use semantic `Link` or `button` elements for interactive user profile sections and ensure they have explicit `aria-label`s and tactile feedback (`active:scale`) to match the rest of the navigation. Verify that routing is consistent (e.g., using the same `/settings` path) across all instances of the profile link.
+
+## 2025-06-16 - [Interactive Affordance for Custom UI Primitives]
+**Learning:** Custom UI primitives built with Radix (like `Select` or `Popover`) often lack default interactive cursors. Manually adding `cursor-pointer` to the trigger components is essential for maintaining standard web affordance, especially when these components are styled to look like native form elements.
+**Action:** Audit shared UI components (Triggers, Buttons, Toggles) and ensure they explicitly include `cursor-pointer` in their base classes to provide clear visual feedback that the element is interactive.
