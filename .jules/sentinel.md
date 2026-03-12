@@ -27,3 +27,8 @@
 **Vulnerability:** Dashboard API handlers used a fallback to an untrusted `shop` query parameter when the `verified_shop` context was missing, creating a potential IDOR vector if middleware was bypassed.
 **Learning:** Even with security middleware in place, handlers should not provide fallbacks to untrusted inputs. A missing verified identity should always result in an explicit authorization failure (Fail-Closed).
 **Prevention:** Remove all `|| c.req.query("shop")` fallbacks in protected routes and strictly rely on the context value provided by the verification middleware.
+
+## 2025-05-24 - [Loose CORS Origin Validation and Runtime ReferenceErrors]
+**Vulnerability:** CORS origin validation used loose `.startsWith()` checks for localhost, allowing bypasses like `http://localhost.attacker.com`. Additionally, security warning blocks referenced undefined variables, causing runtime crashes on protected endpoints.
+**Learning:** Origin validation must be anchored and specific to prevent DNS-rebinding-like bypasses. Furthermore, deprecated or "warning" code paths must be fully tested to avoid introducing runtime errors (ReferenceErrors) in production.
+**Prevention:** Use strictly anchored regex (`LOCALHOST_REGEX`) for origin validation. Remove insecure, untested fallback code paths entirely rather than leaving broken warning blocks.
