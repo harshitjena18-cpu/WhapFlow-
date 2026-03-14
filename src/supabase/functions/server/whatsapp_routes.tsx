@@ -21,9 +21,8 @@ app.post("/whatsapp/send", async (c) => {
       return c.json({ error: "Unauthorized: Invalid or missing token" }, 401);
     }
 
-    if (isServiceAuth && !isWhatsappAuth) {
-      console.warn(`[Security] Endpoint called with deprecated Service Role Key. Please migrate to WHATSAPP_API_KEY.`);
-    }
+    // SECURITY: Removed insecure fallback to SUPABASE_SERVICE_ROLE_KEY (previously caused ReferenceError)
+    // All clients must now use the dedicated WHATSAPP_API_KEY.
 
     const { phoneNumber, templateId } = await c.req.json();
 
