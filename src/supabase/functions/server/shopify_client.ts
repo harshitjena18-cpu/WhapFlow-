@@ -8,6 +8,9 @@ import { redactPII, getErrorMessage } from "../../../lib/error.ts";
 let _cachedHmacKey: CryptoKey | null = null;
 let _cachedHmacSecret: string | null = null;
 
+// PERFORMANCE: Hoist encoder to module level to avoid redundant object creation
+const ENCODER = new TextEncoder();
+
 /**
  * Utility to escape special characters in Shopify search queries to prevent injection.
  * Escapes backslashes and double quotes.
@@ -103,12 +106,11 @@ export async function verifyWebhookHmac(rawBody: string, hmacHeader: string, sec
   if (!rawBody || !hmacHeader || !secret) return false;
 
   try {
-    const encoder = new TextEncoder();
-    const msgData = encoder.encode(rawBody);
+    const msgData = ENCODER.encode(rawBody);
 
     // PERFORMANCE: Cache the imported CryptoKey to avoid ~2-5ms overhead of importKey per call
     if (_cachedHmacSecret !== secret || !_cachedHmacKey) {
-      const keyData = encoder.encode(secret);
+      const keyData = ENCODER.encode(secret);
       _cachedHmacKey = await crypto.subtle.importKey(
         "raw",
         keyData,
