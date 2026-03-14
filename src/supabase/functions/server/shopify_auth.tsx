@@ -1,5 +1,6 @@
 import { Hono } from "npm:hono";
 import { setCookie, getCookie } from "npm:hono/cookie";
+import { Buffer } from "node:buffer";
 import * as kv from "./kv_store.tsx";
 import { encrypt } from "./crypto.ts";
 import { getEnv } from "../../../lib/env.ts";
@@ -11,6 +12,9 @@ const app = new Hono();
 // Module-level cache for HMAC CryptoKeys to minimize import overhead
 let _cachedHmacKey: CryptoKey | null = null;
 let _cachedHmacSecret: string | null = null;
+
+// PERFORMANCE: Hoist encoder to module level to avoid redundant object creation
+const ENCODER = new TextEncoder();
 
 // Configuration
 const SHOPIFY_SCOPES = "read_checkouts,read_orders";
@@ -129,20 +133,19 @@ app.get("/callback", async (c) => {
     const accessToken = tokenData.access_token;
     console.log(`[OAuth] Token acquired for ${shop}`);
 
-    // STEP 4: MERCHANT REGISTRATION
-    // Update global config for MVP (Dashboard compatibility)
-    // In a real multi-tenant app, this would be scoped to the user session.
-    
-    // 1. Update Scoped Config (Scoping by shop to prevent multi-tenancy leaks)
+    // STEP 4: MERCHANT REGISTRATION & WEBHOOK PREP
     const shopifyKey = `shop:${shop}:config:shopify`;
-    const shopifyConfig = (await kv.get(shopifyKey)) || {};
+
+    // PERFORMANCE: Parallelize initial dependency fetching and encryption
+    const [existingConfig, encryptedToken] = await Promise.all([
+      kv.get(shopifyKey),
+      encrypt(accessToken)
+    ]);
+
+    const shopifyConfig = existingConfig || {};
     shopifyConfig.connected_at = new Date().toISOString();
     shopifyConfig.connection_status = "connected";
-    shopifyConfig.shop_domain = shop; // Metadata
-
-    // 2. Securely Store Credentials (keyed by shop)
-    // Encrypt the access token before storing it at rest
-    const encryptedToken = await encrypt(accessToken);
+    shopifyConfig.shop_domain = shop;
 
     const merchantRecord = {
       shop: shop,
@@ -154,16 +157,15 @@ app.get("/callback", async (c) => {
       updated_at: new Date().toISOString()
     };
 
-    // PERFORMANCE: Batch persist both configuration and merchant record in a single request
-    await kv.mset(
-      [shopifyKey, `merchant:${shop}`],
-      [shopifyConfig, merchantRecord]
-    );
-    
-    // Also set a mapping if needed, or just rely on the global config for the MVP demo.
-
-    // STEP 5: REGISTER WEBHOOKS
-    await registerWebhooks(shop, accessToken);
+    // PERFORMANCE: Parallelize final persistence and webhook registration
+    // This removes the latency of sequential await for registration.
+    await Promise.all([
+      kv.mset(
+        [shopifyKey, `merchant:${shop}`],
+        [shopifyConfig, merchantRecord]
+      ),
+      registerWebhooks(shop, accessToken)
+    ]);
 
     // STEP 6: FINAL REDIRECT
     console.log(`[OAuth] Flow complete. Redirecting to Dashboard.`);
@@ -187,12 +189,11 @@ async function verifyHmac(query: Record<string, string>, secret: string) {
   const keys = Object.keys(rest).sort();
   const message = keys.map(key => `${key}=${rest[key]}`).join("&");
 
-  const encoder = new TextEncoder();
-  const msgData = encoder.encode(message);
+  const msgData = ENCODER.encode(message);
 
   // PERFORMANCE: Cache the imported CryptoKey to avoid overhead during OAuth callback
   if (_cachedHmacSecret !== secret || !_cachedHmacKey) {
-    const keyData = encoder.encode(secret);
+    const keyData = ENCODER.encode(secret);
     _cachedHmacKey = await crypto.subtle.importKey(
       "raw",
       keyData,
@@ -203,11 +204,8 @@ async function verifyHmac(query: Record<string, string>, secret: string) {
     _cachedHmacSecret = secret;
   }
 
-  // Convert hex HMAC to Uint8Array for constant-time verification
-  const hmacBytes = new Uint8Array(hmac.length / 2);
-  for (let i = 0; i < hmac.length; i += 2) {
-    hmacBytes[i / 2] = parseInt(hmac.substring(i, i + 2), 16);
-  }
+  // PERFORMANCE: Use Buffer.from for much faster hex-to-binary conversion
+  const hmacBytes = Buffer.from(hmac, "hex");
 
   // Type narrowing for TypeScript safety
   if (!_cachedHmacKey) {

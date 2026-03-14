@@ -17,6 +17,9 @@ interface SendMessageParams {
 let _cachedHmacKey: CryptoKey | null = null;
 let _cachedHmacSecret: string | null = null;
 
+// PERFORMANCE: Hoist encoder to module level to avoid redundant object creation
+const ENCODER = new TextEncoder();
+
 export const sendWhatsAppTemplate = async ({
   to,
   templateName = "abandoned_cart_test",
@@ -105,12 +108,11 @@ export async function verifyWhatsAppSignature(rawBody: string, signatureHeader: 
   }
 
   try {
-    const encoder = new TextEncoder();
-    const msgData = encoder.encode(rawBody);
+    const msgData = ENCODER.encode(rawBody);
 
     // PERFORMANCE: Cache the imported CryptoKey
     if (_cachedHmacSecret !== secret || !_cachedHmacKey) {
-      const keyData = encoder.encode(secret);
+      const keyData = ENCODER.encode(secret);
       _cachedHmacKey = await crypto.subtle.importKey(
         "raw",
         keyData,
