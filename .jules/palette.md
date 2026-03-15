@@ -37,3 +37,7 @@
 ## 2025-05-15 - Profile Navigation Semantic and Accessibility
 **Learning:** Bespoke profile/user sections in sidebars are often implemented as clickable `div`s, which prevents them from being correctly identified as navigation elements by screen readers and lacks native keyboard focus behavior. Ensuring these sections are interactive across all sidebar states (expanded or collapsed) is critical for consistency.
 **Action:** Always use semantic `Link` or `button` elements for interactive user profile sections and ensure they have explicit `aria-label`s and tactile feedback (`active:scale`) to match the rest of the navigation. Verify that routing is consistent (e.g., using the same `/settings` path) across all instances of the profile link.
+
+## 2025-05-24 - [Component Variant Specificity and Overrides]
+**Learning:** Using attribute-based selectors (e.g., `data-size="default"`) for default component styles can sometimes interfere with Tailwind utility overrides if not carefully managed within the `cn()` utility. Transitioning to conditional class strings for variants (`size === "sm" ? "h-8" : "h-9"`) provides a more reliable way for `tailwind-merge` to handle external class overrides (like custom heights) while maintaining internal defaults.
+**Action:** For UI components that require high customizability via `className`, prefer conditional class strings for variant-specific styles over attribute selectors to ensure predictable behavior with `tailwind-merge`.
