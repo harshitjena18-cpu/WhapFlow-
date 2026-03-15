@@ -28,8 +28,8 @@ async function verify() {
       useRegex: false
     },
     {
-      pattern: 'if (origin.startsWith("http://localhost:")',
-      description: "Allows localhost",
+      pattern: 'if (LOCALHOST_REGEX.test(origin))',
+      description: "Allows localhost via LOCALHOST_REGEX",
       useRegex: false
     },
     {
