@@ -45,23 +45,24 @@ async function getV3Key(): Promise<CryptoKey> {
   }
 
   if (_cachedV3Key) return _cachedV3Key;
-  if (_v3KeyPromise) return _v3KeyPromise;
 
-  _v3KeyPromise = (async () => {
-    try {
-      const km = await crypto.subtle.importKey("raw", encoder.encode(secret), "HKDF", false, ["deriveKey"]);
-      _cachedV3Key = await crypto.subtle.deriveKey(
-        { name: "HKDF", salt: encoder.encode("WhapFlow-V3-Salt"), info: encoder.encode("V3-Key"), hash: DIGEST },
-        km, { name: ALGORITHM, length: KEY_LENGTH }, false, ["encrypt", "decrypt"]
-      );
-      return _cachedV3Key;
-    } catch (e) {
-      _v3KeyPromise = null; // Reset on failure
-      throw e;
-    }
-  })();
+  if (!_v3KeyPromise) {
+    _v3KeyPromise = (async () => {
+      try {
+        const km = await crypto.subtle.importKey("raw", encoder.encode(secret), "HKDF", false, ["deriveKey"]);
+        _cachedV3Key = await crypto.subtle.deriveKey(
+          { name: "HKDF", salt: encoder.encode("WhapFlow-V3-Salt"), info: encoder.encode("V3-Key"), hash: DIGEST },
+          km, { name: ALGORITHM, length: KEY_LENGTH }, false, ["encrypt", "decrypt"]
+        );
+        return _cachedV3Key;
+      } catch (e) {
+        _v3KeyPromise = null; // Reset on failure
+        throw e;
+      }
+    })();
+  }
 
-  return _v3KeyPromise;
+  return await _v3KeyPromise;
 }
 
 /** Derives a legacy key using PBKDF2 (V2) - Not cached as it depends on salt */
