@@ -13,9 +13,13 @@ interface SendMessageParams {
   components?: any[];
 }
 
+// PERFORMANCE: Hoist TextEncoder to module level
+const encoder = new TextEncoder();
+
 // Module-level cache for HMAC CryptoKeys
 let _cachedHmacKey: CryptoKey | null = null;
 let _cachedHmacSecret: string | null = null;
+let _hmacKeyPromise: Promise<CryptoKey> | null = null;
 
 export const sendWhatsAppTemplate = async ({
   to,
@@ -105,31 +109,42 @@ export async function verifyWhatsAppSignature(rawBody: string, signatureHeader: 
   }
 
   try {
-    const encoder = new TextEncoder();
     const msgData = encoder.encode(rawBody);
 
     // PERFORMANCE: Cache the imported CryptoKey
-    if (_cachedHmacSecret !== secret || !_cachedHmacKey) {
-      const keyData = encoder.encode(secret);
-      _cachedHmacKey = await crypto.subtle.importKey(
-        "raw",
-        keyData,
-        { name: "HMAC", hash: "SHA-256" },
-        false,
-        ["verify"]
-      );
+    // Uses promise-based caching to prevent thundering herd on concurrent webhooks.
+    if (_cachedHmacSecret !== secret) {
+      _cachedHmacKey = null;
+      _hmacKeyPromise = null;
       _cachedHmacSecret = secret;
     }
 
-    if (!_cachedHmacKey) {
-        throw new Error("HMAC Key initialization failed");
+    if (!_cachedHmacKey && !_hmacKeyPromise) {
+      _hmacKeyPromise = (async () => {
+        try {
+          const keyData = encoder.encode(secret);
+          _cachedHmacKey = await crypto.subtle.importKey(
+            "raw",
+            keyData,
+            { name: "HMAC", hash: "SHA-256" },
+            false,
+            ["verify"]
+          );
+          return _cachedHmacKey;
+        } catch (e) {
+          _hmacKeyPromise = null;
+          throw e;
+        }
+      })();
     }
+
+    const key = _cachedHmacKey || (await _hmacKeyPromise!);
 
     const signatureBytes = Buffer.from(signature, "hex");
 
     return await crypto.subtle.verify(
       "HMAC",
-      _cachedHmacKey,
+      key,
       signatureBytes,
       msgData
     );
