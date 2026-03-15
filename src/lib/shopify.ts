@@ -8,8 +8,6 @@
 
 import { z } from "zod";
 import { getEnv } from "./env.ts";
-import { ShopifyCartPayload } from "../types/index.ts";
-import { getEnv } from "./env.ts";
 
 const ShopifyLineItemSchema = z.object({
   id: z.number(),
@@ -35,7 +33,7 @@ export const ShopifyCartSchema = z.object({
   created_at: z.string(),
 });
 
-export const parseShopifyCart = (payload: unknown): ShopifyCartPayload => {
+export const parseShopifyCart = (payload: unknown) => {
   return ShopifyCartSchema.parse(payload);
 };
 
