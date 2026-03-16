@@ -34,7 +34,7 @@ async function getV3Key(): Promise<CryptoKey> {
     _cachedSecret = secret;
   }
   if (_cachedV3Key) return _cachedV3Key;
-  if (_v3KeyPromise) return _v3KeyPromise;
+  if (_v3KeyPromise) return await _v3KeyPromise;
 
   _v3KeyPromise = (async () => {
     const km = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), "HKDF", false, ["deriveKey"]);
@@ -46,7 +46,7 @@ async function getV3Key(): Promise<CryptoKey> {
     return key;
   })();
 
-  return _v3KeyPromise;
+  return await _v3KeyPromise;
 }
 
 /** Derives a legacy key using PBKDF2 (V2) - Not cached as it depends on salt */
