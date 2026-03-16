@@ -82,3 +82,7 @@
 ## 2026-03-25 - [Middleware Hot-path Optimizations]
 **Learning:** Request-level middleware like `verifyShopifySession` executes on every authenticated call. Expensive operations like `new URL()` parsing and repeated environment variable lookups (even via `Deno.env.get`) add cumulative latency. Optimized string manipulation for hostname extraction and module-level configuration caching reduce the per-request latency floor.
 **Action:** Audit middleware and high-frequency hooks for redundant I/O or expensive object construction (URL, Date, Regex). Cache static config and prefer string manipulation in hot-paths when the input format is strictly validated.
+
+## 2026-03-28 - [Thundering Herd Prevention via Promise Caching]
+**Learning:** Standard module-level caching of `CryptoKey` results is insufficient during high-concurrency initialization. Multiple concurrent requests can check for a `null` cache and trigger redundant, expensive HKDF or HMAC key imports (~2-5ms CPU time each). Caching the **promise** of the derivation ensures all concurrent waiters resolve to the same key object without duplicating work.
+**Action:** Always cache the initialization promise (`Promise<CryptoKey>`) for expensive asynchronous resources at the module level. Use the `cachedKey || await promise` pattern to minimize micro-task overhead for subsequent hits.

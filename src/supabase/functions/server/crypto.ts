@@ -17,6 +17,7 @@ const DIGEST = "SHA-256";
 // Caching for V3 master key
 let _cachedSecret: string | null = null;
 let _cachedV3Key: CryptoKey | null = null;
+let _v3KeyPromise: Promise<CryptoKey> | null = null;
 
 function getSecret() {
   const secret = getEnv("ENCRYPTION_SECRET") || getEnv("SHOPIFY_CLIENT_SECRET");
@@ -27,14 +28,25 @@ function getSecret() {
 /** Derives a cached master key using HKDF (V3) */
 async function getV3Key(): Promise<CryptoKey> {
   const secret = getSecret();
-  if (secret !== _cachedSecret) { _cachedV3Key = null; _cachedSecret = secret; }
+  if (secret !== _cachedSecret) {
+    _cachedV3Key = null;
+    _v3KeyPromise = null;
+    _cachedSecret = secret;
+  }
   if (_cachedV3Key) return _cachedV3Key;
+  if (_v3KeyPromise) return await _v3KeyPromise;
 
-  const km = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), "HKDF", false, ["deriveKey"]);
-  return _cachedV3Key = await crypto.subtle.deriveKey(
-    { name: "HKDF", salt: new TextEncoder().encode("WhapFlow-V3-Salt"), info: new TextEncoder().encode("V3-Key"), hash: DIGEST },
-    km, { name: ALGORITHM, length: KEY_LENGTH }, false, ["encrypt", "decrypt"]
-  );
+  _v3KeyPromise = (async () => {
+    const km = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), "HKDF", false, ["deriveKey"]);
+    const key = await crypto.subtle.deriveKey(
+      { name: "HKDF", salt: new TextEncoder().encode("WhapFlow-V3-Salt"), info: new TextEncoder().encode("V3-Key"), hash: DIGEST },
+      km, { name: ALGORITHM, length: KEY_LENGTH }, false, ["encrypt", "decrypt"]
+    );
+    _cachedV3Key = key;
+    return key;
+  })();
+
+  return await _v3KeyPromise;
 }
 
 /** Derives a legacy key using PBKDF2 (V2) - Not cached as it depends on salt */
