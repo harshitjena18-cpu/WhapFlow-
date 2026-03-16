@@ -11,6 +11,7 @@ const app = new Hono();
 // Module-level cache for HMAC CryptoKeys to minimize import overhead
 let _cachedHmacKey: CryptoKey | null = null;
 let _cachedHmacSecret: string | null = null;
+let _hmacKeyPromise: Promise<CryptoKey> | null = null;
 
 // Configuration
 const SHOPIFY_SCOPES = "read_checkouts,read_orders";
@@ -190,18 +191,29 @@ async function verifyHmac(query: Record<string, string>, secret: string) {
   const encoder = new TextEncoder();
   const msgData = encoder.encode(message);
 
-  // PERFORMANCE: Cache the imported CryptoKey to avoid overhead during OAuth callback
-  if (_cachedHmacSecret !== secret || !_cachedHmacKey) {
-    const keyData = encoder.encode(secret);
-    _cachedHmacKey = await crypto.subtle.importKey(
-      "raw",
-      keyData,
-      { name: "HMAC", hash: "SHA-256" },
-      false,
-      ["verify"]
-    );
+  // PERFORMANCE: Cache the imported CryptoKey promise to avoid overhead during concurrent OAuth callbacks
+  if (_cachedHmacSecret !== secret) {
+    _cachedHmacKey = null;
+    _hmacKeyPromise = null;
     _cachedHmacSecret = secret;
   }
+
+  if (!_cachedHmacKey && !_hmacKeyPromise) {
+    const keyData = encoder.encode(secret);
+    _hmacKeyPromise = (async () => {
+      const key = await crypto.subtle.importKey(
+        "raw",
+        keyData,
+        { name: "HMAC", hash: "SHA-256" },
+        false,
+        ["verify"]
+      );
+      _cachedHmacKey = key;
+      return key;
+    })();
+  }
+
+  const key = _cachedHmacKey || (await _hmacKeyPromise!);
 
   // Convert hex HMAC to Uint8Array for constant-time verification
   const hmacBytes = new Uint8Array(hmac.length / 2);
@@ -209,12 +221,7 @@ async function verifyHmac(query: Record<string, string>, secret: string) {
     hmacBytes[i / 2] = parseInt(hmac.substring(i, i + 2), 16);
   }
 
-  // Type narrowing for TypeScript safety
-  if (!_cachedHmacKey) {
-    throw new Error("HMAC Key initialization failed");
-  }
-
-  return await crypto.subtle.verify("HMAC", _cachedHmacKey, hmacBytes, msgData);
+  return await crypto.subtle.verify("HMAC", key, hmacBytes, msgData);
 }
 
 /**
