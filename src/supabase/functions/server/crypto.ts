@@ -14,9 +14,14 @@ const ITERATIONS_V2 = 100000;
 const KEY_LENGTH = 256;
 const DIGEST = "SHA-256";
 
+// PERFORMANCE: Hoist encoders/decoders to module level to avoid redundant object creation
+const encoder = new TextEncoder();
+const decoder = new TextDecoder();
+
 // Caching for V3 master key
 let _cachedSecret: string | null = null;
 let _cachedV3Key: CryptoKey | null = null;
+let _v3KeyPromise: Promise<CryptoKey> | null = null;
 
 function getSecret() {
   const secret = getEnv("ENCRYPTION_SECRET") || getEnv("SHOPIFY_CLIENT_SECRET");
@@ -24,22 +29,53 @@ function getSecret() {
   return secret;
 }
 
-/** Derives a cached master key using HKDF (V3) */
+/**
+ * Derives a cached master key using HKDF (V3)
+ *
+ * PERFORMANCE: Implements promise-based caching to prevent the "thundering herd"
+ * effect during high-concurrency requests.
+ */
 async function getV3Key(): Promise<CryptoKey> {
   const secret = getSecret();
-  if (secret !== _cachedSecret) { _cachedV3Key = null; _cachedSecret = secret; }
-  if (_cachedV3Key) return _cachedV3Key;
 
-  const km = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), "HKDF", false, ["deriveKey"]);
-  return _cachedV3Key = await crypto.subtle.deriveKey(
-    { name: "HKDF", salt: new TextEncoder().encode("WhapFlow-V3-Salt"), info: new TextEncoder().encode("V3-Key"), hash: DIGEST },
-    km, { name: ALGORITHM, length: KEY_LENGTH }, false, ["encrypt", "decrypt"]
-  );
+  // Invalidate cache if secret changes
+  if (secret !== _cachedSecret) {
+    _cachedV3Key = null;
+    _v3KeyPromise = null;
+    _cachedSecret = secret;
+  }
+
+  if (_cachedV3Key) return _cachedV3Key;
+  if (_v3KeyPromise) return _v3KeyPromise;
+
+  _v3KeyPromise = (async () => {
+    try {
+      const km = await crypto.subtle.importKey("raw", encoder.encode(secret), "HKDF", false, ["deriveKey"]);
+      _cachedV3Key = await crypto.subtle.deriveKey(
+        {
+          name: "HKDF",
+          salt: encoder.encode("WhapFlow-V3-Salt"),
+          info: encoder.encode("V3-Key"),
+          hash: DIGEST
+        },
+        km,
+        { name: ALGORITHM, length: KEY_LENGTH },
+        false,
+        ["encrypt", "decrypt"]
+      );
+      return _cachedV3Key;
+    } catch (err) {
+      _v3KeyPromise = null; // Reset promise on error to allow retry
+      throw err;
+    }
+  })();
+
+  return _v3KeyPromise;
 }
 
 /** Derives a legacy key using PBKDF2 (V2) - Not cached as it depends on salt */
 async function getV2Key(salt: Uint8Array): Promise<CryptoKey> {
-  const km = await crypto.subtle.importKey("raw", new TextEncoder().encode(getSecret()), "PBKDF2", false, ["deriveKey"]);
+  const km = await crypto.subtle.importKey("raw", encoder.encode(getSecret()), "PBKDF2", false, ["deriveKey"]);
   return await crypto.subtle.deriveKey(
     { name: "PBKDF2", salt, iterations: ITERATIONS_V2, hash: DIGEST },
     km, { name: ALGORITHM, length: KEY_LENGTH }, false, ["encrypt", "decrypt"]
@@ -51,7 +87,7 @@ export async function encrypt(text: string | null | undefined): Promise<string |
   try {
     const key = await getV3Key();
     const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH));
-    const ct = await crypto.subtle.encrypt({ name: ALGORITHM, iv }, key, new TextEncoder().encode(text));
+    const ct = await crypto.subtle.encrypt({ name: ALGORITHM, iv }, key, encoder.encode(text));
 
     return `${PREFIX_V3}${b64(iv)}:${b64(new Uint8Array(ct))}`;
   } catch (e) {
@@ -65,11 +101,11 @@ export async function decrypt(enc: string | null | undefined): Promise<string | 
   try {
     if (enc.startsWith(PREFIX_V3)) {
       const [ivB, ctB] = enc.slice(PREFIX_V3.length).split(":");
-      return new TextDecoder().decode(await crypto.subtle.decrypt({ name: ALGORITHM, iv: deb64(ivB) }, await getV3Key(), deb64(ctB)));
+      return decoder.decode(await crypto.subtle.decrypt({ name: ALGORITHM, iv: deb64(ivB) }, await getV3Key(), deb64(ctB)));
     }
     if (enc.startsWith(PREFIX_V2)) {
       const [sB, ivB, ctB] = enc.slice(PREFIX_V2.length).split(":");
-      return new TextDecoder().decode(await crypto.subtle.decrypt({ name: ALGORITHM, iv: deb64(ivB) }, await getV2Key(deb64(sB)), deb64(ctB)));
+      return decoder.decode(await crypto.subtle.decrypt({ name: ALGORITHM, iv: deb64(ivB) }, await getV2Key(deb64(sB)), deb64(ctB)));
     }
   } catch (e) {
     console.error("[Crypto] Decryption failed:", e);
