@@ -37,3 +37,7 @@
 ## 2025-05-15 - Profile Navigation Semantic and Accessibility
 **Learning:** Bespoke profile/user sections in sidebars are often implemented as clickable `div`s, which prevents them from being correctly identified as navigation elements by screen readers and lacks native keyboard focus behavior. Ensuring these sections are interactive across all sidebar states (expanded or collapsed) is critical for consistency.
 **Action:** Always use semantic `Link` or `button` elements for interactive user profile sections and ensure they have explicit `aria-label`s and tactile feedback (`active:scale`) to match the rest of the navigation. Verify that routing is consistent (e.g., using the same `/settings` path) across all instances of the profile link.
+
+## 2025-05-16 - [Standardizing Inputs and Interaction Feedback]
+**Learning:** Mixing native HTML `<select>` elements with Radix-based UI components creates a disjointed experience and bypasses the design system's built-in accessibility features (like keyboard navigation and screen reader support). Similarly, using inconsistent scale-down animations for button feedback (`scale-98` vs `scale-95`) reduces the polished, "tactile" feel of the interface.
+**Action:** Always replace native select/input elements with their themed Radix counterparts. Audit interactive elements for consistent feedback classes (e.g., standardizing on `active:scale-95`) to ensure a unified and premium feel across the application.
