@@ -35,7 +35,7 @@ function getSecret() {
  * PERFORMANCE: Implements promise-based caching to prevent the "thundering herd"
  * effect during high-concurrency requests.
  */
-async function getV3Key(): Promise<CryptoKey> {
+function getV3Key(): Promise<CryptoKey> {
   const secret = getSecret();
 
   // Invalidate cache if secret changes
@@ -45,7 +45,7 @@ async function getV3Key(): Promise<CryptoKey> {
     _cachedSecret = secret;
   }
 
-  if (_cachedV3Key) return _cachedV3Key;
+  if (_cachedV3Key) return Promise.resolve(_cachedV3Key);
   if (_v3KeyPromise) return _v3KeyPromise;
 
   _v3KeyPromise = (async () => {
