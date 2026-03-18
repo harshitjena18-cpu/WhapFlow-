@@ -11,6 +11,7 @@ const app = new Hono();
 // Module-level cache for HMAC CryptoKeys to minimize import overhead
 let _cachedHmacKey: CryptoKey | null = null;
 let _cachedHmacSecret: string | null = null;
+let _hmacKeyPromise: Promise<CryptoKey> | null = null;
 
 // Configuration
 const SHOPIFY_SCOPES = "read_checkouts,read_orders";
@@ -191,16 +192,33 @@ async function verifyHmac(query: Record<string, string>, secret: string) {
   const msgData = encoder.encode(message);
 
   // PERFORMANCE: Cache the imported CryptoKey to avoid overhead during OAuth callback
-  if (_cachedHmacSecret !== secret || !_cachedHmacKey) {
-    const keyData = encoder.encode(secret);
-    _cachedHmacKey = await crypto.subtle.importKey(
-      "raw",
-      keyData,
-      { name: "HMAC", hash: "SHA-256" },
-      false,
-      ["verify"]
-    );
+  // Uses promise-based caching to prevent redundant imports during concurrent calls.
+  if (_cachedHmacSecret !== secret) {
+    _cachedHmacKey = null;
+    _hmacKeyPromise = null;
     _cachedHmacSecret = secret;
+  }
+
+  if (!_cachedHmacKey) {
+    if (!_hmacKeyPromise) {
+      _hmacKeyPromise = (async () => {
+        try {
+          const keyData = encoder.encode(secret);
+          _cachedHmacKey = await crypto.subtle.importKey(
+            "raw",
+            keyData,
+            { name: "HMAC", hash: "SHA-256" },
+            false,
+            ["verify"]
+          );
+          return _cachedHmacKey;
+        } catch (e) {
+          _hmacKeyPromise = null;
+          throw e;
+        }
+      })();
+    }
+    await _hmacKeyPromise;
   }
 
   // Convert hex HMAC to Uint8Array for constant-time verification

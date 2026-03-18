@@ -16,6 +16,7 @@ interface SendMessageParams {
 // Module-level cache for HMAC CryptoKeys
 let _cachedHmacKey: CryptoKey | null = null;
 let _cachedHmacSecret: string | null = null;
+let _hmacKeyPromise: Promise<CryptoKey> | null = null;
 
 export const sendWhatsAppTemplate = async ({
   to,
@@ -109,16 +110,33 @@ export async function verifyWhatsAppSignature(rawBody: string, signatureHeader: 
     const msgData = encoder.encode(rawBody);
 
     // PERFORMANCE: Cache the imported CryptoKey
-    if (_cachedHmacSecret !== secret || !_cachedHmacKey) {
-      const keyData = encoder.encode(secret);
-      _cachedHmacKey = await crypto.subtle.importKey(
-        "raw",
-        keyData,
-        { name: "HMAC", hash: "SHA-256" },
-        false,
-        ["verify"]
-      );
+    // Uses promise-based caching to prevent redundant imports during high-concurrency (thundering herd).
+    if (_cachedHmacSecret !== secret) {
+      _cachedHmacKey = null;
+      _hmacKeyPromise = null;
       _cachedHmacSecret = secret;
+    }
+
+    if (!_cachedHmacKey) {
+      if (!_hmacKeyPromise) {
+        _hmacKeyPromise = (async () => {
+          try {
+            const keyData = encoder.encode(secret);
+            _cachedHmacKey = await crypto.subtle.importKey(
+              "raw",
+              keyData,
+              { name: "HMAC", hash: "SHA-256" },
+              false,
+              ["verify"]
+            );
+            return _cachedHmacKey;
+          } catch (e) {
+            _hmacKeyPromise = null;
+            throw e;
+          }
+        })();
+      }
+      await _hmacKeyPromise;
     }
 
     if (!_cachedHmacKey) {

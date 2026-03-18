@@ -17,6 +17,7 @@ const DIGEST = "SHA-256";
 // Caching for V3 master key
 let _cachedSecret: string | null = null;
 let _cachedV3Key: CryptoKey | null = null;
+let _v3KeyPromise: Promise<CryptoKey> | null = null;
 
 function getSecret() {
   const secret = getEnv("ENCRYPTION_SECRET") || getEnv("SHOPIFY_CLIENT_SECRET");
@@ -24,17 +25,43 @@ function getSecret() {
   return secret;
 }
 
-/** Derives a cached master key using HKDF (V3) */
+/**
+ * Derives a cached master key using HKDF (V3)
+ * PERFORMANCE: Uses promise-based caching to prevent redundant derivations during concurrent calls (thundering herd).
+ */
 async function getV3Key(): Promise<CryptoKey> {
   const secret = getSecret();
-  if (secret !== _cachedSecret) { _cachedV3Key = null; _cachedSecret = secret; }
+
+  // If secret changed, invalidate the cache
+  if (secret !== _cachedSecret) {
+    _cachedV3Key = null;
+    _v3KeyPromise = null;
+    _cachedSecret = secret;
+  }
+
+  // Return the key if it's already available
   if (_cachedV3Key) return _cachedV3Key;
 
-  const km = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), "HKDF", false, ["deriveKey"]);
-  return _cachedV3Key = await crypto.subtle.deriveKey(
-    { name: "HKDF", salt: new TextEncoder().encode("WhapFlow-V3-Salt"), info: new TextEncoder().encode("V3-Key"), hash: DIGEST },
-    km, { name: ALGORITHM, length: KEY_LENGTH }, false, ["encrypt", "decrypt"]
-  );
+  // If a derivation is already in progress, return its promise
+  if (_v3KeyPromise) return _v3KeyPromise;
+
+  // Otherwise, start the derivation and cache the promise
+  _v3KeyPromise = (async () => {
+    try {
+      const encoder = new TextEncoder();
+      const km = await crypto.subtle.importKey("raw", encoder.encode(secret), "HKDF", false, ["deriveKey"]);
+      _cachedV3Key = await crypto.subtle.deriveKey(
+        { name: "HKDF", salt: encoder.encode("WhapFlow-V3-Salt"), info: encoder.encode("V3-Key"), hash: DIGEST },
+        km, { name: ALGORITHM, length: KEY_LENGTH }, false, ["encrypt", "decrypt"]
+      );
+      return _cachedV3Key;
+    } catch (e) {
+      _v3KeyPromise = null; // Reset on failure so we can retry
+      throw e;
+    }
+  })();
+
+  return _v3KeyPromise;
 }
 
 /** Derives a legacy key using PBKDF2 (V2) - Not cached as it depends on salt */
