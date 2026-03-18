@@ -12,8 +12,8 @@ async function verify() {
   const checks = [
     {
       // Check import
-      pattern: 'import {.*APP_DOMAIN.*} from "./constants.ts"',
-      description: "Imports APP_DOMAIN",
+      pattern: 'import {.*APP_DOMAIN.*LOCALHOST_REGEX.*} from "./constants.ts"',
+      description: "Imports APP_DOMAIN and LOCALHOST_REGEX",
       useRegex: true
     },
     {
@@ -28,8 +28,8 @@ async function verify() {
       useRegex: false
     },
     {
-      pattern: 'if (origin.startsWith("http://localhost:")',
-      description: "Allows localhost",
+      pattern: 'if (LOCALHOST_REGEX.test(origin))',
+      description: "Allows localhost via secure regex",
       useRegex: false
     },
     {
@@ -74,6 +74,13 @@ async function verify() {
     passed = false;
   } else {
       console.log(`✅ Check passed: 'origin: "*"' is removed`);
+  }
+
+  if (content.includes('origin.startsWith("http://localhost:")')) {
+    console.error(`❌ Check failed: Still contains insecure 'origin.startsWith("http://localhost:")'`);
+    passed = false;
+  } else {
+    console.log(`✅ Check passed: Insecure localhost check removed`);
   }
 
   if (passed) {
