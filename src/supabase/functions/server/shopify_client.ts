@@ -7,6 +7,7 @@ import { redactPII, getErrorMessage } from "../../../lib/error.ts";
 // Module-level cache for HMAC CryptoKeys to minimize import overhead (~2-5ms per call)
 let _cachedHmacKey: CryptoKey | null = null;
 let _cachedHmacSecret: string | null = null;
+let _hmacKeyPromise: Promise<CryptoKey> | null = null;
 
 /**
  * Utility to escape special characters in Shopify search queries to prevent injection.
@@ -107,16 +108,33 @@ export async function verifyWebhookHmac(rawBody: string, hmacHeader: string, sec
     const msgData = encoder.encode(rawBody);
 
     // PERFORMANCE: Cache the imported CryptoKey to avoid ~2-5ms overhead of importKey per call
-    if (_cachedHmacSecret !== secret || !_cachedHmacKey) {
-      const keyData = encoder.encode(secret);
-      _cachedHmacKey = await crypto.subtle.importKey(
-        "raw",
-        keyData,
-        { name: "HMAC", hash: "SHA-256" },
-        false,
-        ["verify"]
-      );
+    // Uses promise-based caching to prevent redundant imports during high-concurrency (thundering herd).
+    if (_cachedHmacSecret !== secret) {
+      _cachedHmacKey = null;
+      _hmacKeyPromise = null;
       _cachedHmacSecret = secret;
+    }
+
+    if (!_cachedHmacKey) {
+      if (!_hmacKeyPromise) {
+        _hmacKeyPromise = (async () => {
+          try {
+            const keyData = encoder.encode(secret);
+            _cachedHmacKey = await crypto.subtle.importKey(
+              "raw",
+              keyData,
+              { name: "HMAC", hash: "SHA-256" },
+              false,
+              ["verify"]
+            );
+            return _cachedHmacKey;
+          } catch (e) {
+            _hmacKeyPromise = null;
+            throw e;
+          }
+        })();
+      }
+      await _hmacKeyPromise;
     }
 
     // Shopify webhooks use base64 for the HMAC header

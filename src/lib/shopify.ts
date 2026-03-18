@@ -8,8 +8,25 @@
 
 import { z } from "zod";
 import { getEnv } from "./env.ts";
-import { ShopifyCartPayload } from "../types/index.ts";
-import { getEnv } from "./env.ts";
+export interface ShopifyCartPayload {
+  id: string;
+  token: string;
+  line_items: Array<{
+    id: number;
+    title: string;
+    quantity: number;
+    price: string;
+  }>;
+  currency: string;
+  customer: {
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone?: string;
+  };
+  abandoned_checkout_url: string;
+  created_at: string;
+}
 
 const ShopifyLineItemSchema = z.object({
   id: z.number(),

@@ -82,3 +82,7 @@
 ## 2026-03-25 - [Middleware Hot-path Optimizations]
 **Learning:** Request-level middleware like `verifyShopifySession` executes on every authenticated call. Expensive operations like `new URL()` parsing and repeated environment variable lookups (even via `Deno.env.get`) add cumulative latency. Optimized string manipulation for hostname extraction and module-level configuration caching reduce the per-request latency floor.
 **Action:** Audit middleware and high-frequency hooks for redundant I/O or expensive object construction (URL, Date, Regex). Cache static config and prefer string manipulation in hot-paths when the input format is strictly validated.
+
+## 2026-03-28 - [Crypto Thundering Herd Prevention]
+**Learning:** In concurrent Edge Function environments, cold-start cryptographic operations (key derivation, HMAC import) can be triggered multiple times simultaneously by a burst of requests. While the results are eventually cached, the initial redundant async operations waste CPU and increase latency for the first batch of requests.
+**Action:** Implement "Singleflight" or promise-based caching for all expensive async initialization (crypto keys, static API config). Cache the `Promise` of the operation, not just the result, to ensure concurrent callers await the same underlying task.
