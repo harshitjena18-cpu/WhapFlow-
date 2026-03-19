@@ -4,9 +4,14 @@ import { Merchant } from "./types.ts";
 import { Buffer } from "node:buffer";
 import { redactPII, getErrorMessage } from "../../../lib/error.ts";
 
+// PERFORMANCE: Hoist encoder to avoid redundant object creation per call
+const ENCODER = new TextEncoder();
+
 // Module-level cache for HMAC CryptoKeys to minimize import overhead (~2-5ms per call)
 let _cachedHmacKey: CryptoKey | null = null;
 let _cachedHmacSecret: string | null = null;
+// PERFORMANCE: Singleflight promise cache to prevent "thundering herd" key importation
+let _hmacKeyPromise: Promise<CryptoKey> | null = null;
 
 /**
  * Utility to escape special characters in Shopify search queries to prevent injection.
@@ -98,38 +103,46 @@ export async function checkOrderExists(
 /**
  * Verify HMAC for Webhooks (Body-based)
  * Uses constant-time comparison to prevent timing attacks.
+ *
+ * PERFORMANCE: Implements a promise-based cache to ensure that concurrent webhook bursts
+ * only trigger a single key importation, solving the thundering herd problem.
  */
 export async function verifyWebhookHmac(rawBody: string, hmacHeader: string, secret: string): Promise<boolean> {
   if (!rawBody || !hmacHeader || !secret) return false;
 
   try {
-    const encoder = new TextEncoder();
-    const msgData = encoder.encode(rawBody);
+    const msgData = ENCODER.encode(rawBody);
 
     // PERFORMANCE: Cache the imported CryptoKey to avoid ~2-5ms overhead of importKey per call
-    if (_cachedHmacSecret !== secret || !_cachedHmacKey) {
-      const keyData = encoder.encode(secret);
-      _cachedHmacKey = await crypto.subtle.importKey(
-        "raw",
-        keyData,
-        { name: "HMAC", hash: "SHA-256" },
-        false,
-        ["verify"]
-      );
+    if (_cachedHmacSecret !== secret) {
+      _cachedHmacKey = null;
       _cachedHmacSecret = secret;
+      _hmacKeyPromise = null;
+    }
+
+    let hmacKey = _cachedHmacKey;
+    if (!hmacKey) {
+      if (!_hmacKeyPromise) {
+        _hmacKeyPromise = crypto.subtle.importKey(
+          "raw",
+          ENCODER.encode(secret),
+          { name: "HMAC", hash: "SHA-256" },
+          false,
+          ["verify"]
+        ).then(key => {
+          _cachedHmacKey = key;
+          return key;
+        });
+      }
+      hmacKey = await _hmacKeyPromise;
     }
 
     // Shopify webhooks use base64 for the HMAC header
     const signatureBytes = Buffer.from(hmacHeader, "base64");
 
-    // Type narrowing for TypeScript safety
-    if (!_cachedHmacKey) {
-      throw new Error("HMAC Key initialization failed");
-    }
-
     return await crypto.subtle.verify(
       "HMAC",
-      _cachedHmacKey,
+      hmacKey,
       signatureBytes,
       msgData
     );
