@@ -5,15 +5,16 @@ async function verify() {
   const path = resolve("src/supabase/functions/server/index.tsx");
   const content = await readFile(path, "utf-8");
 
-  // We are checking for the presence of code patterns.
-  // Since we are reading the file directly, we can just use string.includes for simple checks,
-  // or simple regex.
-
   const checks = [
     {
       // Check import
       pattern: 'import {.*APP_DOMAIN.*} from "./constants.ts"',
       description: "Imports APP_DOMAIN",
+      useRegex: true
+    },
+    {
+      pattern: 'import {.*LOCALHOST_REGEX.*} from "./constants.ts"',
+      description: "Imports LOCALHOST_REGEX",
       useRegex: true
     },
     {
@@ -28,8 +29,8 @@ async function verify() {
       useRegex: false
     },
     {
-      pattern: 'if (origin.startsWith("http://localhost:")',
-      description: "Allows localhost",
+      pattern: 'if (LOCALHOST_REGEX.test(origin))',
+      description: "Allows localhost via REGEX",
       useRegex: false
     },
     {
@@ -74,6 +75,13 @@ async function verify() {
     passed = false;
   } else {
       console.log(`✅ Check passed: 'origin: "*"' is removed`);
+  }
+
+  if (content.includes('if (origin.startsWith("http://localhost:")')) {
+    console.error(`❌ Check failed: Still contains loose localhost check`);
+    passed = false;
+  } else {
+      console.log(`✅ Check passed: Loose localhost check is removed`);
   }
 
   if (passed) {
