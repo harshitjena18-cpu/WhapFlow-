@@ -143,7 +143,7 @@ export async function verifyWhatsAppSignature(rawBody: string, signatureHeader: 
     }
 
     if (!key) {
-        throw new Error("HMAC Key initialization failed");
+      throw new Error("HMAC Key initialization failed");
     }
 
     const signatureBytes = Buffer.from(signature, "hex");

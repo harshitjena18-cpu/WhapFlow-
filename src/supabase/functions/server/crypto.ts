@@ -41,7 +41,7 @@ async function getV3Key(): Promise<CryptoKey> {
 
   // PERFORMANCE: Use Singleflight pattern (Promise-based caching) to prevent thundering herd
   // under high concurrency or during cold starts in Edge Functions.
-  if (_v3KeyPromise) return _v3KeyPromise;
+  if (_v3KeyPromise) return await _v3KeyPromise;
 
   _v3KeyPromise = (async () => {
     try {
@@ -64,7 +64,7 @@ async function getV3Key(): Promise<CryptoKey> {
     }
   })();
 
-  return _v3KeyPromise;
+  return await _v3KeyPromise;
 }
 
 /** Derives a legacy key using PBKDF2 (V2) - Not cached as it depends on salt */
