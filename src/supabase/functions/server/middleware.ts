@@ -1,5 +1,5 @@
-import { Context, Next } from "npm:hono";
-import { verify } from "npm:hono/jwt";
+import { Context, Next } from "hono";
+import { verify } from "hono/jwt";
 import { getEnv } from "../../../lib/env.ts";
 import { SHOPIFY_DOMAIN_REGEX } from "./constants.ts";
 
