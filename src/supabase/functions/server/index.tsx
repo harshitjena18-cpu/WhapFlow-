@@ -37,7 +37,7 @@ app.use(
       // Allow requests with no origin (e.g. mobile apps, curl)
       if (!origin) return origin;
 
-      // Localhost for development
+      // Localhost for development (Strict regex validation)
       if (LOCALHOST_REGEX.test(origin)) {
         return origin;
       }
@@ -104,9 +104,14 @@ app.post(`${SERVER_BASE_PATH}/api/whatsapp/send`, async (c) => {
     const shop = c.req.query("shop") || "global";
 
     // SECURITY: Protect demo endpoint from unauthorized use
-    // Verify against API key for internal/admin access
-    const apiKey = getEnv("WHATSAPP_API_KEY");
-    if (!apiKey || !authHeader || authHeader !== `Bearer ${apiKey}`) {
+    // Verify against API key for internal/admin access or legacy service role key
+    const whatsappApiKey = getEnv("WHATSAPP_API_KEY");
+    const serviceRoleKey = getEnv("SUPABASE_SERVICE_ROLE_KEY");
+
+    const isWhatsappAuth = whatsappApiKey && authHeader === `Bearer ${whatsappApiKey}`;
+    const isServiceAuth = serviceRoleKey && authHeader === `Bearer ${serviceRoleKey}`;
+
+    if (!isWhatsappAuth && !isServiceAuth) {
       return c.json({ error: "Unauthorized: Invalid or missing token" }, 401);
     }
 
