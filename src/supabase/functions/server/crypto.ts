@@ -14,14 +14,18 @@ const ITERATIONS_V2 = 100000;
 const KEY_LENGTH = 256;
 const DIGEST = "SHA-256";
 
-// PERFORMANCE: Hoist encoder/decoder to avoid redundant object creation per call
+// PERFORMANCE: Hoist encoders and decoders to module level to avoid repeated allocation
 const ENCODER = new TextEncoder();
 const DECODER = new TextDecoder();
+
+// PERFORMANCE: Pre-encode static HKDF parameters to avoid redundant TextEncoder overhead
+const V3_SALT = ENCODER.encode("WhapFlow-V3-Salt");
+const V3_INFO = ENCODER.encode("V3-Key");
 
 // Caching for V3 master key
 let _cachedSecret: string | null = null;
 let _cachedV3Key: CryptoKey | null = null;
-// PERFORMANCE: Singleflight promise cache to prevent "thundering herd" key derivation
+// PERFORMANCE: Promise-based cache to prevent "thundering herd" during concurrent cold starts
 let _v3KeyPromise: Promise<CryptoKey> | null = null;
 
 function getSecret() {
@@ -30,40 +34,34 @@ function getSecret() {
   return secret;
 }
 
-/**
- * Derives a cached master key using HKDF (V3)
- *
- * PERFORMANCE: Implements a promise-based cache to ensure that concurrent calls
- * only trigger a single key derivation, solving the thundering herd problem.
- */
-async function getV3Key(): Promise<CryptoKey> {
+/** Derives a cached master key using HKDF (V3) */
+function getV3Key(): Promise<CryptoKey> {
   const secret = getSecret();
+
+  // Invalidate cache if secret changes (primarily for test/benchmark isolation)
   if (secret !== _cachedSecret) {
     _cachedV3Key = null;
-    _cachedSecret = secret;
     _v3KeyPromise = null;
+    _cachedSecret = secret;
   }
 
-  if (_cachedV3Key) return _cachedV3Key;
+  // PERFORMANCE: Return cached key immediately if already derived
+  if (_cachedV3Key) return Promise.resolve(_cachedV3Key);
 
-  if (!_v3KeyPromise) {
-    _v3KeyPromise = (async () => {
-      const km = await crypto.subtle.importKey("raw", ENCODER.encode(secret), "HKDF", false, ["deriveKey"]);
-      const key = await crypto.subtle.deriveKey(
-        {
-          name: "HKDF",
-          salt: ENCODER.encode("WhapFlow-V3-Salt"),
-          info: ENCODER.encode("V3-Key"),
-          hash: DIGEST
-        },
-        km, { name: ALGORITHM, length: KEY_LENGTH }, false, ["encrypt", "decrypt"]
-      );
-      _cachedV3Key = key;
-      return key;
-    })();
-  }
+  // PERFORMANCE: Return existing derivation promise to prevent redundant HKDF computations
+  if (_v3KeyPromise) return _v3KeyPromise;
 
-  return await _v3KeyPromise;
+  // Start derivation and cache the promise
+  _v3KeyPromise = (async () => {
+    const km = await crypto.subtle.importKey("raw", ENCODER.encode(secret), "HKDF", false, ["deriveKey"]);
+    _cachedV3Key = await crypto.subtle.deriveKey(
+      { name: "HKDF", salt: V3_SALT, info: V3_INFO, hash: DIGEST },
+      km, { name: ALGORITHM, length: KEY_LENGTH }, false, ["encrypt", "decrypt"]
+    );
+    return _cachedV3Key;
+  })();
+
+  return _v3KeyPromise;
 }
 
 /** Derives a legacy key using PBKDF2 (V2) - Not cached as it depends on salt */

@@ -9,13 +9,12 @@ import { Buffer } from "node:buffer";
 
 const app = new Hono();
 
-// PERFORMANCE: Hoist encoder to avoid redundant object creation per call
-const ENCODER = new TextEncoder();
+// PERFORMANCE: Hoist encoder to avoid repeated object creation overhead
+const encoder = new TextEncoder();
 
 // Module-level cache for HMAC CryptoKeys to minimize import overhead
 let _cachedHmacKey: CryptoKey | null = null;
 let _cachedHmacSecret: string | null = null;
-// PERFORMANCE: Singleflight promise cache to prevent "thundering herd" key importation
 let _hmacKeyPromise: Promise<CryptoKey> | null = null;
 
 // Configuration
@@ -196,36 +195,52 @@ async function verifyHmac(query: Record<string, string>, secret: string) {
   const keys = Object.keys(rest).sort();
   const message = keys.map(key => `${key}=${rest[key]}`).join("&");
 
-  const msgData = ENCODER.encode(message);
+  const msgData = encoder.encode(message);
 
-  // PERFORMANCE: Cache the imported CryptoKey to avoid overhead during OAuth callback
+  // PERFORMANCE: Cache the imported CryptoKey and use Singleflight pattern to avoid overhead during OAuth callback
   if (_cachedHmacSecret !== secret) {
     _cachedHmacKey = null;
+    _hmacKeyPromise = null;
     _cachedHmacSecret = secret;
     _hmacKeyPromise = null;
   }
 
-  let hmacKey = _cachedHmacKey;
-  if (!hmacKey) {
+  let key: CryptoKey;
+  if (_cachedHmacKey) {
+    key = _cachedHmacKey;
+  } else {
     if (!_hmacKeyPromise) {
-      _hmacKeyPromise = crypto.subtle.importKey(
-        "raw",
-        ENCODER.encode(secret),
-        { name: "HMAC", hash: "SHA-256" },
-        false,
-        ["verify"]
-      ).then(key => {
-        _cachedHmacKey = key;
-        return key;
-      });
+      _hmacKeyPromise = (async () => {
+        try {
+          const keyData = encoder.encode(secret);
+          _cachedHmacKey = await crypto.subtle.importKey(
+            "raw",
+            keyData,
+            { name: "HMAC", hash: "SHA-256" },
+            false,
+            ["verify"]
+          );
+          return _cachedHmacKey;
+        } finally {
+          _hmacKeyPromise = null;
+        }
+      })();
     }
-    hmacKey = await _hmacKeyPromise;
+    key = await _hmacKeyPromise;
   }
 
-  // PERFORMANCE: Use Buffer.from(..., 'hex') for optimized hex-to-Uint8Array conversion (~85% faster)
-  const hmacBytes = Buffer.from(hmac, "hex");
+  // Convert hex HMAC to Uint8Array for constant-time verification
+  const hmacBytes = new Uint8Array(hmac.length / 2);
+  for (let i = 0; i < hmac.length; i += 2) {
+    hmacBytes[i / 2] = parseInt(hmac.substring(i, i + 2), 16);
+  }
 
-  return await crypto.subtle.verify("HMAC", hmacKey, hmacBytes, msgData);
+  // Type narrowing for TypeScript safety
+  if (!key) {
+    throw new Error("HMAC Key initialization failed");
+  }
+
+  return await crypto.subtle.verify("HMAC", key, hmacBytes, msgData);
 }
 
 /**
