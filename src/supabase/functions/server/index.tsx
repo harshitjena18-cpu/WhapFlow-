@@ -23,6 +23,10 @@ import { SERVER_BASE_PATH, SHOPIFY_DOMAIN_REGEX, APP_DOMAIN, API_DOMAIN, LOCALHO
 
 const app = new Hono();
 
+// PERFORMANCE: Hoist environment variables to module level to avoid repeated globalThis/Deno lookups in hot paths
+const WHATSAPP_API_KEY = getEnv("WHATSAPP_API_KEY");
+const SUPABASE_SERVICE_ROLE_KEY = getEnv("SUPABASE_SERVICE_ROLE_KEY");
+
 // Enable logger
 app.use('*', logger(console.log));
 
@@ -105,11 +109,9 @@ app.post(`${SERVER_BASE_PATH}/api/whatsapp/send`, async (c) => {
 
     // SECURITY: Protect demo endpoint from unauthorized use
     // Verify against API key for internal/admin access or legacy service role key
-    const whatsappApiKey = getEnv("WHATSAPP_API_KEY");
-    const serviceRoleKey = getEnv("SUPABASE_SERVICE_ROLE_KEY");
-
-    const isWhatsappAuth = whatsappApiKey && authHeader === `Bearer ${whatsappApiKey}`;
-    const isServiceAuth = serviceRoleKey && authHeader === `Bearer ${serviceRoleKey}`;
+    // PERFORMANCE: Using hoisted module-level constants to avoid redundant getEnv lookups
+    const isWhatsappAuth = WHATSAPP_API_KEY && authHeader === `Bearer ${WHATSAPP_API_KEY}`;
+    const isServiceAuth = SUPABASE_SERVICE_ROLE_KEY && authHeader === `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`;
 
     if (!isWhatsappAuth && !isServiceAuth) {
       return c.json({ error: "Unauthorized: Invalid or missing token" }, 401);

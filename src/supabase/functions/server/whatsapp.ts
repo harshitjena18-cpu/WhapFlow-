@@ -7,7 +7,12 @@ import { getEnv } from "../../../lib/env.ts";
 import { Buffer } from "node:buffer";
 
 // PERFORMANCE: Hoist encoder to avoid redundant object creation per call
-const ENCODER = new TextEncoder();
+const encoder = new TextEncoder();
+
+// PERFORMANCE: Hoist environment variables to module level to avoid repeated globalThis/Deno lookups
+const WHATSAPP_ACCESS_TOKEN = getEnv("WHATSAPP_ACCESS_TOKEN");
+const WHATSAPP_PHONE_NUMBER_ID = getEnv("WHATSAPP_PHONE_NUMBER_ID");
+const WHATSAPP_APP_SECRET = getEnv("WHATSAPP_APP_SECRET");
 
 interface SendMessageParams {
   to: string;
@@ -15,9 +20,6 @@ interface SendMessageParams {
   languageCode?: string;
   components?: any[];
 }
-
-// PERFORMANCE: Hoist encoder to avoid repeated object creation overhead
-const encoder = new TextEncoder();
 
 // Module-level cache for HMAC CryptoKeys
 let _cachedHmacKey: CryptoKey | null = null;
@@ -30,8 +32,8 @@ export const sendWhatsAppTemplate = async ({
   languageCode = "en_US",
   components = []
 }: SendMessageParams) => {
-  const token = getEnv("WHATSAPP_ACCESS_TOKEN");
-  const phoneId = getEnv("WHATSAPP_PHONE_NUMBER_ID");
+  const token = WHATSAPP_ACCESS_TOKEN;
+  const phoneId = WHATSAPP_PHONE_NUMBER_ID;
 
   if (!token || !phoneId) {
     console.error("❌ Missing WhatsApp configuration (WHATSAPP_ACCESS_TOKEN or WHATSAPP_PHONE_NUMBER_ID)");
@@ -87,11 +89,11 @@ export const sendWhatsAppTemplate = async ({
  * Verify WhatsApp Webhook Signature
  * Validates the X-Hub-Signature-256 header using HMAC-SHA256
  *
- * PERFORMANCE: Implements a promise-based cache to ensure that concurrent webhook bursts
- * only trigger a single key importation, solving the thundering herd problem.
+ * PERFORMANCE: Implements a promise-based cache (Singleflight) to ensure that
+ * concurrent webhook bursts only trigger a single key importation.
  */
 export async function verifyWhatsAppSignature(rawBody: string, signatureHeader: string | null): Promise<boolean> {
-  const secret = getEnv("WHATSAPP_APP_SECRET");
+  const secret = WHATSAPP_APP_SECRET;
   if (!secret) {
       console.error("[WhatsApp Webhook] Critical Error: WHATSAPP_APP_SECRET not configured");
       return false;
@@ -122,7 +124,6 @@ export async function verifyWhatsAppSignature(rawBody: string, signatureHeader: 
       _cachedHmacKey = null;
       _hmacKeyPromise = null;
       _cachedHmacSecret = secret;
-      _hmacKeyPromise = null;
     }
 
     let key: CryptoKey;
@@ -131,27 +132,21 @@ export async function verifyWhatsAppSignature(rawBody: string, signatureHeader: 
     } else {
       if (!_hmacKeyPromise) {
         _hmacKeyPromise = (async () => {
-          try {
-            const keyData = encoder.encode(secret);
-            _cachedHmacKey = await crypto.subtle.importKey(
-              "raw",
-              keyData,
-              { name: "HMAC", hash: "SHA-256" },
-              false,
-              ["verify"]
-            );
-            return _cachedHmacKey;
-          } finally {
-            _hmacKeyPromise = null;
-          }
+          const keyData = encoder.encode(secret);
+          _cachedHmacKey = await crypto.subtle.importKey(
+            "raw",
+            keyData,
+            { name: "HMAC", hash: "SHA-256" },
+            false,
+            ["verify"]
+          );
+          return _cachedHmacKey;
         })();
       }
       key = await _hmacKeyPromise;
     }
 
-    if (!key) {
-      throw new Error("HMAC Key initialization failed");
-    }
+    if (!key) throw new Error("HMAC Key initialization failed");
 
     const signatureBytes = Buffer.from(signature, "hex");
 
