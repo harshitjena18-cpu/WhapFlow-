@@ -13,9 +13,13 @@ interface SendMessageParams {
   components?: any[];
 }
 
+// PERFORMANCE: Hoist encoder to avoid repeated object creation overhead
+const encoder = new TextEncoder();
+
 // Module-level cache for HMAC CryptoKeys
 let _cachedHmacKey: CryptoKey | null = null;
 let _cachedHmacSecret: string | null = null;
+let _hmacKeyPromise: Promise<CryptoKey> | null = null;
 
 export const sendWhatsAppTemplate = async ({
   to,
@@ -105,31 +109,48 @@ export async function verifyWhatsAppSignature(rawBody: string, signatureHeader: 
   }
 
   try {
-    const encoder = new TextEncoder();
     const msgData = encoder.encode(rawBody);
 
-    // PERFORMANCE: Cache the imported CryptoKey
-    if (_cachedHmacSecret !== secret || !_cachedHmacKey) {
-      const keyData = encoder.encode(secret);
-      _cachedHmacKey = await crypto.subtle.importKey(
-        "raw",
-        keyData,
-        { name: "HMAC", hash: "SHA-256" },
-        false,
-        ["verify"]
-      );
+    // PERFORMANCE: Cache the imported CryptoKey and use Singleflight pattern
+    if (_cachedHmacSecret !== secret) {
+      _cachedHmacKey = null;
+      _hmacKeyPromise = null;
       _cachedHmacSecret = secret;
     }
 
-    if (!_cachedHmacKey) {
-        throw new Error("HMAC Key initialization failed");
+    let key: CryptoKey;
+    if (_cachedHmacKey) {
+      key = _cachedHmacKey;
+    } else {
+      if (!_hmacKeyPromise) {
+        _hmacKeyPromise = (async () => {
+          try {
+            const keyData = encoder.encode(secret);
+            _cachedHmacKey = await crypto.subtle.importKey(
+              "raw",
+              keyData,
+              { name: "HMAC", hash: "SHA-256" },
+              false,
+              ["verify"]
+            );
+            return _cachedHmacKey;
+          } finally {
+            _hmacKeyPromise = null;
+          }
+        })();
+      }
+      key = await _hmacKeyPromise;
+    }
+
+    if (!key) {
+      throw new Error("HMAC Key initialization failed");
     }
 
     const signatureBytes = Buffer.from(signature, "hex");
 
     return await crypto.subtle.verify(
       "HMAC",
-      _cachedHmacKey,
+      key,
       signatureBytes,
       msgData
     );
