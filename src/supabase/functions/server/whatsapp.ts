@@ -6,6 +6,9 @@
 import { getEnv } from "../../../lib/env.ts";
 import { Buffer } from "node:buffer";
 
+// PERFORMANCE: Hoist encoder to avoid redundant object creation per call
+const ENCODER = new TextEncoder();
+
 interface SendMessageParams {
   to: string;
   templateName: string;
@@ -83,6 +86,9 @@ export const sendWhatsAppTemplate = async ({
 /**
  * Verify WhatsApp Webhook Signature
  * Validates the X-Hub-Signature-256 header using HMAC-SHA256
+ *
+ * PERFORMANCE: Implements a promise-based cache to ensure that concurrent webhook bursts
+ * only trigger a single key importation, solving the thundering herd problem.
  */
 export async function verifyWhatsAppSignature(rawBody: string, signatureHeader: string | null): Promise<boolean> {
   const secret = getEnv("WHATSAPP_APP_SECRET");
@@ -116,6 +122,7 @@ export async function verifyWhatsAppSignature(rawBody: string, signatureHeader: 
       _cachedHmacKey = null;
       _hmacKeyPromise = null;
       _cachedHmacSecret = secret;
+      _hmacKeyPromise = null;
     }
 
     let key: CryptoKey;

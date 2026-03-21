@@ -5,6 +5,7 @@ import { encrypt } from "./crypto.ts";
 import { getEnv } from "../../../lib/env.ts";
 import { getErrorMessage } from "../../../lib/error.ts";
 import { API_DOMAIN, APP_DOMAIN, SERVER_BASE_PATH } from "./constants.ts";
+import { Buffer } from "node:buffer";
 
 const app = new Hono();
 
@@ -182,6 +183,9 @@ app.get("/callback", async (c) => {
 
 /**
  * Helper: HMAC Verification
+ *
+ * PERFORMANCE: Implements a promise-based cache to ensure that concurrent OAuth attempts
+ * only trigger a single key importation, solving the thundering herd problem.
  */
 async function verifyHmac(query: Record<string, string>, secret: string) {
   const { hmac, ...rest } = query;
@@ -198,6 +202,7 @@ async function verifyHmac(query: Record<string, string>, secret: string) {
     _cachedHmacKey = null;
     _hmacKeyPromise = null;
     _cachedHmacSecret = secret;
+    _hmacKeyPromise = null;
   }
 
   let key: CryptoKey;

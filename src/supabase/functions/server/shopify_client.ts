@@ -102,6 +102,9 @@ export async function checkOrderExists(
 /**
  * Verify HMAC for Webhooks (Body-based)
  * Uses constant-time comparison to prevent timing attacks.
+ *
+ * PERFORMANCE: Implements a promise-based cache to ensure that concurrent webhook bursts
+ * only trigger a single key importation, solving the thundering herd problem.
  */
 export async function verifyWebhookHmac(rawBody: string, hmacHeader: string, secret: string): Promise<boolean> {
   if (!rawBody || !hmacHeader || !secret) return false;
@@ -114,6 +117,24 @@ export async function verifyWebhookHmac(rawBody: string, hmacHeader: string, sec
       _cachedHmacKey = null;
       _hmacKeyPromise = null;
       _cachedHmacSecret = secret;
+      _hmacKeyPromise = null;
+    }
+
+    let hmacKey = _cachedHmacKey;
+    if (!hmacKey) {
+      if (!_hmacKeyPromise) {
+        _hmacKeyPromise = crypto.subtle.importKey(
+          "raw",
+          ENCODER.encode(secret),
+          { name: "HMAC", hash: "SHA-256" },
+          false,
+          ["verify"]
+        ).then(key => {
+          _cachedHmacKey = key;
+          return key;
+        });
+      }
+      hmacKey = await _hmacKeyPromise;
     }
 
     let key: CryptoKey;
