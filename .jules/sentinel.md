@@ -27,3 +27,8 @@
 **Vulnerability:** Dashboard API handlers used a fallback to an untrusted `shop` query parameter when the `verified_shop` context was missing, creating a potential IDOR vector if middleware was bypassed.
 **Learning:** Even with security middleware in place, handlers should not provide fallbacks to untrusted inputs. A missing verified identity should always result in an explicit authorization failure (Fail-Closed).
 **Prevention:** Remove all `|| c.req.query("shop")` fallbacks in protected routes and strictly rely on the context value provided by the verification middleware.
+
+## 2025-05-24 - [Broken HMAC Verification and Race Condition in Singleflight]
+**Vulnerability:** Redundant logic and a `ReferenceError` (using `ENCODER` instead of `encoder`) in `shopify_client.ts` caused all Shopify webhook HMAC verifications to fail. Additionally, a `finally` block in the promise-based cache caused concurrent requests to `await null`.
+**Learning:** Security-critical utility functions must be kept clean and DRY to avoid inconsistent state or regressions. In high-concurrency environments like webhooks, the "Singleflight" pattern must ensure the promise is only cleared when the cache needs invalidation (e.g., secret rotation), not after every resolution.
+**Prevention:** Consolidate HMAC logic into a single robust helper. Ensure the `_hmacKeyPromise` is only reset when the `secret` changes, not in a `finally` block, to prevent race conditions during cold starts.
