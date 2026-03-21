@@ -9,7 +9,6 @@
 import { z } from "zod";
 import { getEnv } from "./env.ts";
 import { ShopifyCartPayload } from "../types/index.ts";
-import { getEnv } from "./env.ts";
 
 const ShopifyLineItemSchema = z.object({
   id: z.number(),
