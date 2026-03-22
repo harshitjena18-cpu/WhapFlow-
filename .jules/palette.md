@@ -41,3 +41,7 @@
 ## 2026-03-20 - [Standardizing Settings UI and Tactile Feedback]
 **Learning:** Native HTML elements (like <select>) often look out of place in a highly-themed Radix-based UI and lack consistent focus/hover states. Standardizing on project-specific themed components automatically brings in accessibility features (like proper keyboard navigation) and visual cohesion. Additionally, unifying tactile feedback (e.g., active:scale-95) across the app prevents a "jittery" or inconsistent feel for users navigating different sections.
 **Action:** Always audit for native HTML form elements and replace them with project-standard themed components. Ensure tactile micro-animations use a single, consistent scale factor across all interactive elements.
+
+## 2025-10-27 - [Form Accessibility in AI Generator]
+**Learning:** Even when using modern UI libraries (like Radix), programmatic association between labels and inputs is not automatic. In the AI Generator form, `Label` components were missing `htmlFor` attributes, and their corresponding `SelectTrigger` and `Input` components lacked `id`s. This oversight breaks screen reader support and the native "click-label-to-focus" behavior, which is a significant accessibility regression.
+**Action:** Always audit form sections to ensure every `Label` is explicitly linked to its control via `htmlFor` and `id`. For custom components like `SelectTrigger`, the `id` must be placed directly on the trigger element to ensure the association is correctly recognized by the browser's accessibility tree.
