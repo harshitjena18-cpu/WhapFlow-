@@ -9,6 +9,9 @@ import { Buffer } from "node:buffer";
 // PERFORMANCE: Hoist encoder to avoid redundant object creation per call
 const ENCODER = new TextEncoder();
 
+// SECURITY: Strict E.164 regex to ensure valid phone number format (+[country][number])
+const E164_REGEX = /^\+[1-9]\d{1,14}$/;
+
 interface SendMessageParams {
   to: string;
   templateName: string;
@@ -30,6 +33,12 @@ export const sendWhatsAppTemplate = async ({
   languageCode = "en_US",
   components = []
 }: SendMessageParams) => {
+  // 1. INPUT VALIDATION: Strictly enforce E.164 format for phone numbers
+  if (!to || !E164_REGEX.test(to)) {
+    console.error(`❌ Invalid phone number format: ${to || 'missing'}`);
+    return { success: false, error: "Invalid phone number format. Expected E.164 (+1234567890)" };
+  }
+
   const token = getEnv("WHATSAPP_ACCESS_TOKEN");
   const phoneId = getEnv("WHATSAPP_PHONE_NUMBER_ID");
 
@@ -76,7 +85,10 @@ export const sendWhatsAppTemplate = async ({
     // SECURITY: Log only wamid to avoid leaking PII in response data
     const wamid = data.messages?.[0]?.id;
     console.log("✅ WhatsApp Message Sent. ID:", wamid);
-    return { success: true, data, wamid };
+
+    // SECURITY: Sanitize response by returning only wamid, avoiding leakage of raw Meta 'data'
+    // which contains the recipient's phone number in the 'contacts' array.
+    return { success: true, wamid };
   } catch (error) {
     console.error("❌ Network/Server Error sending WhatsApp:", error);
     return { success: false, error };
