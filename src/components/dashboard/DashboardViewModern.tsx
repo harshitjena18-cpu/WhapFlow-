@@ -190,7 +190,7 @@ export function DashboardViewModern() {
           <motion.button 
             className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all flex items-center gap-2 shadow-sm"
             whileHover={{ scale: 1.03, y: -1 }}
-            whileTap={{ scale: 0.98 }}
+            whileTap={{ scale: 0.95 }}
           >
             <Calendar className="w-4 h-4" />
             {dateRange}
@@ -199,7 +199,7 @@ export function DashboardViewModern() {
           <motion.button 
             className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all flex items-center gap-2 shadow-sm"
             whileHover={{ scale: 1.03, y: -1 }}
-            whileTap={{ scale: 0.98 }}
+            whileTap={{ scale: 0.95 }}
           >
             <Filter className="w-4 h-4" />
             Filter
@@ -208,7 +208,7 @@ export function DashboardViewModern() {
           <motion.button 
             className="px-4 py-2 bg-gradient-to-r from-teal-500 to-emerald-500 text-white rounded-lg text-sm font-semibold hover:shadow-lg hover:shadow-teal-500/30 transition-all flex items-center gap-2"
             whileHover={{ scale: 1.03, y: -2 }}
-            whileTap={{ scale: 0.98 }}
+            whileTap={{ scale: 0.95 }}
           >
             <Download className="w-4 h-4" />
             Export
