@@ -3,6 +3,7 @@ import { getEnv } from "../../../lib/env.ts";
 import { getErrorMessage } from "../../../lib/error.ts";
 import { processWhatsAppStatuses } from "./automation.ts";
 import { sendWhatsAppTemplate, verifyWhatsAppSignature } from "./whatsapp.ts";
+import { SHOPIFY_DOMAIN_REGEX } from "./constants.ts";
 
 const app = new Hono();
 
@@ -10,9 +11,11 @@ const app = new Hono();
  * WhatsApp Sender
  * Path: /api/whatsapp/send
  */
-app.post("/whatsapp/send", async (c) => {
+app.post("/send", async (c) => {
   try {
     const authHeader = c.req.header("Authorization");
+    const shop = c.req.query("shop") || "global";
+
     // SECURITY: Protect endpoint from unauthorized use
     // Verify against API key for internal/admin access or legacy service role key
     const whatsappApiKey = getEnv("WHATSAPP_API_KEY");
@@ -25,8 +28,15 @@ app.post("/whatsapp/send", async (c) => {
       return c.json({ error: "Unauthorized: Invalid or missing token" }, 401);
     }
 
+    // SECURITY: Validate shop domain presence and format
+    if (shop !== "global" && !SHOPIFY_DOMAIN_REGEX.test(shop)) {
+      return c.json({ error: "Invalid shop domain" }, 400);
+    }
 
     const { phoneNumber, templateId } = await c.req.json();
+
+    // SECURITY: Redact phoneNumber from logs
+    console.log(`[WhatsApp] Intent to send template "${templateId}" to [REDACTED] (Shop: ${shop})`);
 
     // Call the shared helper
     const result = await sendWhatsAppTemplate({
@@ -36,12 +46,14 @@ app.post("/whatsapp/send", async (c) => {
     });
 
     if (result.success) {
-      return c.json({ success: true, message: 'Message sent', data: result.data }, 200);
+      // SECURITY: result.data is already omitted in sendWhatsAppTemplate to prevent PII leak
+      return c.json({ success: true, message: 'Message sent', wamid: result.wamid }, 200);
     } else {
       return c.json({ error: 'WhatsApp API Error', details: result.error }, 500);
     }
 
-  } catch (_error) {
+  } catch (error) {
+    console.error("[WhatsApp Send] Error:", getErrorMessage(error));
     return c.json({ error: 'Invalid request' }, 400);
   }
 });
