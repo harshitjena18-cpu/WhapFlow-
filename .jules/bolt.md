@@ -86,3 +86,7 @@
 ## 2026-04-01 - [Promise-based Crypto Caching]
 **Learning:** Concurrent "cold start" cryptographic requests trigger redundant HKDF derivations, creating a "thundering herd" bottleneck (~43ms for 50 calls). Implementing a promise-based cache for the derivation process ensures only one operation is executed and shared, reducing total latency by ~73%.
 **Action:** Use promise-based caching for expensive, idempotent async operations that are likely to be called concurrently (like key derivation or auth token exchange). Hoist encoders/decoders to module level to further reduce allocation overhead.
+
+## 2026-04-10 - [Efficient HMAC Hex Conversion]
+**Learning:** Manual hex-to-Uint8Array conversion using loops with `substring` and `parseInt` is significantly slower (~12x) than using the native `Buffer.from(hmac, 'hex')` method in Node-compatible environments like Supabase Edge Functions.
+**Action:** Always prefer `Buffer.from(data, 'hex')` or `Buffer.from(data, 'base64')` for binary data conversion in backend routes to minimize CPU overhead and latency in critical paths like HMAC verification.
