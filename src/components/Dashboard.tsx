@@ -127,7 +127,7 @@ export function Dashboard() {
               <li key={item.name}>
                 <button
                   onClick={() => setActiveNav(item.name)}
-                  className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-200 ${
+                  className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-200 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-[#25D366]/20 ${
                     item.active
                       ? 'bg-gradient-to-r from-green-50 to-emerald-50 text-[#25D366] shadow-sm'
                       : 'text-gray-700 hover:bg-gray-50'
@@ -151,7 +151,7 @@ export function Dashboard() {
           <Link
             to="/settings"
             aria-label="User Profile and Settings"
-            className="flex items-center gap-4 p-3 rounded-xl hover:bg-gray-50 transition-all duration-200 overflow-hidden active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-[#25D366]/20"
+            className="flex items-center gap-4 p-3 rounded-xl hover:bg-gray-50 transition-all duration-200 overflow-hidden active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-[#25D366]/20"
           >
             <div className="w-10 h-10 bg-gradient-to-br from-[#25D366] to-[#20BD5A] rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
               <span className="text-white font-semibold text-sm">JD</span>
@@ -178,7 +178,7 @@ export function Dashboard() {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <Button variant="outline" size="icon" className="relative rounded-xl border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all">
+              <Button variant="outline" size="icon" aria-label="Notifications" className="relative rounded-xl border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all">
                 <Bell className="w-5 h-5" />
                 <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
               </Button>
