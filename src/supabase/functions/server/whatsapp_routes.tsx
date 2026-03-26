@@ -1,18 +1,20 @@
 import { Hono } from "npm:hono";
 import { getEnv } from "../../../lib/env.ts";
 import { getErrorMessage } from "../../../lib/error.ts";
-import { processWhatsAppStatuses } from "./automation.ts";
-import { sendWhatsAppTemplate, verifyWhatsAppSignature } from "./whatsapp.ts";
+import { sendWhatsAppTemplate } from "./whatsapp.ts";
+import { SHOPIFY_DOMAIN_REGEX, E164_REGEX } from "./constants.ts";
 
 const app = new Hono();
 
 /**
  * WhatsApp Sender
- * Path: /api/whatsapp/send
+ * Path: /api/whatsapp/send (Mounted at /api/whatsapp)
  */
-app.post("/whatsapp/send", async (c) => {
+app.post("/send", async (c) => {
   try {
     const authHeader = c.req.header("Authorization");
+    const shop = c.req.query("shop") || "global";
+
     // SECURITY: Protect endpoint from unauthorized use
     // Verify against API key for internal/admin access or legacy service role key
     const whatsappApiKey = getEnv("WHATSAPP_API_KEY");
@@ -25,8 +27,17 @@ app.post("/whatsapp/send", async (c) => {
       return c.json({ error: "Unauthorized: Invalid or missing token" }, 401);
     }
 
+    // SECURITY: Validate shop domain
+    if (shop !== "global" && !SHOPIFY_DOMAIN_REGEX.test(shop)) {
+      return c.json({ error: "Invalid shop domain" }, 400);
+    }
 
     const { phoneNumber, templateId } = await c.req.json();
+
+    // SECURITY: Validate phone number format (E.164)
+    if (!phoneNumber || !E164_REGEX.test(phoneNumber)) {
+      return c.json({ error: "Invalid phone number format. Expected E.164 (e.g. +1234567890)" }, 400);
+    }
 
     // Call the shared helper
     const result = await sendWhatsAppTemplate({
@@ -36,7 +47,13 @@ app.post("/whatsapp/send", async (c) => {
     });
 
     if (result.success) {
-      return c.json({ success: true, message: 'Message sent', data: result.data }, 200);
+      // SECURITY: Sanitize response to return only necessary metadata (wamid)
+      // instead of the full Meta API response which contains the recipient phone number.
+      return c.json({
+        success: true,
+        message: 'Message sent',
+        wamid: result.wamid
+      }, 200);
     } else {
       return c.json({ error: 'WhatsApp API Error', details: result.error }, 500);
     }
@@ -46,56 +63,5 @@ app.post("/whatsapp/send", async (c) => {
   }
 });
 
-/**
- * WhatsApp Webhook Receiver
- * Path: /api/webhooks/whatsapp
- */
-// GET: Verification Challenge
-app.get("/webhooks/whatsapp", (c) => {
-  const mode = c.req.query("hub.mode");
-  const token = c.req.query("hub.verify_token");
-  const challenge = c.req.query("hub.challenge");
-
-  const verifyToken = getEnv("WHATSAPP_VERIFY_TOKEN");
-
-  // SECURITY: Ensure verifyToken is configured and matches the request token
-  if (mode === "subscribe" && verifyToken && token === verifyToken) {
-    console.log("[WhatsApp Webhook] Webhook verified.");
-    return c.text(challenge || "");
-  }
-
-  console.error("[WhatsApp Webhook] Verification failed.");
-  return c.json({ error: "Forbidden" }, 403);
-});
-
-// POST: Status Updates & Messages
-app.post("/webhooks/whatsapp", async (c) => {
-  try {
-    const signature = c.req.header("X-Hub-Signature-256");
-    const rawBody = await c.req.text();
-
-    // SECURITY: Verify HMAC signature from WhatsApp/Meta
-    const isValid = await verifyWhatsAppSignature(rawBody, signature || null);
-    if (!isValid) {
-      console.error("[WhatsApp Webhook] HMAC verification failed");
-      return c.json({ error: "Unauthorized" }, 401);
-    }
-
-    const body = JSON.parse(rawBody);
-
-    // Check if it's a status update
-    if (body.entry && body.entry[0]?.changes && body.entry[0]?.changes[0]?.value?.statuses) {
-      const statuses = body.entry[0].changes[0].value.statuses;
-      // PERFORMANCE: Process all status updates in a single optimized batch
-      await processWhatsAppStatuses(statuses);
-    }
-
-    return c.json({ status: 'ok' });
-  } catch (error) {
-    // SECURITY: Redact PII from the error message before logging
-    console.error("[WhatsApp Webhook] Error processing POST:", getErrorMessage(error));
-    return c.json({ error: "Internal Error" }, 500);
-  }
-});
 
 export default app;
