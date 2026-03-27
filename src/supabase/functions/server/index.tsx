@@ -133,7 +133,8 @@ app.post(`${SERVER_BASE_PATH}/api/whatsapp/send`, async (c) => {
     });
     
     if (result.success) {
-      return c.json({ success: true, message: 'Message sent', data: result.data }, 200);
+      // SECURITY: Sanitized response - return only success indicator and wamid (already handled in result)
+      return c.json({ success: true, message: 'Message sent', wamid: result.wamid }, 200);
     } else {
       return c.json({ error: 'WhatsApp API Error', details: result.error }, 500);
     }
