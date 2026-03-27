@@ -5,7 +5,7 @@ import { Buffer } from "node:buffer";
 import { redactPII, getErrorMessage } from "../../../lib/error.ts";
 
 // PERFORMANCE: Hoist encoder to avoid repeated object creation overhead
-const encoder = new TextEncoder();
+const ENCODER = new TextEncoder();
 
 // Module-level cache for HMAC CryptoKeys to minimize import overhead (~2-5ms per call)
 let _cachedHmacKey: CryptoKey | null = null;
@@ -110,18 +110,17 @@ export async function verifyWebhookHmac(rawBody: string, hmacHeader: string, sec
   if (!rawBody || !hmacHeader || !secret) return false;
 
   try {
-    const msgData = encoder.encode(rawBody);
+    const msgData = ENCODER.encode(rawBody);
 
     // PERFORMANCE: Cache the imported CryptoKey and use Singleflight pattern
     if (_cachedHmacSecret !== secret) {
       _cachedHmacKey = null;
       _hmacKeyPromise = null;
       _cachedHmacSecret = secret;
-      _hmacKeyPromise = null;
     }
 
-    let hmacKey = _cachedHmacKey;
-    if (!hmacKey) {
+    let key = _cachedHmacKey;
+    if (!key) {
       if (!_hmacKeyPromise) {
         _hmacKeyPromise = crypto.subtle.importKey(
           "raw",
@@ -129,34 +128,13 @@ export async function verifyWebhookHmac(rawBody: string, hmacHeader: string, sec
           { name: "HMAC", hash: "SHA-256" },
           false,
           ["verify"]
-        ).then(key => {
-          _cachedHmacKey = key;
-          return key;
+        ).then(k => {
+          _cachedHmacKey = k;
+          return k;
+        }).catch(err => {
+          _hmacKeyPromise = null;
+          throw err;
         });
-      }
-      hmacKey = await _hmacKeyPromise;
-    }
-
-    let key: CryptoKey;
-    if (_cachedHmacKey) {
-      key = _cachedHmacKey;
-    } else {
-      if (!_hmacKeyPromise) {
-        _hmacKeyPromise = (async () => {
-          try {
-            const keyData = encoder.encode(secret);
-            _cachedHmacKey = await crypto.subtle.importKey(
-              "raw",
-              keyData,
-              { name: "HMAC", hash: "SHA-256" },
-              false,
-              ["verify"]
-            );
-            return _cachedHmacKey;
-          } finally {
-            _hmacKeyPromise = null;
-          }
-        })();
       }
       key = await _hmacKeyPromise;
     }
