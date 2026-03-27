@@ -249,7 +249,7 @@ export function LandingPagePremium() {
             </Link>
             <Link to="/signup">
               <motion.button 
-                className="px-5 py-2.5 bg-gradient-to-r from-teal-500 to-emerald-500 text-white text-sm font-semibold rounded-lg shadow-lg shadow-teal-500/30 hover:shadow-teal-500/50 transition-all relative overflow-hidden group"
+                className="px-5 py-2.5 bg-gradient-to-r from-teal-500 to-emerald-500 text-white text-sm font-semibold rounded-lg shadow-lg shadow-teal-500/30 hover:shadow-teal-500/50 transition-all relative overflow-hidden group outline-none focus-visible:ring-2 focus-visible:ring-teal-500/50"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
@@ -303,9 +303,9 @@ export function LandingPagePremium() {
               >
                 <Link to="/signup">
                   <motion.button 
-                    className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-teal-500 to-emerald-500 text-white text-lg font-semibold rounded-xl shadow-2xl shadow-teal-500/40 hover:shadow-teal-500/60 transition-all relative overflow-hidden group"
+                    className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-teal-500 to-emerald-500 text-white text-lg font-semibold rounded-xl shadow-2xl shadow-teal-500/40 hover:shadow-teal-500/60 transition-all relative overflow-hidden group outline-none focus-visible:ring-2 focus-visible:ring-teal-500/50"
                     whileHover={{ scale: 1.02, y: -2 }}
-                    whileTap={{ scale: 0.98 }}
+                    whileTap={{ scale: 0.95 }}
                   >
                     <span className="relative z-10 flex items-center gap-2">
                       <Store className="w-5 h-5" />
@@ -316,9 +316,9 @@ export function LandingPagePremium() {
                 </Link>
                 
                 <motion.button 
-                  className="w-full sm:w-auto px-8 py-4 bg-white/10 backdrop-blur-sm border border-white/20 text-white text-lg font-semibold rounded-xl hover:bg-white/15 transition-all"
+                  className="w-full sm:w-auto px-8 py-4 bg-white/10 backdrop-blur-sm border border-white/20 text-white text-lg font-semibold rounded-xl hover:bg-white/15 transition-all outline-none focus-visible:ring-2 focus-visible:ring-white/50"
                   whileHover={{ scale: 1.02, y: -2 }}
-                  whileTap={{ scale: 0.98 }}
+                  whileTap={{ scale: 0.95 }}
                 >
                   <span className="flex items-center gap-2 justify-center">
                     <Play className="w-5 h-5" />
@@ -710,13 +710,13 @@ export function LandingPagePremium() {
                   
                   <Link to="/signup" className="block mt-auto">
                     <motion.button 
-                      className={`w-full py-3 px-6 font-semibold rounded-xl transition-all ${
+                      className={`w-full py-3 px-6 font-semibold rounded-xl transition-all outline-none focus-visible:ring-2 ${
                         plan.highlighted
-                          ? 'bg-gradient-to-r from-teal-500 to-emerald-500 text-white shadow-lg shadow-teal-500/30 hover:shadow-teal-500/50'
-                          : 'bg-white/10 border border-white/20 text-white hover:bg-white/15'
+                          ? 'bg-gradient-to-r from-teal-500 to-emerald-500 text-white shadow-lg shadow-teal-500/30 hover:shadow-teal-500/50 focus-visible:ring-teal-500/50'
+                          : 'bg-white/10 border border-white/20 text-white hover:bg-white/15 focus-visible:ring-white/50'
                       }`}
                       whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
+                      whileTap={{ scale: 0.95 }}
                     >
                       <span className="flex items-center justify-center gap-2">
                         Get Started
@@ -758,7 +758,10 @@ export function LandingPagePremium() {
               >
                 <button
                   onClick={() => setOpenFaq(openFaq === index ? null : index)}
-                  className="w-full px-6 py-5 flex items-center justify-between text-left"
+                  className="w-full px-6 py-5 flex items-center justify-between text-left outline-none focus-visible:ring-2 focus-visible:ring-teal-500/50"
+                  aria-expanded={openFaq === index}
+                  aria-controls={`faq-answer-${index}`}
+                  id={`faq-question-${index}`}
                 >
                   <span className="text-lg font-semibold text-white">{faq.question}</span>
                   <ChevronDown 
@@ -776,6 +779,9 @@ export function LandingPagePremium() {
                   }}
                   transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
                   className="overflow-hidden"
+                  id={`faq-answer-${index}`}
+                  role="region"
+                  aria-labelledby={`faq-question-${index}`}
                 >
                   <div className="px-6 pb-5">
                     <p className="text-gray-300 leading-relaxed">{faq.answer}</p>
@@ -822,7 +828,7 @@ export function LandingPagePremium() {
             
             <Link to="/signup">
               <motion.button 
-                className="px-10 py-5 bg-white text-teal-600 text-lg font-semibold rounded-xl shadow-2xl hover:shadow-white/30 transition-all relative overflow-hidden group"
+                className="px-10 py-5 bg-white text-teal-600 text-lg font-semibold rounded-xl shadow-2xl hover:shadow-white/30 transition-all relative overflow-hidden group outline-none focus-visible:ring-2 focus-visible:ring-white/50"
                 whileHover={{ scale: 1.05, y: -3 }}
                 whileTap={{ scale: 0.95 }}
                 animate={{
