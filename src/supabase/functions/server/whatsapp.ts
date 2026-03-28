@@ -5,6 +5,7 @@
 
 import { getEnv } from "../../../lib/env.ts";
 import { Buffer } from "node:buffer";
+import { E164_REGEX } from "./constants.ts";
 
 // PERFORMANCE: Hoist encoder to avoid redundant object creation per call
 const ENCODER = new TextEncoder();
@@ -15,9 +16,6 @@ interface SendMessageParams {
   languageCode?: string;
   components?: any[];
 }
-
-// PERFORMANCE: Hoist encoder to avoid repeated object creation overhead
-const encoder = new TextEncoder();
 
 // Module-level cache for HMAC CryptoKeys
 let _cachedHmacKey: CryptoKey | null = null;
@@ -30,6 +28,12 @@ export const sendWhatsAppTemplate = async ({
   languageCode = "en_US",
   components = []
 }: SendMessageParams) => {
+  // SECURITY: Validate phone number format (E.164) before calling Meta API
+  if (!to || !E164_REGEX.test(to)) {
+    console.error(`❌ WhatsApp Error: Invalid phone number format [${to}]`);
+    return { success: false, error: "Invalid phone number format" };
+  }
+
   const token = getEnv("WHATSAPP_ACCESS_TOKEN");
   const phoneId = getEnv("WHATSAPP_PHONE_NUMBER_ID");
 
@@ -76,7 +80,8 @@ export const sendWhatsAppTemplate = async ({
     // SECURITY: Log only wamid to avoid leaking PII in response data
     const wamid = data.messages?.[0]?.id;
     console.log("✅ WhatsApp Message Sent. ID:", wamid);
-    return { success: true, data, wamid };
+    // SECURITY: Return only the wamid, never the full Meta API response 'data' which contains the recipient phone number.
+    return { success: true, wamid };
   } catch (error) {
     console.error("❌ Network/Server Error sending WhatsApp:", error);
     return { success: false, error };
@@ -115,14 +120,13 @@ export async function verifyWhatsAppSignature(rawBody: string, signatureHeader: 
   }
 
   try {
-    const msgData = encoder.encode(rawBody);
+    const msgData = ENCODER.encode(rawBody);
 
     // PERFORMANCE: Cache the imported CryptoKey and use Singleflight pattern
     if (_cachedHmacSecret !== secret) {
       _cachedHmacKey = null;
       _hmacKeyPromise = null;
       _cachedHmacSecret = secret;
-      _hmacKeyPromise = null;
     }
 
     let key: CryptoKey;
@@ -132,7 +136,7 @@ export async function verifyWhatsAppSignature(rawBody: string, signatureHeader: 
       if (!_hmacKeyPromise) {
         _hmacKeyPromise = (async () => {
           try {
-            const keyData = encoder.encode(secret);
+            const keyData = ENCODER.encode(secret);
             _cachedHmacKey = await crypto.subtle.importKey(
               "raw",
               keyData,
@@ -141,8 +145,10 @@ export async function verifyWhatsAppSignature(rawBody: string, signatureHeader: 
               ["verify"]
             );
             return _cachedHmacKey;
-          } finally {
+          } catch (err) {
+            // SECURITY: Clear promise on failure to allow retries, avoiding persistent null results
             _hmacKeyPromise = null;
+            throw err;
           }
         })();
       }

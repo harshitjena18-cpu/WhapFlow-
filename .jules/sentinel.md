@@ -27,3 +27,8 @@
 **Vulnerability:** Dashboard API handlers used a fallback to an untrusted `shop` query parameter when the `verified_shop` context was missing, creating a potential IDOR vector if middleware was bypassed.
 **Learning:** Even with security middleware in place, handlers should not provide fallbacks to untrusted inputs. A missing verified identity should always result in an explicit authorization failure (Fail-Closed).
 **Prevention:** Remove all `|| c.req.query("shop")` fallbacks in protected routes and strictly rely on the context value provided by the verification middleware.
+
+## 2025-05-24 - [PII Leak in WhatsApp Responses and Broken HMAC Logic]
+**Vulnerability:** WhatsApp sending routes returned the full Meta API response, including recipient phone numbers, to clients. Additionally, a ReferenceError (`ENCODER`) and incorrect Singleflight promise clearing in `shopify_client.ts` broke webhook verification.
+**Learning:** Sanitizing external API responses is critical to prevent accidental PII leakage. Inconsistent naming and using `finally` instead of `catch` for clearing shared initialization promises can lead to runtime crashes or awaiting null references during high concurrency.
+**Prevention:** Always sanitize API responses to return only minimal identifiers (e.g., `wamid`). Standardize module-level constants and ensure Singleflight patterns only clear the promise on failure to remain resilient to thundering herds.

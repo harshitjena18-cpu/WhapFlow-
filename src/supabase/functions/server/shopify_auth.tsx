@@ -10,7 +10,7 @@ import { Buffer } from "node:buffer";
 const app = new Hono();
 
 // PERFORMANCE: Hoist encoder to avoid repeated object creation overhead
-const encoder = new TextEncoder();
+const ENCODER = new TextEncoder();
 
 // Module-level cache for HMAC CryptoKeys to minimize import overhead
 let _cachedHmacKey: CryptoKey | null = null;
@@ -195,14 +195,13 @@ async function verifyHmac(query: Record<string, string>, secret: string) {
   const keys = Object.keys(rest).sort();
   const message = keys.map(key => `${key}=${rest[key]}`).join("&");
 
-  const msgData = encoder.encode(message);
+  const msgData = ENCODER.encode(message);
 
   // PERFORMANCE: Cache the imported CryptoKey and use Singleflight pattern to avoid overhead during OAuth callback
   if (_cachedHmacSecret !== secret) {
     _cachedHmacKey = null;
     _hmacKeyPromise = null;
     _cachedHmacSecret = secret;
-    _hmacKeyPromise = null;
   }
 
   let key: CryptoKey;
@@ -212,7 +211,7 @@ async function verifyHmac(query: Record<string, string>, secret: string) {
     if (!_hmacKeyPromise) {
       _hmacKeyPromise = (async () => {
         try {
-          const keyData = encoder.encode(secret);
+          const keyData = ENCODER.encode(secret);
           _cachedHmacKey = await crypto.subtle.importKey(
             "raw",
             keyData,
@@ -221,8 +220,10 @@ async function verifyHmac(query: Record<string, string>, secret: string) {
             ["verify"]
           );
           return _cachedHmacKey;
-        } finally {
+        } catch (err) {
+          // SECURITY: Clear promise on failure to allow retries, avoiding persistent null results
           _hmacKeyPromise = null;
+          throw err;
         }
       })();
     }
