@@ -5,6 +5,7 @@
 
 import { getEnv } from "../../../lib/env.ts";
 import { Buffer } from "node:buffer";
+import { E164_REGEX } from "./constants.ts";
 
 // PERFORMANCE: Hoist encoder to avoid redundant object creation per call
 const ENCODER = new TextEncoder();
@@ -39,6 +40,12 @@ export const sendWhatsAppTemplate = async ({
   }
 
   const url = `https://graph.facebook.com/v17.0/${phoneId}/messages`;
+
+  // SECURITY: Validate phone number format (E.164)
+  if (!E164_REGEX.test(to)) {
+    console.error(`❌ Invalid phone number format: ${to}`);
+    return { success: false, error: "Invalid phone number format. Expected E.164 (e.g., +1234567890)" };
+  }
 
   const body = {
     messaging_product: "whatsapp",
