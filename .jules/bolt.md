@@ -86,3 +86,11 @@
 ## 2026-04-01 - [Promise-based Crypto Caching]
 **Learning:** Concurrent "cold start" cryptographic requests trigger redundant HKDF derivations, creating a "thundering herd" bottleneck (~43ms for 50 calls). Implementing a promise-based cache for the derivation process ensures only one operation is executed and shared, reducing total latency by ~73%.
 **Action:** Use promise-based caching for expensive, idempotent async operations that are likely to be called concurrently (like key derivation or auth token exchange). Hoist encoders/decoders to module level to further reduce allocation overhead.
+
+## 2026-04-05 - [Native Buffer for Hex Decoding]
+**Learning:** Manual `parseInt` loops for hex-to-Uint8Array conversion in HMAC verification are significantly slower (~10x) than using `Buffer.from(str, 'hex')`. In Edge environments where Node's `Buffer` is available, native implementations provide massive performance gains for auth hot-paths.
+**Action:** Always prefer native `Buffer.from` for hex or base64 decoding instead of manual loops or `TextEncoder` for non-UTF8 binary data.
+
+## 2026-04-05 - [Singleflight Promise Preservation]
+**Learning:** Clearing a Singleflight promise in a `finally` block creates a race condition where concurrent callers might await a null reference if the first one finishes while others are still in the microtask queue.
+**Action:** Use a `catch` block to clear Singleflight promises only on failure, allowing the resolved value to be cached (or handled by a secondary cache) and ensuring stability for concurrent awaiters.
