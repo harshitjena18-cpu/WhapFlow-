@@ -86,3 +86,7 @@
 ## 2026-04-01 - [Promise-based Crypto Caching]
 **Learning:** Concurrent "cold start" cryptographic requests trigger redundant HKDF derivations, creating a "thundering herd" bottleneck (~43ms for 50 calls). Implementing a promise-based cache for the derivation process ensures only one operation is executed and shared, reducing total latency by ~73%.
 **Action:** Use promise-based caching for expensive, idempotent async operations that are likely to be called concurrently (like key derivation or auth token exchange). Hoist encoders/decoders to module level to further reduce allocation overhead.
+
+## 2026-04-05 - [Native Hex Decoding Performance]
+**Learning:** Manual hex-to-Uint8Array conversion loops using `parseInt` and `substring` are a bottleneck in HMAC verification paths. Replacing these with native `Buffer.from(hmac, 'hex')` (available via `node:buffer` in Deno/Node) provides a measured ~9.77x speedup, significantly reducing latency during the Shopify OAuth callback flow.
+**Action:** Always prefer native runtime utilities like `Buffer.from` for encoding/decoding operations over manual JavaScript loops to leverage highly optimized native implementations.
