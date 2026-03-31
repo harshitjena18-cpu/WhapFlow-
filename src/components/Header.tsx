@@ -37,7 +37,7 @@ export function Header() {
       <div className="flex items-center gap-4 flex-1">
         <div className="relative w-full max-w-md hidden md:block">
           <label htmlFor="global-search" className="sr-only">Search orders, customers, or templates</label>
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" aria-hidden="true" />
           <input
             id="global-search"
             ref={searchInputRef}
@@ -54,10 +54,10 @@ export function Header() {
       </div>
       <div className="flex items-center gap-4">
         <button
-          className="relative p-2 text-gray-400 hover:text-gray-600 hover:bg-white/50 rounded-full transition-colors"
+          className="relative p-2 text-gray-400 hover:text-gray-600 hover:bg-white/50 rounded-full transition-colors outline-none focus-visible:ring-2 focus-visible:ring-purple-500/20"
           aria-label="Notifications"
         >
-          <Bell className="w-5 h-5" />
+          <Bell className="w-5 h-5" aria-hidden="true" />
           <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
         </button>
         <div className="h-8 w-px bg-gray-200/50 mx-1 hidden md:block"></div>

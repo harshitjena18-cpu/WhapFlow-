@@ -51,13 +51,13 @@ export function Sidebar() {
       {/* Mobile menu button */}
       <button
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        className="lg:hidden fixed top-6 right-6 z-50 p-3 rounded-xl bg-white border border-gray-100 hover:bg-gray-50 transition-all active:scale-95"
+        className="lg:hidden fixed top-6 right-6 z-50 p-3 rounded-xl bg-white border border-gray-100 hover:bg-gray-50 transition-all active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-[#25D366]/20"
         aria-label="Toggle menu"
       >
         {isMobileMenuOpen ? (
-          <X className="w-5 h-5 text-gray-600" />
+          <X className="w-5 h-5 text-gray-600" aria-hidden="true" />
         ) : (
-          <Menu className="w-5 h-5 text-gray-600" />
+          <Menu className="w-5 h-5 text-gray-600" aria-hidden="true" />
         )}
       </button>
 
@@ -80,7 +80,7 @@ export function Sidebar() {
       >
         {/* Logo */}
         <div className="px-8 py-8 border-b border-gray-100">
-          <Link to="/" className="group">
+          <Link to="/" className="group outline-none focus-visible:ring-2 focus-visible:ring-[#25D366]/20 rounded-xl">
             <WhapflowLogo size="md" variant="full" className="hover:opacity-80 transition-opacity" />
           </Link>
         </div>
@@ -94,7 +94,7 @@ export function Sidebar() {
                   to={item.path}
                   onClick={() => setIsMobileMenuOpen(false)}
                   className={({ isActive }) =>
-                    `flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 active:scale-[0.98] ${
+                    `flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-[#25D366]/20 ${
                       isActive
                         ? 'bg-[#25D366] text-white'
                         : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
@@ -103,7 +103,7 @@ export function Sidebar() {
                 >
                   {({ isActive }) => (
                     <>
-                      <item.icon className="w-5 h-5" />
+                      <item.icon className="w-5 h-5" aria-hidden="true" />
                       <span className="font-medium text-sm">{item.name}</span>
                     </>
                   )}
