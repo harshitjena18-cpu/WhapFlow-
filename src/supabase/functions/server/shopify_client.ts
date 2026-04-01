@@ -4,8 +4,8 @@ import { Merchant } from "./types.ts";
 import { Buffer } from "node:buffer";
 import { redactPII, getErrorMessage } from "../../../lib/error.ts";
 
-// PERFORMANCE: Hoist encoder to avoid repeated object creation overhead
-const encoder = new TextEncoder();
+// PERFORMANCE: Hoist ENCODER to avoid repeated object creation overhead
+const ENCODER = new TextEncoder();
 
 // Module-level cache for HMAC CryptoKeys to minimize import overhead (~2-5ms per call)
 let _cachedHmacKey: CryptoKey | null = null;
@@ -110,31 +110,13 @@ export async function verifyWebhookHmac(rawBody: string, hmacHeader: string, sec
   if (!rawBody || !hmacHeader || !secret) return false;
 
   try {
-    const msgData = encoder.encode(rawBody);
+    const msgData = ENCODER.encode(rawBody);
 
     // PERFORMANCE: Cache the imported CryptoKey and use Singleflight pattern
     if (_cachedHmacSecret !== secret) {
       _cachedHmacKey = null;
-      _hmacKeyPromise = null;
       _cachedHmacSecret = secret;
       _hmacKeyPromise = null;
-    }
-
-    let hmacKey = _cachedHmacKey;
-    if (!hmacKey) {
-      if (!_hmacKeyPromise) {
-        _hmacKeyPromise = crypto.subtle.importKey(
-          "raw",
-          ENCODER.encode(secret),
-          { name: "HMAC", hash: "SHA-256" },
-          false,
-          ["verify"]
-        ).then(key => {
-          _cachedHmacKey = key;
-          return key;
-        });
-      }
-      hmacKey = await _hmacKeyPromise;
     }
 
     let key: CryptoKey;
@@ -144,7 +126,7 @@ export async function verifyWebhookHmac(rawBody: string, hmacHeader: string, sec
       if (!_hmacKeyPromise) {
         _hmacKeyPromise = (async () => {
           try {
-            const keyData = encoder.encode(secret);
+            const keyData = ENCODER.encode(secret);
             _cachedHmacKey = await crypto.subtle.importKey(
               "raw",
               keyData,
