@@ -27,3 +27,8 @@
 **Vulnerability:** Dashboard API handlers used a fallback to an untrusted `shop` query parameter when the `verified_shop` context was missing, creating a potential IDOR vector if middleware was bypassed.
 **Learning:** Even with security middleware in place, handlers should not provide fallbacks to untrusted inputs. A missing verified identity should always result in an explicit authorization failure (Fail-Closed).
 **Prevention:** Remove all `|| c.req.query("shop")` fallbacks in protected routes and strictly rely on the context value provided by the verification middleware.
+
+## 2025-05-24 - [PII Leak in WhatsApp Success and Error Responses]
+**Vulnerability:** The WhatsApp core helper returned the raw Meta API response (`data`) on success and the raw error object on failure. The `data` object contains the recipient's phone number, which was then leaked to the client via route handlers.
+**Learning:** Even if the input is sanitized, the response from third-party APIs often echoes PII. Sanitizing the return values of core service helpers is essential to prevent downstream data leaks.
+**Prevention:** Omit raw response objects from third-party APIs in service helpers. Return only the necessary identifiers (e.g., `wamid`) and always sanitize error objects using a PII-redacting helper like `getErrorMessage`.
