@@ -43,7 +43,7 @@ export function Header() {
             ref={searchInputRef}
             type="text"
             placeholder="Search orders, customers, or templates..."
-            className="w-full pl-10 pr-12 py-2 text-sm bg-white/60 border border-gray-200/50 rounded-lg focus:ring-2 focus:ring-purple-500/20 focus:bg-white focus:border-purple-300/50 transition-all backdrop-blur-sm"
+            className="w-full pl-10 pr-12 py-2 text-sm bg-white/60 border border-gray-200/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-ring/20 focus:bg-white focus:border-ring/30 transition-all backdrop-blur-sm"
           />
           <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none hidden sm:flex items-center gap-1">
             <kbd className="px-1.5 py-0.5 text-[10px] font-medium text-gray-400 bg-gray-100/50 border border-gray-200/50 rounded flex items-center gap-0.5">
@@ -54,7 +54,7 @@ export function Header() {
       </div>
       <div className="flex items-center gap-4">
         <button
-          className="relative p-2 text-gray-400 hover:text-gray-600 hover:bg-white/50 rounded-full transition-colors"
+          className="relative p-2 text-gray-400 hover:text-gray-600 hover:bg-white/50 rounded-full transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
           aria-label="Notifications"
         >
           <Bell className="w-5 h-5" />
@@ -64,7 +64,7 @@ export function Header() {
         <Link
           to="/settings"
           aria-label="User Profile and Settings"
-          className="hidden md:flex items-center gap-3 px-3 py-1.5 rounded-xl hover:bg-white/50 transition-all duration-200 active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-purple-500/20"
+          className="hidden md:flex items-center gap-3 px-3 py-1.5 rounded-xl hover:bg-white/50 transition-all duration-200 active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-ring/20"
         >
           <div className="text-right">
             <p className="text-sm font-medium text-gray-900">Whapflow Store</p>
