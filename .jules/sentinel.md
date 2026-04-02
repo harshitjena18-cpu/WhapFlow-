@@ -27,3 +27,8 @@
 **Vulnerability:** Dashboard API handlers used a fallback to an untrusted `shop` query parameter when the `verified_shop` context was missing, creating a potential IDOR vector if middleware was bypassed.
 **Learning:** Even with security middleware in place, handlers should not provide fallbacks to untrusted inputs. A missing verified identity should always result in an explicit authorization failure (Fail-Closed).
 **Prevention:** Remove all `|| c.req.query("shop")` fallbacks in protected routes and strictly rely on the context value provided by the verification middleware.
+
+## 2025-05-24 - [PII Leak and Missing Input Validation in WhatsApp Routes]
+**Vulnerability:** WhatsApp sending routes returned raw Meta API responses containing customer phone numbers. Additionally, recipient phone numbers were not validated before being sent to the Meta Graph API, allowing malformed inputs.
+**Learning:** Downstream API responses often mirror sensitive input. Sanitizing only the request is insufficient; response objects must be filtered to the minimum required fields (Least Privilege) to prevent accidental data exposure.
+**Prevention:** Always validate phone numbers against a strict E.164 regex at the entry point. Explicitly pick only non-sensitive fields (like `wamid`) from external API responses before returning them to the client or logging.

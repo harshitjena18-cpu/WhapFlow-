@@ -5,6 +5,8 @@
 
 import { getEnv } from "../../../lib/env.ts";
 import { Buffer } from "node:buffer";
+import { E164_REGEX } from "./constants.ts";
+import { getErrorMessage } from "../../../lib/error.ts";
 
 // PERFORMANCE: Hoist encoder to avoid redundant object creation per call
 const ENCODER = new TextEncoder();
@@ -36,6 +38,12 @@ export const sendWhatsAppTemplate = async ({
   if (!token || !phoneId) {
     console.error("❌ Missing WhatsApp configuration (WHATSAPP_ACCESS_TOKEN or WHATSAPP_PHONE_NUMBER_ID)");
     return { success: false, error: "Configuration missing" };
+  }
+
+  // SECURITY: Validate phone number format to prevent malformed or malicious inputs
+  if (!to || !E164_REGEX.test(to)) {
+    console.error("❌ WhatsApp Error: Invalid phone number format (E.164 required)");
+    return { success: false, error: "Invalid phone number format" };
   }
 
   const url = `https://graph.facebook.com/v17.0/${phoneId}/messages`;
@@ -76,10 +84,14 @@ export const sendWhatsAppTemplate = async ({
     // SECURITY: Log only wamid to avoid leaking PII in response data
     const wamid = data.messages?.[0]?.id;
     console.log("✅ WhatsApp Message Sent. ID:", wamid);
-    return { success: true, data, wamid };
+
+    // SECURITY: Remove 'data' from response to prevent PII exposure (phone number)
+    return { success: true, wamid };
   } catch (error) {
-    console.error("❌ Network/Server Error sending WhatsApp:", error);
-    return { success: false, error };
+    // SECURITY: Use getErrorMessage to redact PII from the error before logging
+    const errorMsg = getErrorMessage(error);
+    console.error("❌ Network/Server Error sending WhatsApp:", errorMsg);
+    return { success: false, error: errorMsg };
   }
 };
 

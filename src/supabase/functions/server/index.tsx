@@ -7,6 +7,7 @@ import { executeAutomation, processWhatsAppStatuses } from "./automation.ts";
 import { getEnv } from "../../../lib/env.ts";
 import { getErrorMessage } from "../../../lib/error.ts";
 import { sendWhatsAppTemplate, verifyWhatsAppSignature } from "./whatsapp.ts";
+import { E164_REGEX } from "./constants.ts";
 
 import authApp from "./auth.tsx";
 import dashboardApp from "./dashboard.tsx";
@@ -122,6 +123,12 @@ app.post(`${SERVER_BASE_PATH}/api/whatsapp/send`, async (c) => {
     }
 
     const { phoneNumber, templateId } = await c.req.json();
+
+    // SECURITY: Validate phone number format to prevent malformed or malicious inputs
+    if (!phoneNumber || !E164_REGEX.test(phoneNumber)) {
+      return c.json({ error: "Invalid phone number format" }, 400);
+    }
+
     // SECURITY: Redact phoneNumber from logs
     console.log(`[WhatsApp] Intent to send template "${templateId}" to [REDACTED]`);
     
@@ -133,7 +140,8 @@ app.post(`${SERVER_BASE_PATH}/api/whatsapp/send`, async (c) => {
     });
     
     if (result.success) {
-      return c.json({ success: true, message: 'Message sent', data: result.data }, 200);
+      // SECURITY: Remove result.data to prevent PII exposure (phone number)
+      return c.json({ success: true, message: 'Message sent', wamid: result.wamid }, 200);
     } else {
       return c.json({ error: 'WhatsApp API Error', details: result.error }, 500);
     }

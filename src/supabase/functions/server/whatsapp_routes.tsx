@@ -3,6 +3,7 @@ import { getEnv } from "../../../lib/env.ts";
 import { getErrorMessage } from "../../../lib/error.ts";
 import { processWhatsAppStatuses } from "./automation.ts";
 import { sendWhatsAppTemplate, verifyWhatsAppSignature } from "./whatsapp.ts";
+import { E164_REGEX } from "./constants.ts";
 
 const app = new Hono();
 
@@ -28,6 +29,11 @@ app.post("/whatsapp/send", async (c) => {
 
     const { phoneNumber, templateId } = await c.req.json();
 
+    // SECURITY: Validate phone number format to prevent malformed or malicious inputs
+    if (!phoneNumber || !E164_REGEX.test(phoneNumber)) {
+      return c.json({ error: "Invalid phone number format" }, 400);
+    }
+
     // Call the shared helper
     const result = await sendWhatsAppTemplate({
       to: phoneNumber,
@@ -36,7 +42,8 @@ app.post("/whatsapp/send", async (c) => {
     });
 
     if (result.success) {
-      return c.json({ success: true, message: 'Message sent', data: result.data }, 200);
+      // SECURITY: Remove result.data to prevent PII exposure (phone number)
+      return c.json({ success: true, message: 'Message sent', wamid: result.wamid }, 200);
     } else {
       return c.json({ error: 'WhatsApp API Error', details: result.error }, 500);
     }
