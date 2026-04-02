@@ -86,3 +86,7 @@
 ## 2026-04-01 - [Promise-based Crypto Caching]
 **Learning:** Concurrent "cold start" cryptographic requests trigger redundant HKDF derivations, creating a "thundering herd" bottleneck (~43ms for 50 calls). Implementing a promise-based cache for the derivation process ensures only one operation is executed and shared, reducing total latency by ~73%.
 **Action:** Use promise-based caching for expensive, idempotent async operations that are likely to be called concurrently (like key derivation or auth token exchange). Hoist encoders/decoders to module level to further reduce allocation overhead.
+
+## 2026-04-08 - [Standardized HMAC Singleflight & Buffer Optimization]
+**Learning:** Inconsistent HMAC verification logic across services leads to maintenance overhead and potential `ReferenceError` regressions. Consolidating logic into a standardized Singleflight pattern ensures thundering-herd protection globally. Additionally, using `Buffer.from(hmac, 'hex')` for hex-to-bytes conversion is significantly faster than manual loops in high-traffic auth paths.
+**Action:** Standardize HMAC verification with a promise-based Singleflight cache for `CryptoKey`. Use `Buffer.from` for efficient hex/base64 conversions in security hot-paths.
