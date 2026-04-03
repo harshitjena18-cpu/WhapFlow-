@@ -6,7 +6,7 @@
 import { getEnv } from "../../../lib/env.ts";
 import { Buffer } from "node:buffer";
 
-// PERFORMANCE: Hoist encoder to avoid redundant object creation per call
+// PERFORMANCE: Hoist ENCODER to avoid redundant object creation per call
 const ENCODER = new TextEncoder();
 
 interface SendMessageParams {
@@ -15,9 +15,6 @@ interface SendMessageParams {
   languageCode?: string;
   components?: any[];
 }
-
-// PERFORMANCE: Hoist encoder to avoid repeated object creation overhead
-const encoder = new TextEncoder();
 
 // Module-level cache for HMAC CryptoKeys
 let _cachedHmacKey: CryptoKey | null = null;
@@ -115,14 +112,13 @@ export async function verifyWhatsAppSignature(rawBody: string, signatureHeader: 
   }
 
   try {
-    const msgData = encoder.encode(rawBody);
+    const msgData = ENCODER.encode(rawBody);
 
     // PERFORMANCE: Cache the imported CryptoKey and use Singleflight pattern
     if (_cachedHmacSecret !== secret) {
       _cachedHmacKey = null;
       _hmacKeyPromise = null;
       _cachedHmacSecret = secret;
-      _hmacKeyPromise = null;
     }
 
     let key: CryptoKey;
@@ -132,7 +128,7 @@ export async function verifyWhatsAppSignature(rawBody: string, signatureHeader: 
       if (!_hmacKeyPromise) {
         _hmacKeyPromise = (async () => {
           try {
-            const keyData = encoder.encode(secret);
+            const keyData = ENCODER.encode(secret);
             _cachedHmacKey = await crypto.subtle.importKey(
               "raw",
               keyData,
