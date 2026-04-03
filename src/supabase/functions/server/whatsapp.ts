@@ -5,6 +5,8 @@
 
 import { getEnv } from "../../../lib/env.ts";
 import { Buffer } from "node:buffer";
+import { E164_REGEX } from "./constants.ts";
+import { getErrorMessage } from "../../../lib/error.ts";
 
 // PERFORMANCE: Hoist encoder to avoid redundant object creation per call
 const ENCODER = new TextEncoder();
@@ -15,9 +17,6 @@ interface SendMessageParams {
   languageCode?: string;
   components?: any[];
 }
-
-// PERFORMANCE: Hoist encoder to avoid repeated object creation overhead
-const encoder = new TextEncoder();
 
 // Module-level cache for HMAC CryptoKeys
 let _cachedHmacKey: CryptoKey | null = null;
@@ -38,11 +37,21 @@ export const sendWhatsAppTemplate = async ({
     return { success: false, error: "Configuration missing" };
   }
 
+  // SECURITY: Validate recipient phone number format (E.164)
+  if (!to || !E164_REGEX.test(to)) {
+    console.error(`❌ Invalid WhatsApp recipient format: [REDACTED]`);
+    return { success: false, error: "Invalid phone number format" };
+  }
+
   const url = `https://graph.facebook.com/v17.0/${phoneId}/messages`;
+
+  // Meta Cloud API expects digits only (no '+' or other symbols) for the 'to' field.
+  // We keep the '+' for internal validation but strip it for the API call.
+  const formattedPhone = to.replace(/^\+/, '');
 
   const body = {
     messaging_product: "whatsapp",
-    to: to,
+    to: formattedPhone,
     type: "template",
     template: {
       name: templateName,
@@ -66,20 +75,22 @@ export const sendWhatsAppTemplate = async ({
     const data = await response.json();
 
     if (!response.ok) {
-      // SECURITY: Redact full response 'data' as it contains customer PII (phone number)
+      // SECURITY: Avoid leaking raw error objects or PII
       console.error(`❌ WhatsApp API Error: Status ${response.status}`);
-      // Return only the error message or a sanitized version
       const errorMessage = data.error?.message || "Unknown WhatsApp API Error";
       return { success: false, error: errorMessage };
     }
 
-    // SECURITY: Log only wamid to avoid leaking PII in response data
+    // SECURITY: Extract only the necessary ID (wamid) and omit the full response 'data'
+    // This prevents leaking customer PII (phone number) which is echoed back by the Meta API.
     const wamid = data.messages?.[0]?.id;
     console.log("✅ WhatsApp Message Sent. ID:", wamid);
-    return { success: true, data, wamid };
+    return { success: true, wamid };
   } catch (error) {
-    console.error("❌ Network/Server Error sending WhatsApp:", error);
-    return { success: false, error };
+    // SECURITY: Use getErrorMessage to redact PII from the logged error
+    const errorMsg = getErrorMessage(error);
+    console.error("❌ Network/Server Error sending WhatsApp:", errorMsg);
+    return { success: false, error: errorMsg };
   }
 };
 
@@ -115,7 +126,7 @@ export async function verifyWhatsAppSignature(rawBody: string, signatureHeader: 
   }
 
   try {
-    const msgData = encoder.encode(rawBody);
+    const msgData = ENCODER.encode(rawBody);
 
     // PERFORMANCE: Cache the imported CryptoKey and use Singleflight pattern
     if (_cachedHmacSecret !== secret) {
@@ -132,7 +143,7 @@ export async function verifyWhatsAppSignature(rawBody: string, signatureHeader: 
       if (!_hmacKeyPromise) {
         _hmacKeyPromise = (async () => {
           try {
-            const keyData = encoder.encode(secret);
+            const keyData = ENCODER.encode(secret);
             _cachedHmacKey = await crypto.subtle.importKey(
               "raw",
               keyData,
