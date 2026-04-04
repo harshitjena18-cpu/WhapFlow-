@@ -9,8 +9,11 @@ export function redactPII(text: string): string {
   // Regex for common phone number formats (7+ digits)
   // Optimized to reduce backtracking and handle varied delimiters safely
   const phoneRegex = /(?:\+?\d{1,3}[ \-]?)?\(?\d{3}\)?[ \-]?\d{3}[ \-]?\d{4,}/g;
+  // Regex for digits-only phone numbers (8+ digits) often found in Meta/Shopify IDs
+  const digitsPhoneRegex = /\d{8,}/g;
 
   return text
+    .replace(digitsPhoneRegex, "[REDACTED_PHONE]")
     .replace(emailRegex, "[REDACTED_EMAIL]")
     .replace(phoneRegex, "[REDACTED_PHONE]");
 }

@@ -5,6 +5,8 @@
 
 import { getEnv } from "../../../lib/env.ts";
 import { Buffer } from "node:buffer";
+import { getErrorMessage } from "../../../lib/error.ts";
+import { E164_REGEX } from "./constants.ts";
 
 // PERFORMANCE: Hoist encoder to avoid redundant object creation per call
 const ENCODER = new TextEncoder();
@@ -33,6 +35,12 @@ export const sendWhatsAppTemplate = async ({
   const token = getEnv("WHATSAPP_ACCESS_TOKEN");
   const phoneId = getEnv("WHATSAPP_PHONE_NUMBER_ID");
 
+  // SECURITY: Validate phone number format (E.164)
+  if (!to || !E164_REGEX.test(to)) {
+    console.error(`❌ Invalid WhatsApp phone number format: [REDACTED]`);
+    return { success: false, error: "Invalid phone number format" };
+  }
+
   if (!token || !phoneId) {
     console.error("❌ Missing WhatsApp configuration (WHATSAPP_ACCESS_TOKEN or WHATSAPP_PHONE_NUMBER_ID)");
     return { success: false, error: "Configuration missing" };
@@ -40,9 +48,12 @@ export const sendWhatsAppTemplate = async ({
 
   const url = `https://graph.facebook.com/v17.0/${phoneId}/messages`;
 
+  // SECURITY: Strip '+' prefix for Meta Cloud API (requires digits only for 'to' field)
+  const formattedTo = to.replace("+", "");
+
   const body = {
     messaging_product: "whatsapp",
-    to: to,
+    to: formattedTo,
     type: "template",
     template: {
       name: templateName,
@@ -68,18 +79,23 @@ export const sendWhatsAppTemplate = async ({
     if (!response.ok) {
       // SECURITY: Redact full response 'data' as it contains customer PII (phone number)
       console.error(`❌ WhatsApp API Error: Status ${response.status}`);
-      // Return only the error message or a sanitized version
+      // Return only the error message or a sanitized version, ensuring PII is redacted
       const errorMessage = data.error?.message || "Unknown WhatsApp API Error";
-      return { success: false, error: errorMessage };
+      return { success: false, error: getErrorMessage(errorMessage) };
     }
 
     // SECURITY: Log only wamid to avoid leaking PII in response data
     const wamid = data.messages?.[0]?.id;
     console.log("✅ WhatsApp Message Sent. ID:", wamid);
-    return { success: true, data, wamid };
+
+    // SECURITY: Return only sanitized success indicator and message ID.
+    // Omit the raw 'data' object which contains the recipient's phone number.
+    return { success: true, wamid };
   } catch (error) {
-    console.error("❌ Network/Server Error sending WhatsApp:", error);
-    return { success: false, error };
+    // SECURITY: Use getErrorMessage to redact PII from the error before returning
+    const errorMsg = getErrorMessage(error);
+    console.error("❌ Network/Server Error sending WhatsApp:", errorMsg);
+    return { success: false, error: errorMsg };
   }
 };
 
