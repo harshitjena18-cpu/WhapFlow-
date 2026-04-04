@@ -27,3 +27,8 @@
 **Vulnerability:** Dashboard API handlers used a fallback to an untrusted `shop` query parameter when the `verified_shop` context was missing, creating a potential IDOR vector if middleware was bypassed.
 **Learning:** Even with security middleware in place, handlers should not provide fallbacks to untrusted inputs. A missing verified identity should always result in an explicit authorization failure (Fail-Closed).
 **Prevention:** Remove all `|| c.req.query("shop")` fallbacks in protected routes and strictly rely on the context value provided by the verification middleware.
+
+## 2025-05-24 - [PII Leak in External API Success Responses and Weak Redaction]
+**Vulnerability:** WhatsApp API success responses containing the recipient's phone number were returned raw to clients. Additionally, the PII redaction regex missed digits-only phone numbers (8+ digits) common in API logs.
+**Learning:** Defense-in-depth requires sanitizing external API responses on both success and failure paths. Redaction logic must account for various PII formats, including raw digit strings.
+**Prevention:** Always return a minimized, sanitized object from external service helpers. Use a broad digits-only regex (\d{8,}) in PII redaction utilities to catch raw phone numbers in logs.
