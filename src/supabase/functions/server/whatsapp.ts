@@ -4,6 +4,8 @@
  */
 
 import { getEnv } from "../../../lib/env.ts";
+import { getErrorMessage } from "../../../lib/error.ts";
+import { E164_REGEX } from "./constants.ts";
 import { Buffer } from "node:buffer";
 
 // PERFORMANCE: Hoist encoder to avoid redundant object creation per call
@@ -15,9 +17,6 @@ interface SendMessageParams {
   languageCode?: string;
   components?: any[];
 }
-
-// PERFORMANCE: Hoist encoder to avoid repeated object creation overhead
-const encoder = new TextEncoder();
 
 // Module-level cache for HMAC CryptoKeys
 let _cachedHmacKey: CryptoKey | null = null;
@@ -38,11 +37,20 @@ export const sendWhatsAppTemplate = async ({
     return { success: false, error: "Configuration missing" };
   }
 
+  // SECURITY: Validate phone number to prevent injection or malformed requests
+  if (!E164_REGEX.test(to)) {
+    console.error("❌ Invalid phone number format:", to);
+    return { success: false, error: "Invalid phone number format" };
+  }
+
+  // Meta API expects the number WITHOUT the leading '+'
+  const recipient = to.startsWith('+') ? to.slice(1) : to;
+
   const url = `https://graph.facebook.com/v17.0/${phoneId}/messages`;
 
   const body = {
     messaging_product: "whatsapp",
-    to: to,
+    to: recipient,
     type: "template",
     template: {
       name: templateName,
@@ -68,18 +76,21 @@ export const sendWhatsAppTemplate = async ({
     if (!response.ok) {
       // SECURITY: Redact full response 'data' as it contains customer PII (phone number)
       console.error(`❌ WhatsApp API Error: Status ${response.status}`);
-      // Return only the error message or a sanitized version
-      const errorMessage = data.error?.message || "Unknown WhatsApp API Error";
+      // SECURITY: Use getErrorMessage to redact PII from the error message
+      const errorMessage = getErrorMessage(data.error) || "Unknown WhatsApp API Error";
       return { success: false, error: errorMessage };
     }
 
     // SECURITY: Log only wamid to avoid leaking PII in response data
     const wamid = data.messages?.[0]?.id;
     console.log("✅ WhatsApp Message Sent. ID:", wamid);
-    return { success: true, data, wamid };
+    // SECURITY: Omit raw 'data' to prevent accidental exposure of PII (phone number) in response
+    return { success: true, wamid };
   } catch (error) {
-    console.error("❌ Network/Server Error sending WhatsApp:", error);
-    return { success: false, error };
+    // SECURITY: Use getErrorMessage to redact PII from the error before returning
+    const errorMsg = getErrorMessage(error) || "An unexpected error occurred";
+    console.error("❌ Network/Server Error sending WhatsApp:", errorMsg);
+    return { success: false, error: errorMsg };
   }
 };
 
@@ -115,7 +126,7 @@ export async function verifyWhatsAppSignature(rawBody: string, signatureHeader: 
   }
 
   try {
-    const msgData = encoder.encode(rawBody);
+    const msgData = ENCODER.encode(rawBody);
 
     // PERFORMANCE: Cache the imported CryptoKey and use Singleflight pattern
     if (_cachedHmacSecret !== secret) {
@@ -132,7 +143,7 @@ export async function verifyWhatsAppSignature(rawBody: string, signatureHeader: 
       if (!_hmacKeyPromise) {
         _hmacKeyPromise = (async () => {
           try {
-            const keyData = encoder.encode(secret);
+            const keyData = ENCODER.encode(secret);
             _cachedHmacKey = await crypto.subtle.importKey(
               "raw",
               keyData,
