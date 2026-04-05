@@ -41,3 +41,7 @@
 ## 2026-03-20 - [Standardizing Settings UI and Tactile Feedback]
 **Learning:** Native HTML elements (like <select>) often look out of place in a highly-themed Radix-based UI and lack consistent focus/hover states. Standardizing on project-specific themed components automatically brings in accessibility features (like proper keyboard navigation) and visual cohesion. Additionally, unifying tactile feedback (e.g., active:scale-95) across the app prevents a "jittery" or inconsistent feel for users navigating different sections.
 **Action:** Always audit for native HTML form elements and replace them with project-standard themed components. Ensure tactile micro-animations use a single, consistent scale factor across all interactive elements.
+
+## 2025-05-15 - [Standardizing Interactive Feedback and Focus States]
+**Learning:** Inconsistent tactile feedback (e.g., scale-98 vs scale-95) and non-branded focus rings create a fragmented user experience. Standardizing on a single 'active' scale factor and using the brand color token for focus indicators unifies the interface and reinforces brand identity. Icon-only buttons without tooltips are a recurring accessibility gap that hinders discoverability.
+**Action:** Always use 'active:scale-95' for tactile feedback across all components. Ensure all focus-visible states use the brand green token (#25D366) with appropriate opacity for contrast. Every icon-only button must be wrapped in a Tooltip with a descriptive label.
