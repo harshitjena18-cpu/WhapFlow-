@@ -27,3 +27,8 @@
 **Vulnerability:** Dashboard API handlers used a fallback to an untrusted `shop` query parameter when the `verified_shop` context was missing, creating a potential IDOR vector if middleware was bypassed.
 **Learning:** Even with security middleware in place, handlers should not provide fallbacks to untrusted inputs. A missing verified identity should always result in an explicit authorization failure (Fail-Closed).
 **Prevention:** Remove all `|| c.req.query("shop")` fallbacks in protected routes and strictly rely on the context value provided by the verification middleware.
+
+## 2025-05-24 - [PII Leak in API Success Responses and ReferenceErrors in Cold Paths]
+**Vulnerability:** Meta Cloud API success responses were returned in full, leaking recipient phone numbers. A ReferenceError in the HMAC cold path (`ENCODER` vs `encoder`) risked verification crashes.
+**Learning:** External APIs often echo PII in success payloads. Returning raw response objects to callers bypasses redaction. Additionally, inconsistent naming in security helpers can lead to runtime failures in critical paths.
+**Prevention:** Explicitly sanitize or omit raw data objects from external API success returns. Standardize on module-level constants (e.g., `ENCODER`) and verify all code paths, including those with caching logic.
