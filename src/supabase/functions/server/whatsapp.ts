@@ -5,9 +5,8 @@
 
 import { getEnv } from "../../../lib/env.ts";
 import { Buffer } from "node:buffer";
-
-// PERFORMANCE: Hoist encoder to avoid redundant object creation per call
-const ENCODER = new TextEncoder();
+import { E164_REGEX } from "./constants.ts";
+import { getErrorMessage, redactPII } from "../../../lib/error.ts";
 
 interface SendMessageParams {
   to: string;
@@ -38,11 +37,20 @@ export const sendWhatsAppTemplate = async ({
     return { success: false, error: "Configuration missing" };
   }
 
+  // SECURITY: Validate phone number format
+  if (!to || !E164_REGEX.test(to)) {
+    console.error(`❌ Invalid phone number format: [REDACTED]`);
+    return { success: false, error: "Invalid phone number format. Expected E.164 (e.g., +1234567890)" };
+  }
+
+  // Meta API expects the phone number WITHOUT the leading '+'
+  const formattedPhone = to.replace("+", "");
+
   const url = `https://graph.facebook.com/v17.0/${phoneId}/messages`;
 
   const body = {
     messaging_product: "whatsapp",
-    to: to,
+    to: formattedPhone,
     type: "template",
     template: {
       name: templateName,
@@ -67,19 +75,22 @@ export const sendWhatsAppTemplate = async ({
 
     if (!response.ok) {
       // SECURITY: Redact full response 'data' as it contains customer PII (phone number)
-      console.error(`❌ WhatsApp API Error: Status ${response.status}`);
-      // Return only the error message or a sanitized version
+      // Use redactPII for defense-in-depth logging of the error message
       const errorMessage = data.error?.message || "Unknown WhatsApp API Error";
-      return { success: false, error: errorMessage };
+      console.error(`❌ WhatsApp API Error: Status ${response.status} - ${redactPII(errorMessage)}`);
+
+      return { success: false, error: redactPII(errorMessage) };
     }
 
     // SECURITY: Log only wamid to avoid leaking PII in response data
     const wamid = data.messages?.[0]?.id;
     console.log("✅ WhatsApp Message Sent. ID:", wamid);
-    return { success: true, data, wamid };
+    // SECURITY: Do not return 'data' to avoid leaking Meta internal identifiers or echoed PII
+    return { success: true, wamid };
   } catch (error) {
-    console.error("❌ Network/Server Error sending WhatsApp:", error);
-    return { success: false, error };
+    // SECURITY: Redact PII from the error message before logging
+    console.error("❌ Network/Server Error sending WhatsApp:", getErrorMessage(error));
+    return { success: false, error: "Failed to send WhatsApp message" };
   }
 };
 
@@ -131,19 +142,15 @@ export async function verifyWhatsAppSignature(rawBody: string, signatureHeader: 
     } else {
       if (!_hmacKeyPromise) {
         _hmacKeyPromise = (async () => {
-          try {
-            const keyData = encoder.encode(secret);
-            _cachedHmacKey = await crypto.subtle.importKey(
-              "raw",
-              keyData,
-              { name: "HMAC", hash: "SHA-256" },
-              false,
-              ["verify"]
-            );
-            return _cachedHmacKey;
-          } finally {
-            _hmacKeyPromise = null;
-          }
+          const keyData = encoder.encode(secret);
+          _cachedHmacKey = await crypto.subtle.importKey(
+            "raw",
+            keyData,
+            { name: "HMAC", hash: "SHA-256" },
+            false,
+            ["verify"]
+          );
+          return _cachedHmacKey;
         })();
       }
       key = await _hmacKeyPromise;

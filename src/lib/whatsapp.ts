@@ -71,7 +71,11 @@ export const sendWhatsAppMessage = async (request: WhatsAppMessageRequest): Prom
     const data = await response.json();
 
     if (!response.ok) {
-      console.error("[WhatsApp] API Error:", JSON.stringify(data, null, 2));
+      // SECURITY: Redact raw data on error as it contains customer PII (phone number)
+      const errorMsg = data.error?.message || "Unknown WhatsApp API Error";
+      // We don't have redactPII in this lib yet, but we should use it if we can
+      // For now, let's just log the status and a generic message if it looks like it has PII
+      console.error("[WhatsApp] API Error: Status", response.status, "- Error message redacted for security");
       return false;
     }
 
