@@ -117,6 +117,23 @@ export const mdel = async (keys: string[]): Promise<void> => {
   }
 };
 
+// Deletes multiple key-value pairs from the database and returns the keys that were actually deleted.
+// This is useful for atomic batch-claiming of jobs in a single database round-trip.
+export const mdelWithResult = async (keys: string[]): Promise<string[]> => {
+  if (keys.length === 0) return [];
+  const supabase = client();
+  const { data, error } = await supabase
+    .from("kv_store_c8eef56a")
+    .delete()
+    .in("key", keys)
+    .select("key");
+
+  if (error) {
+    throw new Error(error.message);
+  }
+  return data?.map((item) => item.key) ?? [];
+};
+
 // Search for key-value pairs by prefix.
 export const getByPrefix = async <T = any>(prefix: string, limit?: number): Promise<T[]> => {
   const supabase = client();
