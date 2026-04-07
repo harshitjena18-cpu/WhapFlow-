@@ -27,3 +27,8 @@
 **Vulnerability:** Dashboard API handlers used a fallback to an untrusted `shop` query parameter when the `verified_shop` context was missing, creating a potential IDOR vector if middleware was bypassed.
 **Learning:** Even with security middleware in place, handlers should not provide fallbacks to untrusted inputs. A missing verified identity should always result in an explicit authorization failure (Fail-Closed).
 **Prevention:** Remove all `|| c.req.query("shop")` fallbacks in protected routes and strictly rely on the context value provided by the verification middleware.
+
+## 2025-05-28 - [PII Leak in WhatsApp Sender Response and Redundant Routes]
+**Vulnerability:** The WhatsApp sending service and its redundant route in `index.tsx` returned raw Meta API responses (containing phone numbers) to callers and logged them on failure.
+**Learning:** Redundant code paths for the same functionality (e.g., `/api/whatsapp/send` in both `index.tsx` and `whatsapp_routes.tsx`) increase the risk of inconsistent security application.
+**Prevention:** Apply security fixes (like removing raw API data and redacting PII from error responses) to all redundant code paths if consolidation is not possible. Omit raw external API responses and return only essential data like `wamid`.
