@@ -37,6 +37,22 @@ export const set = async <T = any>(key: string, value: T): Promise<void> => {
   }
 };
 
+/**
+ * mdelWithResult deletes multiple key-value pairs from the database and returns the keys that were successfully deleted.
+ * This is useful for atomic batch-claiming in high-concurrency environments.
+ *
+ * PERFORMANCE: Uses Postgres 'RETURNING' clause via Supabase's .select("key") to confirm deletions in one round-trip.
+ */
+export const mdelWithResult = async (keys: string[]): Promise<string[]> => {
+  if (keys.length === 0) return [];
+  const supabase = client();
+  const { data, error } = await supabase.from("kv_store_c8eef56a").delete().in("key", keys).select("key");
+  if (error) {
+    throw new Error(error.message);
+  }
+  return data?.map(d => d.key) ?? [];
+};
+
 // Get retrieves a key-value pair from the database.
 export const get = async <T = any>(key: string): Promise<T | null> => {
   const supabase = client();
