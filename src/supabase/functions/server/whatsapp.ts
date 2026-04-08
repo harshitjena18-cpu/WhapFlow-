@@ -5,6 +5,8 @@
 
 import { getEnv } from "../../../lib/env.ts";
 import { Buffer } from "node:buffer";
+import { E164_REGEX } from "./constants.ts";
+import { getErrorMessage } from "../../../lib/error.ts";
 
 // PERFORMANCE: Hoist encoder to avoid redundant object creation per call
 const ENCODER = new TextEncoder();
@@ -30,6 +32,12 @@ export const sendWhatsAppTemplate = async ({
   languageCode = "en_US",
   components = []
 }: SendMessageParams) => {
+  // 1. Validate phone number format (E.164)
+  if (!to || !E164_REGEX.test(to)) {
+    console.error(`❌ Invalid phone number format: ${to}`);
+    return { success: false, error: "Invalid phone number format. Expected E.164 (e.g., +1234567890)" };
+  }
+
   const token = getEnv("WHATSAPP_ACCESS_TOKEN");
   const phoneId = getEnv("WHATSAPP_PHONE_NUMBER_ID");
 
@@ -38,11 +46,13 @@ export const sendWhatsAppTemplate = async ({
     return { success: false, error: "Configuration missing" };
   }
 
+  // 2. Meta API requires phone number WITHOUT the leading '+'
+  const formattedTo = to.replace(/^\+/, "");
   const url = `https://graph.facebook.com/v17.0/${phoneId}/messages`;
 
   const body = {
     messaging_product: "whatsapp",
-    to: to,
+    to: formattedTo,
     type: "template",
     template: {
       name: templateName,
@@ -76,10 +86,14 @@ export const sendWhatsAppTemplate = async ({
     // SECURITY: Log only wamid to avoid leaking PII in response data
     const wamid = data.messages?.[0]?.id;
     console.log("✅ WhatsApp Message Sent. ID:", wamid);
-    return { success: true, data, wamid };
+
+    // SECURITY: Omit the raw 'data' object from the response to prevent PII leakage
+    return { success: true, wamid };
   } catch (error) {
-    console.error("❌ Network/Server Error sending WhatsApp:", error);
-    return { success: false, error };
+    // SECURITY: Redact PII from the error message before returning
+    const sanitizedError = getErrorMessage(error) || "Internal Server Error";
+    console.error("❌ Network/Server Error sending WhatsApp:", sanitizedError);
+    return { success: false, error: sanitizedError };
   }
 };
 
