@@ -56,32 +56,32 @@ export async function processPendingJobs<T = unknown>(handler: (payload: T) => P
 
   console.log(`[Queue] Found ${dueJobs.length} due jobs (capped at ${BATCH_SIZE}).`);
 
-  // Process jobs concurrently with a limit to avoid overwhelming resources
+  if (dueJobs.length === 0) return;
+
+  // ATOMIC BATCH CLAIM: Try to delete all due jobs in a single roundtrip.
+  // PERFORMANCE: Using mdelWithResult reduces N+1 database roundtrips to 1.
+  const dueJobKeys = dueJobs.map(j => (j as Job<T>).key);
+  const claimedKeys = new Set(await kv.mdelWithResult(dueJobKeys));
+
+  console.log(`[Queue] Successfully claimed ${claimedKeys.size} out of ${dueJobs.length} jobs.`);
+
+  // Process ONLY claimed jobs concurrently with a limit to avoid overwhelming resources
   const CONCURRENCY_LIMIT = 5;
-  const jobQueue = [...(dueJobs as Job<T>[])];
+  const jobQueue = (dueJobs as Job<T>[]).filter(j => claimedKeys.has(j.key));
 
   const worker = async () => {
     while (jobQueue.length > 0) {
       const job = jobQueue.shift();
       if (!job) break;
 
-      // ATOMIC CLAIM: Try to delete the key first.
-      // If kv.del returns true, it means WE successfully deleted it, so we own the job.
-      // If false, another worker beat us to it.
-      const claimed = await kv.del(job.key);
-
-      if (claimed) {
-        try {
-          console.log(`[Queue] Claimed & Processing job ${job.id}...`);
-          await handler(job.payload);
-          console.log(`[Queue] Job ${job.id} completed.`);
-        } catch (error) {
-          console.error(`[Queue] Error processing job ${job.id}:`, error);
-          // Move to dead-letter queue
-          await kv.set(`queue:failed:${job.id}`, { ...job, error: String(error) });
-        }
-      } else {
-        console.log(`[Queue] Job ${job.id} already claimed by another worker.`);
+      try {
+        console.log(`[Queue] Processing job ${job.id}...`);
+        await handler(job.payload);
+        console.log(`[Queue] Job ${job.id} completed.`);
+      } catch (error) {
+        console.error(`[Queue] Error processing job ${job.id}:`, error);
+        // Move to dead-letter queue
+        await kv.set(`queue:failed:${job.id}`, { ...job, error: String(error) });
       }
     }
   };

@@ -117,6 +117,22 @@ export const mdel = async (keys: string[]): Promise<void> => {
   }
 };
 
+/**
+ * Atomic batch deletion with results
+ * Returns the keys that were successfully deleted (useful for job claiming)
+ *
+ * PERFORMANCE: Uses Postgres RETURNING clause to confirm deletion in a single roundtrip.
+ */
+export const mdelWithResult = async (keys: string[]): Promise<string[]> => {
+  if (keys.length === 0) return [];
+  const supabase = client();
+  const { data, error } = await supabase.from("kv_store_c8eef56a").delete().in("key", keys).select("key");
+  if (error) {
+    throw new Error(error.message);
+  }
+  return data?.map((d) => d.key as string) ?? [];
+};
+
 // Search for key-value pairs by prefix.
 export const getByPrefix = async <T = any>(prefix: string, limit?: number): Promise<T[]> => {
   const supabase = client();
