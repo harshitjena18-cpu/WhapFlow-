@@ -41,3 +41,7 @@
 ## 2026-03-20 - [Standardizing Settings UI and Tactile Feedback]
 **Learning:** Native HTML elements (like <select>) often look out of place in a highly-themed Radix-based UI and lack consistent focus/hover states. Standardizing on project-specific themed components automatically brings in accessibility features (like proper keyboard navigation) and visual cohesion. Additionally, unifying tactile feedback (e.g., active:scale-95) across the app prevents a "jittery" or inconsistent feel for users navigating different sections.
 **Action:** Always audit for native HTML form elements and replace them with project-standard themed components. Ensure tactile micro-animations use a single, consistent scale factor across all interactive elements.
+
+## 2026-04-09 - [Disambiguating Region-Specific Navigation Labels]
+**Learning:** When identical interactive elements (like user profile links) appear in multiple distinct layout regions (e.g., Sidebar and Header), using identical `aria-label`s causes ambiguity for screen reader users and can trigger accessibility failures in automated testing. Providing region-specific context makes navigation more predictable and unambiguous.
+**Action:** Distinguish duplicate navigation elements with region-specific `aria-label` values (e.g., "Sidebar User Profile" vs "Header User Profile") to ensure clear orientation and satisfying accessibility 'strict mode' requirements.
