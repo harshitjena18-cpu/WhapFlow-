@@ -27,3 +27,8 @@
 **Vulnerability:** Dashboard API handlers used a fallback to an untrusted `shop` query parameter when the `verified_shop` context was missing, creating a potential IDOR vector if middleware was bypassed.
 **Learning:** Even with security middleware in place, handlers should not provide fallbacks to untrusted inputs. A missing verified identity should always result in an explicit authorization failure (Fail-Closed).
 **Prevention:** Remove all `|| c.req.query("shop")` fallbacks in protected routes and strictly rely on the context value provided by the verification middleware.
+
+## 2025-06-01 - [PII Leak in WhatsApp Response and ReferenceError in HMAC]
+**Vulnerability:** WhatsApp Cloud API successful responses were returned in full to the client, leaking the recipient's phone number. Additionally, a redundant code path in the Shopify HMAC verification logic used an undefined `ENCODER` constant, which would cause a `ReferenceError`.
+**Learning:** Always audit external API responses for echoed PII before returning them to the frontend. In security-critical paths like HMAC verification, ensure all variables are properly defined and hoisted.
+**Prevention:** Return only necessary identifiers (e.g., `wamid`) from external APIs. Use standardized validation regexes (e.g., `E164_REGEX`) and ensure all constants are consistently named and hoisted.
