@@ -4,6 +4,8 @@
  */
 
 import { getEnv } from "../../../lib/env.ts";
+import { getErrorMessage } from "../../../lib/error.ts";
+import { E164_REGEX } from "./constants.ts";
 import { Buffer } from "node:buffer";
 
 // PERFORMANCE: Hoist encoder to avoid redundant object creation per call
@@ -30,6 +32,12 @@ export const sendWhatsAppTemplate = async ({
   languageCode = "en_US",
   components = []
 }: SendMessageParams) => {
+  // SECURITY: Validate recipient phone number format (E.164)
+  if (!to || !E164_REGEX.test(to)) {
+    console.error(`❌ Invalid phone number format: ${to}`);
+    return { success: false, error: "Invalid phone number format. Expected E.164 (e.g. +1234567890)" };
+  }
+
   const token = getEnv("WHATSAPP_ACCESS_TOKEN");
   const phoneId = getEnv("WHATSAPP_PHONE_NUMBER_ID");
 
@@ -40,9 +48,12 @@ export const sendWhatsAppTemplate = async ({
 
   const url = `https://graph.facebook.com/v17.0/${phoneId}/messages`;
 
+  // SECURITY: Meta Cloud API expects phone numbers WITHOUT the leading '+'
+  const formattedTo = to.startsWith('+') ? to.substring(1) : to;
+
   const body = {
     messaging_product: "whatsapp",
-    to: to,
+    to: formattedTo,
     type: "template",
     template: {
       name: templateName,
@@ -76,10 +87,13 @@ export const sendWhatsAppTemplate = async ({
     // SECURITY: Log only wamid to avoid leaking PII in response data
     const wamid = data.messages?.[0]?.id;
     console.log("✅ WhatsApp Message Sent. ID:", wamid);
-    return { success: true, data, wamid };
+    // Explicitly omit the raw 'data' object from the response to prevent PII leakage
+    return { success: true, wamid };
   } catch (error) {
-    console.error("❌ Network/Server Error sending WhatsApp:", error);
-    return { success: false, error };
+    // SECURITY: Redact PII from error messages before returning
+    const errorMessage = getErrorMessage(error);
+    console.error("❌ Network/Server Error sending WhatsApp:", errorMessage);
+    return { success: false, error: errorMessage };
   }
 };
 

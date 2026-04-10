@@ -36,7 +36,8 @@ app.post("/whatsapp/send", async (c) => {
     });
 
     if (result.success) {
-      return c.json({ success: true, message: 'Message sent', data: result.data }, 200);
+      // SECURITY: Return only necessary data, omit raw response which contains PII
+      return c.json({ success: true, message: 'Message sent', wamid: result.wamid }, 200);
     } else {
       return c.json({ error: 'WhatsApp API Error', details: result.error }, 500);
     }
