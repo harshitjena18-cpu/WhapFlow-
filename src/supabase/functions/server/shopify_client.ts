@@ -117,24 +117,6 @@ export async function verifyWebhookHmac(rawBody: string, hmacHeader: string, sec
       _cachedHmacKey = null;
       _hmacKeyPromise = null;
       _cachedHmacSecret = secret;
-      _hmacKeyPromise = null;
-    }
-
-    let hmacKey = _cachedHmacKey;
-    if (!hmacKey) {
-      if (!_hmacKeyPromise) {
-        _hmacKeyPromise = crypto.subtle.importKey(
-          "raw",
-          ENCODER.encode(secret),
-          { name: "HMAC", hash: "SHA-256" },
-          false,
-          ["verify"]
-        ).then(key => {
-          _cachedHmacKey = key;
-          return key;
-        });
-      }
-      hmacKey = await _hmacKeyPromise;
     }
 
     let key: CryptoKey;
@@ -145,14 +127,15 @@ export async function verifyWebhookHmac(rawBody: string, hmacHeader: string, sec
         _hmacKeyPromise = (async () => {
           try {
             const keyData = encoder.encode(secret);
-            _cachedHmacKey = await crypto.subtle.importKey(
+            const importedKey = await crypto.subtle.importKey(
               "raw",
               keyData,
               { name: "HMAC", hash: "SHA-256" },
               false,
               ["verify"]
             );
-            return _cachedHmacKey;
+            _cachedHmacKey = importedKey;
+            return importedKey;
           } finally {
             _hmacKeyPromise = null;
           }
