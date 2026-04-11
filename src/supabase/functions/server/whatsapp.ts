@@ -122,7 +122,6 @@ export async function verifyWhatsAppSignature(rawBody: string, signatureHeader: 
       _cachedHmacKey = null;
       _hmacKeyPromise = null;
       _cachedHmacSecret = secret;
-      _hmacKeyPromise = null;
     }
 
     let key: CryptoKey;
