@@ -125,7 +125,7 @@ export async function verifyWebhookHmac(rawBody: string, hmacHeader: string, sec
       if (!_hmacKeyPromise) {
         _hmacKeyPromise = crypto.subtle.importKey(
           "raw",
-          ENCODER.encode(secret),
+          encoder.encode(secret),
           { name: "HMAC", hash: "SHA-256" },
           false,
           ["verify"]
