@@ -86,3 +86,7 @@
 ## 2026-04-01 - [Promise-based Crypto Caching]
 **Learning:** Concurrent "cold start" cryptographic requests trigger redundant HKDF derivations, creating a "thundering herd" bottleneck (~43ms for 50 calls). Implementing a promise-based cache for the derivation process ensures only one operation is executed and shared, reducing total latency by ~73%.
 **Action:** Use promise-based caching for expensive, idempotent async operations that are likely to be called concurrently (like key derivation or auth token exchange). Hoist encoders/decoders to module level to further reduce allocation overhead.
+
+## 2026-04-03 - [Optimized Hex Decoding for HMAC]
+**Learning:** Manual hex-to-bytes conversion loops in JavaScript (using substring/parseInt) are significantly slower (~11x) than native decoding provided by `Buffer.from(str, 'hex')`. In high-traffic paths like OAuth callbacks and webhooks, this overhead adds up across concurrent requests.
+**Action:** Always prefer `Buffer.from(str, 'hex')` or `Buffer.from(str, 'base64')` for decoding cryptographic signatures and headers instead of manual loops.
