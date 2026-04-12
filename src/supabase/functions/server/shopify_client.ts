@@ -176,7 +176,8 @@ export async function verifyWebhookHmac(rawBody: string, hmacHeader: string, sec
       msgData
     );
   } catch (error) {
-    console.error("[ShopifyClient] HMAC verification error:", error);
+    // SECURITY: Redact PII from error messages before logging
+    console.error("[ShopifyClient] HMAC verification error:", getErrorMessage(error));
     return false;
   }
 }

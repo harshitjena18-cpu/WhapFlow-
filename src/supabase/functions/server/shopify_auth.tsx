@@ -3,7 +3,7 @@ import { setCookie, getCookie } from "npm:hono/cookie";
 import * as kv from "./kv_store.tsx";
 import { encrypt } from "./crypto.ts";
 import { getEnv } from "../../../lib/env.ts";
-import { getErrorMessage } from "../../../lib/error.ts";
+import { getErrorMessage, redactPII } from "../../../lib/error.ts";
 import { API_DOMAIN, APP_DOMAIN, SERVER_BASE_PATH } from "./constants.ts";
 import { Buffer } from "node:buffer";
 
@@ -295,7 +295,8 @@ async function registerWebhooks(shop: string, accessToken: string) {
         if (JSON.stringify(data).includes("taken")) {
              console.log(`[Webhooks] Topic ${hook.topic} already registered.`);
         } else {
-             console.error(`[Webhooks] Failed to register ${hook.topic}:`, data);
+             // SECURITY: Redact potential PII from Shopify error response before logging
+             console.error(`[Webhooks] Failed to register ${hook.topic}:`, redactPII(JSON.stringify(data)));
         }
       } else {
         console.log(`[Webhooks] Successfully registered ${hook.topic}`);
