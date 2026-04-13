@@ -6,9 +6,6 @@
 import { getEnv } from "../../../lib/env.ts";
 import { Buffer } from "node:buffer";
 
-// PERFORMANCE: Hoist encoder to avoid redundant object creation per call
-const ENCODER = new TextEncoder();
-
 interface SendMessageParams {
   to: string;
   templateName: string;
