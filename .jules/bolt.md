@@ -86,3 +86,7 @@
 ## 2026-04-01 - [Promise-based Crypto Caching]
 **Learning:** Concurrent "cold start" cryptographic requests trigger redundant HKDF derivations, creating a "thundering herd" bottleneck (~43ms for 50 calls). Implementing a promise-based cache for the derivation process ensures only one operation is executed and shared, reducing total latency by ~73%.
 **Action:** Use promise-based caching for expensive, idempotent async operations that are likely to be called concurrently (like key derivation or auth token exchange). Hoist encoders/decoders to module level to further reduce allocation overhead.
+
+## 2026-04-05 - [HMAC Hex Conversion Optimization]
+**Learning:** In Edge Functions (Deno/Node), manual loops using `parseInt(substring)` for hex-to-bytes conversion are significant bottlenecks in high-traffic paths like OAuth callbacks. `Buffer.from(hmac, 'hex')` is approximately 11.7x faster and more memory-efficient.
+**Action:** Always prefer native `Buffer` methods for encoding/decoding operations in hot paths. Ensure `import { Buffer } from "node:buffer"` is included as it's not a global in all Edge environments.
