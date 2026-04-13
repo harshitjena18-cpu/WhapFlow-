@@ -1,4 +1,5 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { Target, Clock, Activity, TrendingUp, TrendingDown } from 'lucide-react';
 
 const conversionData = [
   { name: 'Mon', conversions: 24 },
@@ -31,20 +32,49 @@ export function AnalyticsView() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white border border-gray-100 rounded-2xl p-8">
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Total Conversions</h3>
+        <div className="group bg-white border border-gray-100 rounded-2xl p-8 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:border-[#25D366]/20">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Total Conversions</h3>
+            <div className="p-2 bg-[#25D366]/10 rounded-lg group-hover:bg-[#25D366]/20 transition-colors">
+              <Target className="w-4 h-4 text-[#25D366]" />
+            </div>
+          </div>
           <p className="text-4xl font-semibold text-gray-900 tracking-tight">227</p>
-          <p className="text-sm text-gray-600 mt-4">↑ 12.5% from last week</p>
+          <div className="flex items-center gap-1.5 mt-4 text-emerald-700" aria-label="12.5% increase from last week">
+            <TrendingUp className="w-4 h-4" aria-hidden="true" />
+            <span className="text-sm font-medium">12.5%</span>
+            <span className="text-sm text-gray-400 font-normal ml-1">vs last week</span>
+          </div>
         </div>
-        <div className="bg-white border border-gray-100 rounded-2xl p-8">
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Avg. Recovery Time</h3>
+
+        <div className="group bg-white border border-gray-100 rounded-2xl p-8 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:border-[#25D366]/20">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Avg. Recovery Time</h3>
+            <div className="p-2 bg-blue-50 rounded-lg group-hover:bg-blue-100 transition-colors">
+              <Clock className="w-4 h-4 text-blue-600" />
+            </div>
+          </div>
           <p className="text-4xl font-semibold text-gray-900 tracking-tight">2.4h</p>
-          <p className="text-sm text-gray-600 mt-4">↓ 18% faster</p>
+          <div className="flex items-center gap-1.5 mt-4 text-blue-700" aria-label="18% decrease, faster response">
+            <TrendingDown className="w-4 h-4" aria-hidden="true" />
+            <span className="text-sm font-medium">18%</span>
+            <span className="text-sm text-gray-400 font-normal ml-1">faster response</span>
+          </div>
         </div>
-        <div className="bg-white border border-gray-100 rounded-2xl p-8">
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Message Open Rate</h3>
+
+        <div className="group bg-white border border-gray-100 rounded-2xl p-8 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:border-[#25D366]/20">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Message Open Rate</h3>
+            <div className="p-2 bg-purple-50 rounded-lg group-hover:bg-purple-100 transition-colors">
+              <Activity className="w-4 h-4 text-purple-600" />
+            </div>
+          </div>
           <p className="text-4xl font-semibold text-gray-900 tracking-tight">87.3%</p>
-          <p className="text-sm text-gray-600 mt-4">↑ 5.2% improvement</p>
+          <div className="flex items-center gap-1.5 mt-4 text-emerald-700" aria-label="5.2% increase, improved reach">
+            <TrendingUp className="w-4 h-4" aria-hidden="true" />
+            <span className="text-sm font-medium">5.2%</span>
+            <span className="text-sm text-gray-400 font-normal ml-1">improved reach</span>
+          </div>
         </div>
       </div>
 
@@ -95,20 +125,34 @@ export function AnalyticsView() {
                   data={channelData}
                   cx="50%"
                   cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={90}
-                  fill="#8884d8"
+                  innerRadius={65}
+                  outerRadius={95}
+                  paddingAngle={5}
                   dataKey="value"
-                  style={{ fontSize: '13px', fontWeight: 500 }}
                 >
                   {channelData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="none" />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #f3f4f6',
+                    borderRadius: '12px',
+                    padding: '8px 12px',
+                  }}
+                />
               </PieChart>
             </ResponsiveContainer>
+          </div>
+          <div className="flex justify-center gap-6 mt-4">
+            {channelData.map((entry, index) => (
+              <div key={entry.name} className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index] }} />
+                <span className="text-xs font-medium text-gray-600">{entry.name}</span>
+                <span className="text-xs text-gray-400">{entry.value}%</span>
+              </div>
+            ))}
           </div>
         </div>
       </div>
