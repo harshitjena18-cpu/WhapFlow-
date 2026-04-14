@@ -140,14 +140,17 @@ app.get("/callback", async (c) => {
     
     // 1. Update Scoped Config (Scoping by shop to prevent multi-tenancy leaks)
     const shopifyKey = `shop:${shop}:config:shopify`;
-    const shopifyConfig = (await kv.get(shopifyKey)) || {};
+
+    // PERFORMANCE: Parallelize independent I/O and CPU-bound operations (KV fetch and Token encryption)
+    const [shopifyConfigRaw, encryptedToken] = await Promise.all([
+      kv.get(shopifyKey),
+      encrypt(accessToken)
+    ]);
+
+    const shopifyConfig = shopifyConfigRaw || {};
     shopifyConfig.connected_at = new Date().toISOString();
     shopifyConfig.connection_status = "connected";
     shopifyConfig.shop_domain = shop; // Metadata
-
-    // 2. Securely Store Credentials (keyed by shop)
-    // Encrypt the access token before storing it at rest
-    const encryptedToken = await encrypt(accessToken);
 
     const merchantRecord = {
       shop: shop,
@@ -202,7 +205,6 @@ async function verifyHmac(query: Record<string, string>, secret: string) {
     _cachedHmacKey = null;
     _hmacKeyPromise = null;
     _cachedHmacSecret = secret;
-    _hmacKeyPromise = null;
   }
 
   let key: CryptoKey;
@@ -229,11 +231,8 @@ async function verifyHmac(query: Record<string, string>, secret: string) {
     key = await _hmacKeyPromise;
   }
 
-  // Convert hex HMAC to Uint8Array for constant-time verification
-  const hmacBytes = new Uint8Array(hmac.length / 2);
-  for (let i = 0; i < hmac.length; i += 2) {
-    hmacBytes[i / 2] = parseInt(hmac.substring(i, i + 2), 16);
-  }
+  // PERFORMANCE: Convert hex HMAC to Uint8Array using Buffer.from for optimal performance
+  const hmacBytes = Buffer.from(hmac, 'hex');
 
   // Type narrowing for TypeScript safety
   if (!key) {
