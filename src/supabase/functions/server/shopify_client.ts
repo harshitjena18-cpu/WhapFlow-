@@ -29,7 +29,8 @@ export async function getMerchantCredentials(shop: string, preFetchedMerchant?: 
   const merchant = preFetchedMerchant !== undefined ? preFetchedMerchant : (await kv.get(`merchant:${shop}`) as Merchant | null);
   if (merchant && merchant.access_token) {
     // Decrypt the token if it was stored encrypted
-    merchant.access_token = await decrypt(merchant.access_token);
+    const decryptedToken = await decrypt(merchant.access_token);
+    merchant.access_token = decryptedToken ?? null;
   }
   return merchant;
 }
