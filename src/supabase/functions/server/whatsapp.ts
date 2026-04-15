@@ -122,7 +122,6 @@ export async function verifyWhatsAppSignature(rawBody: string, signatureHeader: 
       _cachedHmacKey = null;
       _hmacKeyPromise = null;
       _cachedHmacSecret = secret;
-      _hmacKeyPromise = null;
     }
 
     let key: CryptoKey;
@@ -146,7 +145,9 @@ export async function verifyWhatsAppSignature(rawBody: string, signatureHeader: 
           }
         })();
       }
-      key = await _hmacKeyPromise;
+    // PERFORMANCE: Capture promise in local variable to prevent race condition if _hmacKeyPromise is cleared
+    const keyPromise = _hmacKeyPromise;
+    key = await keyPromise;
     }
 
     if (!key) {

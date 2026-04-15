@@ -44,7 +44,7 @@ export const get = async <T = any>(key: string): Promise<T | null> => {
   if (error) {
     throw new Error(error.message);
   }
-  return data?.value ?? null;
+  return (data?.value as T) ?? null;
 };
 
 // Delete deletes a key-value pair from the database.

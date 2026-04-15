@@ -25,28 +25,36 @@ const V3_INFO = ENCODER.encode("V3-Key");
 // Caching for V3 master key
 let _cachedSecret: string | null = null;
 let _cachedV3Key: CryptoKey | null = null;
+// Module-level cache for environment variables to avoid redundant getEnv lookups
+let _cachedEncryptionSecret: string | undefined;
+let _cachedShopifyClientSecret: string | undefined;
 // PERFORMANCE: Promise-based cache to prevent "thundering herd" during concurrent cold starts
 let _v3KeyPromise: Promise<CryptoKey> | null = null;
 
 function getSecret() {
-  const secret = getEnv("ENCRYPTION_SECRET") || getEnv("SHOPIFY_CLIENT_SECRET");
+  if (!_cachedEncryptionSecret) _cachedEncryptionSecret = getEnv("ENCRYPTION_SECRET");
+  if (!_cachedShopifyClientSecret) _cachedShopifyClientSecret = getEnv("SHOPIFY_CLIENT_SECRET");
+
+  const secret = _cachedEncryptionSecret || _cachedShopifyClientSecret;
   if (!secret) throw new Error("Security Error: Missing encryption secrets.");
   return secret;
 }
 
 /** Derives a cached master key using HKDF (V3) */
 function getV3Key(): Promise<CryptoKey> {
-  const secret = getSecret();
+  // Check ENV for cache invalidation (primarily for test/benchmark isolation)
+  const freshSecret = getEnv("ENCRYPTION_SECRET") || getEnv("SHOPIFY_CLIENT_SECRET");
 
-  // Invalidate cache if secret changes (primarily for test/benchmark isolation)
-  if (secret !== _cachedSecret) {
+  if (freshSecret !== _cachedSecret) {
     _cachedV3Key = null;
     _v3KeyPromise = null;
-    _cachedSecret = secret;
+    _cachedSecret = freshSecret || null;
+    // Clear ENV cache too to allow getSecret to pick up the new secret
+    _cachedEncryptionSecret = undefined;
+    _cachedShopifyClientSecret = undefined;
   }
 
-  // PERFORMANCE: Return cached key immediately if already derived
-  if (_cachedV3Key) return Promise.resolve(_cachedV3Key);
+  const secret = getSecret();
 
   // PERFORMANCE: Return existing derivation promise to prevent redundant HKDF computations
   if (_v3KeyPromise) return _v3KeyPromise;
@@ -80,7 +88,8 @@ export async function encrypt(text: string | null | undefined): Promise<string |
     const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH));
     const ct = await crypto.subtle.encrypt({ name: ALGORITHM, iv }, key, ENCODER.encode(text));
 
-    return `${PREFIX_V3}${b64(iv)}:${b64(new Uint8Array(ct))}`;
+    // PERFORMANCE: Buffer.from can take ArrayBuffer directly, avoiding redundant Uint8Array allocation
+    return `${PREFIX_V3}${b64(iv)}:${b64(ct)}`;
   } catch (e) {
     console.error("[Crypto] Encryption failed:", e);
     throw new Error("Failed to encrypt data");
@@ -104,5 +113,5 @@ export async function decrypt(enc: string | null | undefined): Promise<string | 
   return enc;
 }
 
-const b64 = (u: Uint8Array) => Buffer.from(u).toString("base64");
+const b64 = (u: Uint8Array | ArrayBuffer) => Buffer.from(u as any).toString("base64");
 const deb64 = (s: string) => Buffer.from(s, "base64");

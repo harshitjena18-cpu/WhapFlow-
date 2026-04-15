@@ -86,3 +86,7 @@
 ## 2026-04-01 - [Promise-based Crypto Caching]
 **Learning:** Concurrent "cold start" cryptographic requests trigger redundant HKDF derivations, creating a "thundering herd" bottleneck (~43ms for 50 calls). Implementing a promise-based cache for the derivation process ensures only one operation is executed and shared, reducing total latency by ~73%.
 **Action:** Use promise-based caching for expensive, idempotent async operations that are likely to be called concurrently (like key derivation or auth token exchange). Hoist encoders/decoders to module level to further reduce allocation overhead.
+
+## 2026-04-05 - [Safe Singleflight Pattern for Crypto Keys]
+**Learning:** In highly concurrent environments (like webhook bursts), clearing a Singleflight promise in a 'finally' block can lead to a race condition where subsequent callers await a null reference if the promise is cleared exactly between the check and the await.
+**Action:** Always capture the Singleflight promise in a local variable before awaiting it to ensure the caller has a stable reference to the execution, even if the module-level variable is cleared concurrently.
