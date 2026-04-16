@@ -117,6 +117,27 @@ export const mdel = async (keys: string[]): Promise<void> => {
   }
 };
 
+/**
+ * Claim multiple keys atomically in a single round-trip.
+ * Uses DELETE ... RETURNING to ensure only one worker claims each job.
+ */
+export const claimBatch = async (keys: string[]): Promise<string[]> => {
+  if (keys.length === 0) return [];
+  const supabase = client();
+  // PERFORMANCE: Atomic batch delete returning successfully deleted keys.
+  // This reduces O(N) sequential 'del' calls to a single O(1) database round-trip.
+  const { data, error } = await supabase.from("kv_store_c8eef56a")
+    .delete()
+    .in("key", keys)
+    .select("key");
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data?.map(d => d.key) || [];
+};
+
 // Search for key-value pairs by prefix.
 export const getByPrefix = async <T = any>(prefix: string, limit?: number): Promise<T[]> => {
   const supabase = client();

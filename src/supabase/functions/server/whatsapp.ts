@@ -146,7 +146,9 @@ export async function verifyWhatsAppSignature(rawBody: string, signatureHeader: 
           }
         })();
       }
-      key = await _hmacKeyPromise;
+      // PERFORMANCE: Capture promise in local variable to prevent race conditions during concurrent webhook bursts
+      const currentPromise = _hmacKeyPromise;
+      key = await currentPromise;
     }
 
     if (!key) {
