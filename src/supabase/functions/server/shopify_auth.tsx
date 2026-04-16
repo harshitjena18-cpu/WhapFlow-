@@ -202,7 +202,6 @@ async function verifyHmac(query: Record<string, string>, secret: string) {
     _cachedHmacKey = null;
     _hmacKeyPromise = null;
     _cachedHmacSecret = secret;
-    _hmacKeyPromise = null;
   }
 
   let key: CryptoKey;
