@@ -1,6 +1,7 @@
 import { getEnv } from "../../../lib/env.ts";
 import { Hono } from "npm:hono";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { secureCompare } from "./crypto.ts";
 
 const authApp = new Hono();
 
@@ -10,7 +11,10 @@ authApp.post("/signup", async (c) => {
   const authHeader = c.req.header("Authorization");
   const serviceKey = getEnv("SUPABASE_SERVICE_ROLE_KEY");
 
-  if (!serviceKey || !authHeader || authHeader !== `Bearer ${serviceKey}`) {
+  const expectedAuth = serviceKey ? `Bearer ${serviceKey}` : null;
+  const isAuthorized = expectedAuth && authHeader && secureCompare(authHeader, expectedAuth);
+
+  if (!isAuthorized) {
     console.error("[Auth] Unauthorized attempt to call /signup");
     return c.json({ error: "Unauthorized: Invalid or missing token" }, 401);
   }
