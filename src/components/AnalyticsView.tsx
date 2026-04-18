@@ -1,4 +1,5 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { Target, Timer, MessageSquare, TrendingUp, TrendingDown, BarChart3, PieChart as PieChartIcon } from 'lucide-react';
 
 const conversionData = [
   { name: 'Mon', conversions: 24 },
@@ -32,19 +33,46 @@ export function AnalyticsView() {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white border border-gray-100 rounded-2xl p-8">
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Total Conversions</h3>
+          <div className="flex items-center gap-2 mb-3">
+            <Target className="w-4 h-4 text-emerald-500" />
+            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Total Conversions</h3>
+          </div>
           <p className="text-4xl font-semibold text-gray-900 tracking-tight">227</p>
-          <p className="text-sm text-gray-600 mt-4">↑ 12.5% from last week</p>
+          <div className="mt-4 flex items-center">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">
+              <TrendingUp className="w-3 h-3" aria-hidden="true" />
+              <span className="sr-only">Increase of </span>
+              12.5% from last week
+            </span>
+          </div>
         </div>
         <div className="bg-white border border-gray-100 rounded-2xl p-8">
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Avg. Recovery Time</h3>
+          <div className="flex items-center gap-2 mb-3">
+            <Timer className="w-4 h-4 text-emerald-500" />
+            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Avg. Recovery Time</h3>
+          </div>
           <p className="text-4xl font-semibold text-gray-900 tracking-tight">2.4h</p>
-          <p className="text-sm text-gray-600 mt-4">↓ 18% faster</p>
+          <div className="mt-4 flex items-center">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">
+              <TrendingDown className="w-3 h-3" aria-hidden="true" />
+              <span className="sr-only">Improvement of </span>
+              18% faster
+            </span>
+          </div>
         </div>
         <div className="bg-white border border-gray-100 rounded-2xl p-8">
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Message Open Rate</h3>
+          <div className="flex items-center gap-2 mb-3">
+            <MessageSquare className="w-4 h-4 text-emerald-500" />
+            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Message Open Rate</h3>
+          </div>
           <p className="text-4xl font-semibold text-gray-900 tracking-tight">87.3%</p>
-          <p className="text-sm text-gray-600 mt-4">↑ 5.2% improvement</p>
+          <div className="mt-4 flex items-center">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">
+              <TrendingUp className="w-3 h-3" aria-hidden="true" />
+              <span className="sr-only">Increase of </span>
+              5.2% improvement
+            </span>
+          </div>
         </div>
       </div>
 
@@ -52,7 +80,10 @@ export function AnalyticsView() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Conversions Chart */}
         <div className="bg-white border border-gray-100 rounded-2xl p-8">
-          <h2 className="text-base font-semibold text-gray-900 mb-1">Daily Conversions</h2>
+          <h2 className="text-base font-semibold text-gray-900 mb-1 flex items-center gap-2">
+            <BarChart3 className="w-4 h-4 text-emerald-500" />
+            Daily Conversions
+          </h2>
           <p className="text-sm text-gray-500 mb-8">Last 7 days</p>
           <div style={{ width: '100%', height: 288 }}>
             <ResponsiveContainer width="100%" height={288}>
@@ -86,7 +117,10 @@ export function AnalyticsView() {
 
         {/* Channel Distribution */}
         <div className="bg-white border border-gray-100 rounded-2xl p-8">
-          <h2 className="text-base font-semibold text-gray-900 mb-1">Channel Distribution</h2>
+          <h2 className="text-base font-semibold text-gray-900 mb-1 flex items-center gap-2">
+            <PieChartIcon className="w-4 h-4 text-emerald-500" />
+            Channel Distribution
+          </h2>
           <p className="text-sm text-gray-500 mb-8">Message delivery by channel</p>
           <div style={{ width: '100%', height: 288 }}>
             <ResponsiveContainer width="100%" height={288}>
