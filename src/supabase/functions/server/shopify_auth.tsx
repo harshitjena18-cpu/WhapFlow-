@@ -202,7 +202,6 @@ async function verifyHmac(query: Record<string, string>, secret: string) {
     _cachedHmacKey = null;
     _hmacKeyPromise = null;
     _cachedHmacSecret = secret;
-    _hmacKeyPromise = null;
   }
 
   let key: CryptoKey;
@@ -226,7 +225,10 @@ async function verifyHmac(query: Record<string, string>, secret: string) {
         }
       })();
     }
-    key = await _hmacKeyPromise;
+    // PERFORMANCE: Capture the promise in a local variable before awaiting to ensure
+    // concurrent requests receive the result even if the global reference is cleared.
+    const currentPromise = _hmacKeyPromise;
+    key = await currentPromise;
   }
 
   // Convert hex HMAC to Uint8Array for constant-time verification
