@@ -108,6 +108,29 @@ export const scanQueue = async <T = any>(endKey: string, limit?: number): Promis
   return data?.map((d) => d.value as T) ?? [];
 };
 
+/**
+ * claimBatch: Atomically deletes multiple keys and returns the ones that were successfully deleted.
+ * Used for high-performance job queue claiming to avoid race conditions and minimize round-trips.
+ */
+export const claimBatch = async (keys: string[]): Promise<string[]> => {
+  if (keys.length === 0) return [];
+  const supabase = client();
+
+  // PERFORMANCE: Use atomic .delete().in() with .select('key') to perform a bulk-claim
+  // in a single database round-trip.
+  const { data, error } = await supabase
+    .from("kv_store_c8eef56a")
+    .delete()
+    .in("key", keys)
+    .select("key");
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data?.map((d) => d.key) ?? [];
+};
+
 // Deletes multiple key-value pairs from the database.
 export const mdel = async (keys: string[]): Promise<void> => {
   const supabase = client();

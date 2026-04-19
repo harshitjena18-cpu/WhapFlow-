@@ -56,35 +56,38 @@ export async function processPendingJobs<T = unknown>(handler: (payload: T) => P
 
   console.log(`[Queue] Found ${dueJobs.length} due jobs (capped at ${BATCH_SIZE}).`);
 
-  // Process jobs concurrently with a limit to avoid overwhelming resources
+  // PERFORMANCE: ATOMIC BATCH CLAIM
+  // Instead of claiming jobs one-by-one in the worker loop (O(N) round-trips),
+  // we claim all due jobs in a single atomic batch delete operation (O(1) round-trip).
+  // This significantly reduces latency and database load.
+  const jobKeys = dueJobs.map(j => (j as Job<T>).key);
+  const claimedKeys = await kv.claimBatch(jobKeys);
+  const claimedKeysSet = new Set(claimedKeys);
+
+  const claimedJobs = (dueJobs as Job<T>[]).filter(j => claimedKeysSet.has(j.key));
+  console.log(`[Queue] Successfully claimed ${claimedJobs.length} jobs in batch.`);
+
+  if (claimedJobs.length === 0) return;
+
+  const jobToProcess = [...claimedJobs];
   const CONCURRENCY_LIMIT = 5;
-  const jobQueue = [...(dueJobs as Job<T>[])];
 
   const worker = async () => {
-    while (jobQueue.length > 0) {
-      const job = jobQueue.shift();
+    while (jobToProcess.length > 0) {
+      const job = jobToProcess.shift();
       if (!job) break;
 
-      // ATOMIC CLAIM: Try to delete the key first.
-      // If kv.del returns true, it means WE successfully deleted it, so we own the job.
-      // If false, another worker beat us to it.
-      const claimed = await kv.del(job.key);
-
-      if (claimed) {
-        try {
-          console.log(`[Queue] Claimed & Processing job ${job.id}...`);
-          await handler(job.payload);
-          console.log(`[Queue] Job ${job.id} completed.`);
-        } catch (error) {
-          console.error(`[Queue] Error processing job ${job.id}:`, error);
-          // Move to dead-letter queue
-          await kv.set(`queue:failed:${job.id}`, { ...job, error: String(error) });
-        }
-      } else {
-        console.log(`[Queue] Job ${job.id} already claimed by another worker.`);
+      try {
+        console.log(`[Queue] Processing claimed job ${job.id}...`);
+        await handler(job.payload);
+        console.log(`[Queue] Job ${job.id} completed.`);
+      } catch (error) {
+        console.error(`[Queue] Error processing job ${job.id}:`, error);
+        // Move to dead-letter queue
+        await kv.set(`queue:failed:${job.id}`, { ...job, error: String(error) });
       }
     }
   };
 
-  await Promise.all(Array.from({ length: CONCURRENCY_LIMIT }, () => worker()));
+  await Promise.all(Array.from({ length: Math.min(CONCURRENCY_LIMIT, claimedJobs.length) }, () => worker()));
 }
