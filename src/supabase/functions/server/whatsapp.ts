@@ -146,7 +146,10 @@ export async function verifyWhatsAppSignature(rawBody: string, signatureHeader: 
           }
         })();
       }
-      key = await _hmacKeyPromise;
+      // PERFORMANCE: Capture promise in local variable before awaiting to avoid race condition
+      // where the global _hmacKeyPromise is cleared by the 'finally' block before we await it.
+      const currentPromise = _hmacKeyPromise;
+      key = await currentPromise;
     }
 
     if (!key) {
