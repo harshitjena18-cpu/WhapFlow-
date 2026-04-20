@@ -117,32 +117,16 @@ export async function verifyWebhookHmac(rawBody: string, hmacHeader: string, sec
       _cachedHmacKey = null;
       _hmacKeyPromise = null;
       _cachedHmacSecret = secret;
-      _hmacKeyPromise = null;
-    }
-
-    let hmacKey = _cachedHmacKey;
-    if (!hmacKey) {
-      if (!_hmacKeyPromise) {
-        _hmacKeyPromise = crypto.subtle.importKey(
-          "raw",
-          ENCODER.encode(secret),
-          { name: "HMAC", hash: "SHA-256" },
-          false,
-          ["verify"]
-        ).then(key => {
-          _cachedHmacKey = key;
-          return key;
-        });
-      }
-      hmacKey = await _hmacKeyPromise;
     }
 
     let key: CryptoKey;
     if (_cachedHmacKey) {
       key = _cachedHmacKey;
     } else {
-      if (!_hmacKeyPromise) {
-        _hmacKeyPromise = (async () => {
+      // Capture the current promise locally to avoid race conditions with the 'finally' block
+      let currentPromise = _hmacKeyPromise;
+      if (!currentPromise) {
+        currentPromise = _hmacKeyPromise = (async () => {
           try {
             const keyData = encoder.encode(secret);
             _cachedHmacKey = await crypto.subtle.importKey(
@@ -158,7 +142,7 @@ export async function verifyWebhookHmac(rawBody: string, hmacHeader: string, sec
           }
         })();
       }
-      key = await _hmacKeyPromise;
+      key = await currentPromise;
     }
 
     // Shopify webhooks use base64 for the HMAC header
