@@ -1,4 +1,5 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { Target, Timer, MessageSquare, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 
 const conversionData = [
   { name: 'Mon', conversions: 24 },
@@ -31,20 +32,58 @@ export function AnalyticsView() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white border border-gray-100 rounded-2xl p-8">
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Total Conversions</h3>
-          <p className="text-4xl font-semibold text-gray-900 tracking-tight">227</p>
-          <p className="text-sm text-gray-600 mt-4">↑ 12.5% from last week</p>
+        <div className="bg-white border border-gray-100 rounded-2xl p-8 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 group">
+          <div className="flex items-start justify-between mb-4">
+            <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600 group-hover:scale-110 transition-transform duration-300">
+              <Target className="w-6 h-6" />
+            </div>
+            <div className="flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-full text-xs font-semibold" aria-hidden="true">
+              <ArrowUpRight className="w-3.5 h-3.5" />
+              12.5%
+            </div>
+          </div>
+          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Total Conversions</h3>
+          <p className="text-4xl font-semibold text-gray-900 tracking-tight mb-2">227</p>
+          <p className="text-sm text-gray-600">
+            <span className="sr-only">Increase of </span>
+            12.5% from last week
+          </p>
         </div>
-        <div className="bg-white border border-gray-100 rounded-2xl p-8">
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Avg. Recovery Time</h3>
-          <p className="text-4xl font-semibold text-gray-900 tracking-tight">2.4h</p>
-          <p className="text-sm text-gray-600 mt-4">↓ 18% faster</p>
+
+        <div className="bg-white border border-gray-100 rounded-2xl p-8 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 group">
+          <div className="flex items-start justify-between mb-4">
+            <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform duration-300">
+              <Timer className="w-6 h-6" />
+            </div>
+            <div className="flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-full text-xs font-semibold" aria-hidden="true">
+              <ArrowDownRight className="w-3.5 h-3.5" />
+              18%
+            </div>
+          </div>
+          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Avg. Recovery Time</h3>
+          <p className="text-4xl font-semibold text-gray-900 tracking-tight mb-2">2.4h</p>
+          <p className="text-sm text-gray-600">
+            <span className="sr-only">Improvement of </span>
+            18% faster than average
+          </p>
         </div>
-        <div className="bg-white border border-gray-100 rounded-2xl p-8">
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Message Open Rate</h3>
-          <p className="text-4xl font-semibold text-gray-900 tracking-tight">87.3%</p>
-          <p className="text-sm text-gray-600 mt-4">↑ 5.2% improvement</p>
+
+        <div className="bg-white border border-gray-100 rounded-2xl p-8 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 group">
+          <div className="flex items-start justify-between mb-4">
+            <div className="w-12 h-12 bg-purple-50 rounded-2xl flex items-center justify-center text-purple-600 group-hover:scale-110 transition-transform duration-300">
+              <MessageSquare className="w-6 h-6" />
+            </div>
+            <div className="flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-full text-xs font-semibold" aria-hidden="true">
+              <ArrowUpRight className="w-3.5 h-3.5" />
+              5.2%
+            </div>
+          </div>
+          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Message Open Rate</h3>
+          <p className="text-4xl font-semibold text-gray-900 tracking-tight mb-2">87.3%</p>
+          <p className="text-sm text-gray-600">
+            <span className="sr-only">Increase of </span>
+            5.2% improvement
+          </p>
         </div>
       </div>
 
