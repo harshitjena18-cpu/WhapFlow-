@@ -1,4 +1,5 @@
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { Target, Timer, MessageSquare } from 'lucide-react';
 
 const conversionData = [
   { name: 'Mon', conversions: 24 },
@@ -31,20 +32,49 @@ export function AnalyticsView() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white border border-gray-100 rounded-2xl p-8">
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Total Conversions</h3>
+        <div className="bg-white border border-gray-100 rounded-2xl p-8 shadow-sm hover:shadow-md transition-all duration-300 group">
+          <div className="flex items-start justify-between mb-4">
+            <div className="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center text-[#25D366] group-hover:scale-110 transition-transform duration-300">
+              <Target className="w-6 h-6" aria-hidden="true" />
+            </div>
+            <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">
+              <span className="sr-only">Increase of</span>
+              12.5%
+            </div>
+          </div>
+          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Total Conversions</h3>
           <p className="text-4xl font-semibold text-gray-900 tracking-tight">227</p>
-          <p className="text-sm text-gray-600 mt-4">↑ 12.5% from last week</p>
+          <p className="text-xs text-gray-500 mt-2">Recovered checkouts this week</p>
         </div>
-        <div className="bg-white border border-gray-100 rounded-2xl p-8">
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Avg. Recovery Time</h3>
+
+        <div className="bg-white border border-gray-100 rounded-2xl p-8 shadow-sm hover:shadow-md transition-all duration-300 group">
+          <div className="flex items-start justify-between mb-4">
+            <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform duration-300">
+              <Timer className="w-6 h-6" aria-hidden="true" />
+            </div>
+            <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
+              <span className="sr-only">Decrease of</span>
+              18%
+            </div>
+          </div>
+          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Avg. Recovery Time</h3>
           <p className="text-4xl font-semibold text-gray-900 tracking-tight">2.4h</p>
-          <p className="text-sm text-gray-600 mt-4">↓ 18% faster</p>
+          <p className="text-xs text-gray-500 mt-2">Time from abandonment to purchase</p>
         </div>
-        <div className="bg-white border border-gray-100 rounded-2xl p-8">
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Message Open Rate</h3>
+
+        <div className="bg-white border border-gray-100 rounded-2xl p-8 shadow-sm hover:shadow-md transition-all duration-300 group">
+          <div className="flex items-start justify-between mb-4">
+            <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center text-purple-600 group-hover:scale-110 transition-transform duration-300">
+              <MessageSquare className="w-6 h-6" aria-hidden="true" />
+            </div>
+            <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-purple-50 text-purple-700">
+              <span className="sr-only">Increase of</span>
+              5.2%
+            </div>
+          </div>
+          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Message Open Rate</h3>
           <p className="text-4xl font-semibold text-gray-900 tracking-tight">87.3%</p>
-          <p className="text-sm text-gray-600 mt-4">↑ 5.2% improvement</p>
+          <p className="text-xs text-gray-500 mt-2">WhatsApp message engagement</p>
         </div>
       </div>
 
@@ -69,7 +99,7 @@ export function AnalyticsView() {
                   tickLine={false}
                   axisLine={{ stroke: '#f3f4f6' }}
                 />
-                <Tooltip
+                <ChartTooltip
                   contentStyle={{
                     backgroundColor: '#ffffff',
                     border: '1px solid #f3f4f6',
@@ -106,7 +136,7 @@ export function AnalyticsView() {
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <ChartTooltip />
               </PieChart>
             </ResponsiveContainer>
           </div>
