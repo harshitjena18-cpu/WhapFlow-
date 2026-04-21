@@ -108,6 +108,19 @@ export const scanQueue = async <T = any>(endKey: string, limit?: number): Promis
   return data?.map((d) => d.value as T) ?? [];
 };
 
+// Atomic claim for multiple keys.
+// Uses a single DELETE ... RETURNING operation to identify which keys were successfully claimed.
+export const claimBatch = async (keys: string[]): Promise<string[]> => {
+  if (keys.length === 0) return [];
+  const supabase = client();
+  // PERFORMANCE: Single round-trip atomic claim
+  const { data, error } = await supabase.from("kv_store_c8eef56a").delete().in("key", keys).select('key');
+  if (error) {
+    throw new Error(error.message);
+  }
+  return data?.map((d) => d.key) ?? [];
+};
+
 // Deletes multiple key-value pairs from the database.
 export const mdel = async (keys: string[]): Promise<void> => {
   const supabase = client();
