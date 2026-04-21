@@ -188,29 +188,29 @@ export function DashboardViewModern() {
         
         <div className="flex flex-wrap items-center gap-3">
           <motion.button 
-            className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all flex items-center gap-2 shadow-sm"
+            className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all flex items-center gap-2 shadow-sm focus-visible:ring-2 focus-visible:ring-[#25D366]/50 outline-none"
             whileHover={{ scale: 1.03, y: -1 }}
             whileTap={{ scale: 0.98 }}
           >
-            <Calendar className="w-4 h-4" />
+            <Calendar className="w-4 h-4" aria-hidden="true" />
             {dateRange}
           </motion.button>
           
           <motion.button 
-            className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all flex items-center gap-2 shadow-sm"
+            className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all flex items-center gap-2 shadow-sm focus-visible:ring-2 focus-visible:ring-[#25D366]/50 outline-none"
             whileHover={{ scale: 1.03, y: -1 }}
             whileTap={{ scale: 0.98 }}
           >
-            <Filter className="w-4 h-4" />
+            <Filter className="w-4 h-4" aria-hidden="true" />
             Filter
           </motion.button>
           
           <motion.button 
-            className="px-4 py-2 bg-gradient-to-r from-teal-500 to-emerald-500 text-white rounded-lg text-sm font-semibold hover:shadow-lg hover:shadow-teal-500/30 transition-all flex items-center gap-2"
+            className="px-4 py-2 bg-gradient-to-r from-teal-500 to-emerald-500 text-white rounded-lg text-sm font-semibold hover:shadow-lg hover:shadow-teal-500/30 transition-all flex items-center gap-2 focus-visible:ring-2 focus-visible:ring-[#25D366]/50 outline-none"
             whileHover={{ scale: 1.03, y: -2 }}
             whileTap={{ scale: 0.98 }}
           >
-            <Download className="w-4 h-4" />
+            <Download className="w-4 h-4" aria-hidden="true" />
             Export
           </motion.button>
         </div>
@@ -291,10 +291,10 @@ export function DashboardViewModern() {
             
             <div className="flex items-center gap-2">
               <button
-                className="p-2 hover:bg-gray-50 rounded-lg transition-colors"
+                className="p-2 hover:bg-gray-50 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-[#25D366]/50 outline-none"
                 aria-label="More options"
               >
-                <MoreHorizontal className="w-4 h-4 text-gray-400" />
+                <MoreHorizontal className="w-4 h-4 text-gray-400" aria-hidden="true" />
               </button>
             </div>
           </div>
@@ -582,7 +582,7 @@ const MetricCard = memo(({ title, value, change, icon: Icon, iconColor, iconBg, 
     >
       <div className="flex items-start justify-between mb-4">
         <div className={`w-12 h-12 ${iconBg} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform`}>
-          <Icon className={`w-6 h-6 ${iconColor}`} />
+          <Icon className={`w-6 h-6 ${iconColor}`} aria-hidden="true" />
         </div>
         {change !== 0 && (
           <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
@@ -590,7 +590,8 @@ const MetricCard = memo(({ title, value, change, icon: Icon, iconColor, iconBg, 
               ? 'bg-teal-50 text-teal-700' 
               : 'bg-red-50 text-red-700'
           }`}>
-            {isPositive ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+            <span className="sr-only">{isPositive ? "Increase of" : "Decrease of"}</span>
+            {isPositive ? <ArrowUpRight className="w-3 h-3" aria-hidden="true" /> : <ArrowDownRight className="w-3 h-3" aria-hidden="true" />}
             {Math.abs(change)}%
           </div>
         )}
