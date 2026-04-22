@@ -1,3 +1,4 @@
+import { Target, Timer, MessageSquare, TrendingUp, TrendingDown } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 const conversionData = [
@@ -18,6 +19,41 @@ const channelData = [
 
 const COLORS = ['#25D366', '#6b7280', '#d1d5db'];
 
+interface StatCardProps {
+  title: string;
+  value: string;
+  change: string;
+  trend: 'up' | 'down';
+  icon: React.ReactNode;
+  isGood?: boolean;
+}
+
+function StatCard({ title, value, change, trend, icon, isGood = true }: StatCardProps) {
+  const isUp = trend === 'up';
+  return (
+    <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-300 group">
+      <div className="flex items-center justify-between mb-4">
+        <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center text-gray-600 group-hover:scale-110 transition-transform duration-300">
+          {icon}
+        </div>
+        <div
+          className={`flex items-center gap-1 text-sm font-medium px-2.5 py-0.5 rounded-full ${
+            isGood ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'
+          }`}
+        >
+          {isUp ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
+          <span>
+            <span className="sr-only">{isUp ? 'Increase of' : 'Decrease of'}</span>
+            {change}
+          </span>
+        </div>
+      </div>
+      <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">{title}</h3>
+      <p className="text-3xl font-semibold text-gray-900 tracking-tight mt-1">{value}</p>
+    </div>
+  );
+}
+
 export function AnalyticsView() {
   return (
     <div className="space-y-10">
@@ -31,21 +67,28 @@ export function AnalyticsView() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white border border-gray-100 rounded-2xl p-8">
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Total Conversions</h3>
-          <p className="text-4xl font-semibold text-gray-900 tracking-tight">227</p>
-          <p className="text-sm text-gray-600 mt-4">↑ 12.5% from last week</p>
-        </div>
-        <div className="bg-white border border-gray-100 rounded-2xl p-8">
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Avg. Recovery Time</h3>
-          <p className="text-4xl font-semibold text-gray-900 tracking-tight">2.4h</p>
-          <p className="text-sm text-gray-600 mt-4">↓ 18% faster</p>
-        </div>
-        <div className="bg-white border border-gray-100 rounded-2xl p-8">
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Message Open Rate</h3>
-          <p className="text-4xl font-semibold text-gray-900 tracking-tight">87.3%</p>
-          <p className="text-sm text-gray-600 mt-4">↑ 5.2% improvement</p>
-        </div>
+        <StatCard
+          title="Total Conversions"
+          value="227"
+          change="12.5%"
+          trend="up"
+          icon={<Target className="w-6 h-6" />}
+        />
+        <StatCard
+          title="Avg. Recovery Time"
+          value="2.4h"
+          change="18%"
+          trend="down"
+          isGood={true} // Lower time is good
+          icon={<Timer className="w-6 h-6" />}
+        />
+        <StatCard
+          title="Message Open Rate"
+          value="87.3%"
+          change="5.2%"
+          trend="up"
+          icon={<MessageSquare className="w-6 h-6" />}
+        />
       </div>
 
       {/* Charts Grid */}
