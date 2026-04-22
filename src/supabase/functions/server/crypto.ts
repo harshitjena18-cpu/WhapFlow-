@@ -5,6 +5,7 @@
  */
 import { getEnv } from "../../../lib/env.ts";
 import { Buffer } from "node:buffer";
+import { timingSafeEqual } from "node:crypto";
 
 const ALGORITHM = "AES-GCM";
 const PREFIX_V3 = "enc:v3:";
@@ -102,6 +103,20 @@ export async function decrypt(enc: string | null | undefined): Promise<string | 
     console.error("[Crypto] Decryption failed:", e);
   }
   return enc;
+}
+
+/**
+ * Perform a timing-safe comparison of two strings.
+ * Hashes both inputs with SHA-256 before comparing to mitigate timing attacks
+ * and handle strings of different lengths securely.
+ */
+export async function secureCompare(a: string, b: string): Promise<boolean> {
+  const [hashA, hashB] = await Promise.all([
+    crypto.subtle.digest(DIGEST, ENCODER.encode(a)),
+    crypto.subtle.digest(DIGEST, ENCODER.encode(b))
+  ]);
+
+  return timingSafeEqual(Buffer.from(hashA), Buffer.from(hashB));
 }
 
 const b64 = (u: Uint8Array) => Buffer.from(u).toString("base64");
