@@ -122,31 +122,31 @@ export async function verifyWhatsAppSignature(rawBody: string, signatureHeader: 
       _cachedHmacKey = null;
       _hmacKeyPromise = null;
       _cachedHmacSecret = secret;
-      _hmacKeyPromise = null;
     }
 
     let key: CryptoKey;
     if (_cachedHmacKey) {
       key = _cachedHmacKey;
     } else {
-      if (!_hmacKeyPromise) {
-        _hmacKeyPromise = (async () => {
-          try {
-            const keyData = encoder.encode(secret);
-            _cachedHmacKey = await crypto.subtle.importKey(
-              "raw",
-              keyData,
-              { name: "HMAC", hash: "SHA-256" },
-              false,
-              ["verify"]
-            );
-            return _cachedHmacKey;
-          } finally {
-            _hmacKeyPromise = null;
-          }
-        })();
-      }
-      key = await _hmacKeyPromise;
+      // Capture the current promise to prevent race conditions during 'finally' cleanup
+      const currentPromise = _hmacKeyPromise || (async () => {
+        try {
+          const keyData = encoder.encode(secret);
+          _cachedHmacKey = await crypto.subtle.importKey(
+            "raw",
+            keyData,
+            { name: "HMAC", hash: "SHA-256" },
+            false,
+            ["verify"]
+          );
+          return _cachedHmacKey;
+        } finally {
+          _hmacKeyPromise = null;
+        }
+      })();
+
+      if (!_hmacKeyPromise) _hmacKeyPromise = currentPromise;
+      key = await currentPromise;
     }
 
     if (!key) {

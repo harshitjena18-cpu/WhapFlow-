@@ -27,3 +27,8 @@
 **Vulnerability:** Dashboard API handlers used a fallback to an untrusted `shop` query parameter when the `verified_shop` context was missing, creating a potential IDOR vector if middleware was bypassed.
 **Learning:** Even with security middleware in place, handlers should not provide fallbacks to untrusted inputs. A missing verified identity should always result in an explicit authorization failure (Fail-Closed).
 **Prevention:** Remove all `|| c.req.query("shop")` fallbacks in protected routes and strictly rely on the context value provided by the verification middleware.
+
+## 2025-05-24 - [Timing Attack Risk in Token Verification and HMAC Race Condition]
+**Vulnerability:** Critical authorization checks for admin signup and WhatsApp webhooks used direct string equality, making them vulnerable to timing attacks. Additionally, HMAC key caching had a race condition where concurrent requests could receive null if the global promise was cleared during a 'finally' block.
+**Learning:** For secure string comparison, hashing inputs before using timing-safe utilities allows for secure comparison of strings with different lengths without leaking info. In Singleflight patterns, local variable capture is essential to prevent race conditions during global state cleanup.
+**Prevention:** Use a centralized `secureCompare` utility for all sensitive token checks. Always capture the current promise in a local variable before awaiting in Singleflight implementations to ensure consistency across concurrent requests.
