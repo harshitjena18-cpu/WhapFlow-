@@ -188,27 +188,30 @@ export function DashboardViewModern() {
         
         <div className="flex flex-wrap items-center gap-3">
           <motion.button 
-            className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all flex items-center gap-2 shadow-sm"
+            className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 focus-visible:ring-2 focus-visible:ring-teal-500/50 transition-all flex items-center gap-2 shadow-sm outline-none"
             whileHover={{ scale: 1.03, y: -1 }}
             whileTap={{ scale: 0.98 }}
+            aria-label={`Change date range: current ${dateRange}`}
           >
             <Calendar className="w-4 h-4" />
             {dateRange}
           </motion.button>
           
           <motion.button 
-            className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all flex items-center gap-2 shadow-sm"
+            className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 focus-visible:ring-2 focus-visible:ring-teal-500/50 transition-all flex items-center gap-2 shadow-sm outline-none"
             whileHover={{ scale: 1.03, y: -1 }}
             whileTap={{ scale: 0.98 }}
+            aria-label="Filter dashboard metrics"
           >
             <Filter className="w-4 h-4" />
             Filter
           </motion.button>
           
           <motion.button 
-            className="px-4 py-2 bg-gradient-to-r from-teal-500 to-emerald-500 text-white rounded-lg text-sm font-semibold hover:shadow-lg hover:shadow-teal-500/30 transition-all flex items-center gap-2"
+            className="px-4 py-2 bg-gradient-to-r from-teal-500 to-emerald-500 text-white rounded-lg text-sm font-semibold hover:shadow-lg hover:shadow-teal-500/30 focus-visible:ring-2 focus-visible:ring-teal-500/50 transition-all flex items-center gap-2 outline-none"
             whileHover={{ scale: 1.03, y: -2 }}
             whileTap={{ scale: 0.98 }}
+            aria-label="Export report"
           >
             <Download className="w-4 h-4" />
             Export
@@ -498,7 +501,7 @@ export function DashboardViewModern() {
 
         {/* Integration List */}
         <motion.div 
-          className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 hover:shadow-md transition-shadow"
+          className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 hover:shadow-md transition-shadow group/list"
           variants={chartVariants}
           initial="hidden"
           animate={bottomInView ? "visible" : "hidden"}
@@ -509,7 +512,10 @@ export function DashboardViewModern() {
               <h3 className="text-base font-semibold text-gray-900">Active Integrations</h3>
               <p className="text-sm text-gray-500 mt-1">Connected services</p>
             </div>
-            <button className="text-xs text-teal-600 hover:text-teal-700 font-medium">
+            <button
+              className="text-xs text-teal-600 hover:text-teal-700 font-medium focus-visible:underline outline-none"
+              aria-label="See all active integrations"
+            >
               See All
             </button>
           </div>
@@ -524,7 +530,7 @@ export function DashboardViewModern() {
                 transition={{ delay: index * 0.1 + 0.2 }}
               >
                 <div className="flex items-center gap-3 flex-1">
-                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-teal-50 to-emerald-50 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-teal-50 to-emerald-50 flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-transform">
                     <CheckCircle2 className="w-5 h-5 text-teal-600" />
                   </div>
                   <div>
@@ -579,17 +585,22 @@ const MetricCard = memo(({ title, value, change, icon: Icon, iconColor, iconBg, 
       variants={cardVariants}
       initial="hidden"
       animate={inView ? "visible" : "hidden"}
+      role="region"
+      aria-label={`${title} metric`}
     >
       <div className="flex items-start justify-between mb-4">
-        <div className={`w-12 h-12 ${iconBg} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform`}>
+        <div className={`w-12 h-12 ${iconBg} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform`} aria-hidden="true">
           <Icon className={`w-6 h-6 ${iconColor}`} />
         </div>
         {change !== 0 && (
-          <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
-            isPositive 
-              ? 'bg-teal-50 text-teal-700' 
-              : 'bg-red-50 text-red-700'
-          }`}>
+          <div
+            className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+              isPositive
+                ? 'bg-teal-50 text-teal-700'
+                : 'bg-red-50 text-red-700'
+            }`}
+            aria-label={`${isPositive ? 'Increase' : 'Decrease'} of ${Math.abs(change)}% from last period`}
+          >
             {isPositive ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
             {Math.abs(change)}%
           </div>
