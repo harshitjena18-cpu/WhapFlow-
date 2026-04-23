@@ -8,6 +8,7 @@ import { encrypt } from "./crypto.ts";
 import { processWhatsAppStatuses, AutomationTemplate } from "./automation.ts";
 import { createJob } from "./queue.ts";
 import { verifyWhatsAppSignature } from "./whatsapp.ts";
+import { secureCompare } from "./crypto.ts";
 
 const webhooksApp = new Hono();
 
@@ -304,7 +305,7 @@ webhooksApp.get("/whatsapp", (c) => {
   const verifyToken = getEnv("WHATSAPP_VERIFY_TOKEN");
 
   // SECURITY: Ensure verifyToken is configured and matches the request token
-  if (mode === "subscribe" && verifyToken && token === verifyToken) {
+  if (mode === "subscribe" && verifyToken && token && secureCompare(token, verifyToken)) {
     console.log("[WhatsApp Webhook] Webhook verified.");
     return c.text(challenge || "");
   }
