@@ -1,4 +1,6 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { Target, Activity, MessageCircle, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { memo } from 'react';
 
 const conversionData = [
   { name: 'Mon', conversions: 24 },
@@ -18,6 +20,43 @@ const channelData = [
 
 const COLORS = ['#25D366', '#6b7280', '#d1d5db'];
 
+interface StatCardProps {
+  title: string;
+  value: string;
+  trend: string;
+  trendValue: number;
+  icon: React.ElementType;
+  isGood?: boolean;
+}
+
+const StatCard = memo(({ title, value, trend, trendValue, icon: Icon, isGood = true }: StatCardProps) => {
+  const isPositive = trendValue > 0;
+  const isTrendGood = isGood ? isPositive : !isPositive;
+
+  return (
+    <div className="bg-white border border-gray-100 rounded-2xl p-8 hover:shadow-md hover:-translate-y-1 transition-all group">
+      <div className="flex items-start justify-between mb-4">
+        <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+          <Icon className="w-6 h-6 text-gray-400 group-hover:text-[#25D366] transition-colors" />
+        </div>
+        <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${
+          isTrendGood ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'
+        }`}>
+          <span className="sr-only">{isTrendGood ? 'Improvement of' : 'Decline of'}</span>
+          {isPositive ? <ArrowUpRight className="w-3.5 h-3.5" /> : <ArrowDownRight className="w-3.5 h-3.5" />}
+          {trend}
+        </div>
+      </div>
+      <div>
+        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">{title}</h3>
+        <p className="text-4xl font-semibold text-gray-900 tracking-tight">{value}</p>
+      </div>
+    </div>
+  );
+});
+
+StatCard.displayName = 'StatCard';
+
 export function AnalyticsView() {
   return (
     <div className="space-y-10">
@@ -31,21 +70,28 @@ export function AnalyticsView() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white border border-gray-100 rounded-2xl p-8">
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Total Conversions</h3>
-          <p className="text-4xl font-semibold text-gray-900 tracking-tight">227</p>
-          <p className="text-sm text-gray-600 mt-4">↑ 12.5% from last week</p>
-        </div>
-        <div className="bg-white border border-gray-100 rounded-2xl p-8">
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Avg. Recovery Time</h3>
-          <p className="text-4xl font-semibold text-gray-900 tracking-tight">2.4h</p>
-          <p className="text-sm text-gray-600 mt-4">↓ 18% faster</p>
-        </div>
-        <div className="bg-white border border-gray-100 rounded-2xl p-8">
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Message Open Rate</h3>
-          <p className="text-4xl font-semibold text-gray-900 tracking-tight">87.3%</p>
-          <p className="text-sm text-gray-600 mt-4">↑ 5.2% improvement</p>
-        </div>
+        <StatCard
+          title="Total Conversions"
+          value="227"
+          trend="12.5% from last week"
+          trendValue={12.5}
+          icon={Target}
+        />
+        <StatCard
+          title="Avg. Recovery Time"
+          value="2.4h"
+          trend="18% faster"
+          trendValue={-18}
+          isGood={false}
+          icon={Activity}
+        />
+        <StatCard
+          title="Message Open Rate"
+          value="87.3%"
+          trend="5.2% improvement"
+          trendValue={5.2}
+          icon={MessageCircle}
+        />
       </div>
 
       {/* Charts Grid */}
