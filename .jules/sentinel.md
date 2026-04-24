@@ -27,3 +27,8 @@
 **Vulnerability:** Dashboard API handlers used a fallback to an untrusted `shop` query parameter when the `verified_shop` context was missing, creating a potential IDOR vector if middleware was bypassed.
 **Learning:** Even with security middleware in place, handlers should not provide fallbacks to untrusted inputs. A missing verified identity should always result in an explicit authorization failure (Fail-Closed).
 **Prevention:** Remove all `|| c.req.query("shop")` fallbacks in protected routes and strictly rely on the context value provided by the verification middleware.
+
+## 2025-05-24 - [Timing Attack Vulnerability in API Authorization]
+**Vulnerability:** Sensitive API keys and Bearer tokens were compared using standard string equality (`===`), which is susceptible to timing side-channel attacks.
+**Learning:** Standard string comparison in many runtimes (including V8 used by Deno) exits early as soon as a mismatch is found, allowing an attacker to reconstruct a secret by measuring response times.
+**Prevention:** Always use constant-time comparison (e.g., `node:crypto`'s `timingSafeEqual`) for sensitive credentials. Hash inputs with a fixed-length algorithm (like SHA-256) before comparison to safely handle strings of different lengths without leaking length information.
