@@ -1,4 +1,5 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { TrendingUp, TrendingDown, Clock, MessageCircle, CheckCircle2 } from 'lucide-react';
 
 const conversionData = [
   { name: 'Mon', conversions: 24 },
@@ -18,6 +19,40 @@ const channelData = [
 
 const COLORS = ['#25D366', '#6b7280', '#d1d5db'];
 
+interface StatCardProps {
+  title: string;
+  value: string;
+  trendText: string;
+  trendValue: number;
+  icon: React.ElementType;
+  isGood?: boolean;
+}
+
+function StatCard({ title, value, trendText, trendValue, icon: Icon, isGood = true }: StatCardProps) {
+  const isPositive = trendValue > 0;
+  const isSuccess = isPositive === isGood;
+
+  return (
+    <div className="bg-white border border-gray-100 rounded-2xl p-8 hover:shadow-md transition-all group duration-300">
+      <div className="flex justify-between items-start mb-6">
+        <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+          <Icon className="w-6 h-6 text-gray-600" />
+        </div>
+        <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${
+          isSuccess ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'
+        }`}>
+          {isPositive ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
+          <span className="sr-only">{isPositive ? 'Increase of' : 'Decrease of'}</span>
+          {Math.abs(trendValue)}%
+        </div>
+      </div>
+      <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">{title}</h3>
+      <p className="text-4xl font-semibold text-gray-900 tracking-tight">{value}</p>
+      <p className="text-sm text-gray-500 mt-4">{trendText}</p>
+    </div>
+  );
+}
+
 export function AnalyticsView() {
   return (
     <div className="space-y-10">
@@ -31,21 +66,28 @@ export function AnalyticsView() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white border border-gray-100 rounded-2xl p-8">
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Total Conversions</h3>
-          <p className="text-4xl font-semibold text-gray-900 tracking-tight">227</p>
-          <p className="text-sm text-gray-600 mt-4">↑ 12.5% from last week</p>
-        </div>
-        <div className="bg-white border border-gray-100 rounded-2xl p-8">
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Avg. Recovery Time</h3>
-          <p className="text-4xl font-semibold text-gray-900 tracking-tight">2.4h</p>
-          <p className="text-sm text-gray-600 mt-4">↓ 18% faster</p>
-        </div>
-        <div className="bg-white border border-gray-100 rounded-2xl p-8">
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Message Open Rate</h3>
-          <p className="text-4xl font-semibold text-gray-900 tracking-tight">87.3%</p>
-          <p className="text-sm text-gray-600 mt-4">↑ 5.2% improvement</p>
-        </div>
+        <StatCard
+          title="Total Conversions"
+          value="227"
+          trendText="12.5% from last week"
+          trendValue={12.5}
+          icon={CheckCircle2}
+        />
+        <StatCard
+          title="Avg. Recovery Time"
+          value="2.4h"
+          trendText="18% faster"
+          trendValue={-18}
+          icon={Clock}
+          isGood={false} // Decrease is good for recovery time
+        />
+        <StatCard
+          title="Message Open Rate"
+          value="87.3%"
+          trendText="5.2% improvement"
+          trendValue={5.2}
+          icon={MessageCircle}
+        />
       </div>
 
       {/* Charts Grid */}
