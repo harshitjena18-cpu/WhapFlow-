@@ -37,6 +37,23 @@ export const set = async <T = any>(key: string, value: T): Promise<void> => {
   }
 };
 
+// Claims multiple keys atomically.
+// PERFORMANCE: Uses a single .delete().in(keys).select('key') operation to claim multiple keys in one database round-trip.
+// Returns an array of keys that were successfully deleted (claimed).
+export const claimBatch = async (keys: string[]): Promise<string[]> => {
+  if (keys.length === 0) return [];
+  const supabase = client();
+  const { data, error } = await supabase
+    .from("kv_store_c8eef56a")
+    .delete()
+    .in("key", keys)
+    .select("key");
+  if (error) {
+    throw new Error(error.message);
+  }
+  return data?.map((d) => d.key) ?? [];
+};
+
 // Get retrieves a key-value pair from the database.
 export const get = async <T = any>(key: string): Promise<T | null> => {
   const supabase = client();

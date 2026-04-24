@@ -86,3 +86,7 @@
 ## 2026-04-01 - [Promise-based Crypto Caching]
 **Learning:** Concurrent "cold start" cryptographic requests trigger redundant HKDF derivations, creating a "thundering herd" bottleneck (~43ms for 50 calls). Implementing a promise-based cache for the derivation process ensures only one operation is executed and shared, reducing total latency by ~73%.
 **Action:** Use promise-based caching for expensive, idempotent async operations that are likely to be called concurrently (like key derivation or auth token exchange). Hoist encoders/decoders to module level to further reduce allocation overhead.
+
+## 2026-04-10 - [Atomic Batch Claiming in Distributed Queues]
+**Learning:** Sequential claiming of jobs in a distributed queue using individual delete/update operations creates a massive latency bottleneck ($ round-trips). Implementing an atomic batch claim using PostgreSQL's `DELETE ... RETURNING` (via Supabase's `.delete().in(keys).select('key')`) reduces database round-trips from $ to 1 per batch, yielding a measured 98.9% reduction in claim latency (from ~1027ms to ~11ms for 100 jobs).
+**Action:** Always prefer atomic batch operations (mget, mset, or delete-select for claims) over sequential or parallelized individual calls when processing batches of records in Edge Functions.
