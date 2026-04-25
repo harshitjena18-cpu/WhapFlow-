@@ -117,43 +117,41 @@ export async function verifyWhatsAppSignature(rawBody: string, signatureHeader: 
   try {
     const msgData = encoder.encode(rawBody);
 
-    // PERFORMANCE: Cache the imported CryptoKey and use Singleflight pattern
+    // PERFORMANCE: Cache the imported CryptoKey and use Singleflight pattern to avoid thundering herd
     if (_cachedHmacSecret !== secret) {
       _cachedHmacKey = null;
       _hmacKeyPromise = null;
       _cachedHmacSecret = secret;
-      _hmacKeyPromise = null;
     }
 
-    let key: CryptoKey;
+    const signatureBytes = Buffer.from(signature, "hex");
+
     if (_cachedHmacKey) {
-      key = _cachedHmacKey;
-    } else {
-      if (!_hmacKeyPromise) {
-        _hmacKeyPromise = (async () => {
-          try {
-            const keyData = encoder.encode(secret);
-            _cachedHmacKey = await crypto.subtle.importKey(
-              "raw",
-              keyData,
-              { name: "HMAC", hash: "SHA-256" },
-              false,
-              ["verify"]
-            );
-            return _cachedHmacKey;
-          } finally {
-            _hmacKeyPromise = null;
-          }
-        })();
-      }
-      key = await _hmacKeyPromise;
+      return await crypto.subtle.verify("HMAC", _cachedHmacKey, signatureBytes, msgData);
     }
+
+    if (!_hmacKeyPromise) {
+      _hmacKeyPromise = (async () => {
+        try {
+          _cachedHmacKey = await crypto.subtle.importKey(
+            "raw",
+            encoder.encode(secret),
+            { name: "HMAC", hash: "SHA-256" },
+            false,
+            ["verify"]
+          );
+          return _cachedHmacKey;
+        } finally {
+          _hmacKeyPromise = null;
+        }
+      })();
+    }
+
+    const key = await _hmacKeyPromise;
 
     if (!key) {
       throw new Error("HMAC Key initialization failed");
     }
-
-    const signatureBytes = Buffer.from(signature, "hex");
 
     return await crypto.subtle.verify(
       "HMAC",

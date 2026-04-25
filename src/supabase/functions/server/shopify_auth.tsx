@@ -197,47 +197,49 @@ async function verifyHmac(query: Record<string, string>, secret: string) {
 
   const msgData = encoder.encode(message);
 
-  // PERFORMANCE: Cache the imported CryptoKey and use Singleflight pattern to avoid overhead during OAuth callback
+  // PERFORMANCE: Cache the imported CryptoKey and use Singleflight pattern to avoid thundering herd during OAuth callback
   if (_cachedHmacSecret !== secret) {
     _cachedHmacKey = null;
     _hmacKeyPromise = null;
     _cachedHmacSecret = secret;
-    _hmacKeyPromise = null;
   }
 
-  let key: CryptoKey;
   if (_cachedHmacKey) {
-    key = _cachedHmacKey;
-  } else {
-    if (!_hmacKeyPromise) {
-      _hmacKeyPromise = (async () => {
-        try {
-          const keyData = encoder.encode(secret);
-          _cachedHmacKey = await crypto.subtle.importKey(
-            "raw",
-            keyData,
-            { name: "HMAC", hash: "SHA-256" },
-            false,
-            ["verify"]
-          );
-          return _cachedHmacKey;
-        } finally {
-          _hmacKeyPromise = null;
-        }
-      })();
+    // Convert hex HMAC to Uint8Array for constant-time verification
+    const hmacBytes = new Uint8Array(hmac.length / 2);
+    for (let i = 0; i < hmac.length; i += 2) {
+      hmacBytes[i / 2] = parseInt(hmac.substring(i, i + 2), 16);
     }
-    key = await _hmacKeyPromise;
+    return await crypto.subtle.verify("HMAC", _cachedHmacKey, hmacBytes, msgData);
+  }
+
+  if (!_hmacKeyPromise) {
+    _hmacKeyPromise = (async () => {
+      try {
+        _cachedHmacKey = await crypto.subtle.importKey(
+          "raw",
+          encoder.encode(secret),
+          { name: "HMAC", hash: "SHA-256" },
+          false,
+          ["verify"]
+        );
+        return _cachedHmacKey;
+      } finally {
+        _hmacKeyPromise = null;
+      }
+    })();
+  }
+
+  const key = await _hmacKeyPromise;
+
+  if (!key) {
+    throw new Error("HMAC Key initialization failed");
   }
 
   // Convert hex HMAC to Uint8Array for constant-time verification
   const hmacBytes = new Uint8Array(hmac.length / 2);
   for (let i = 0; i < hmac.length; i += 2) {
     hmacBytes[i / 2] = parseInt(hmac.substring(i, i + 2), 16);
-  }
-
-  // Type narrowing for TypeScript safety
-  if (!key) {
-    throw new Error("HMAC Key initialization failed");
   }
 
   return await crypto.subtle.verify("HMAC", key, hmacBytes, msgData);

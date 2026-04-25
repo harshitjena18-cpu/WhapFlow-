@@ -86,3 +86,7 @@
 ## 2026-04-01 - [Promise-based Crypto Caching]
 **Learning:** Concurrent "cold start" cryptographic requests trigger redundant HKDF derivations, creating a "thundering herd" bottleneck (~43ms for 50 calls). Implementing a promise-based cache for the derivation process ensures only one operation is executed and shared, reducing total latency by ~73%.
 **Action:** Use promise-based caching for expensive, idempotent async operations that are likely to be called concurrently (like key derivation or auth token exchange). Hoist encoders/decoders to module level to further reduce allocation overhead.
+
+## 2026-04-10 - [Standardized HMAC Singleflight & Buffer signature conversion]
+**Learning:** HMAC verification logic was inconsistently implemented and contained a ReferenceError in shopify_client.ts. Standardizing the Singleflight pattern (using _hmacKeyPromise) across all verification sites ensures that concurrent bursts only trigger a single importKey operation. Additionally, using Buffer.from for signature conversion (hex/base64) provides a significant speedup over manual loops or TextEncoder for binary data.
+**Action:** Always use the standardized Singleflight pattern for cryptographic key derivations and use Buffer.from for signature conversions to ensure peak performance in security hot-paths.
