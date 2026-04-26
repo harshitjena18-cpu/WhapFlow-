@@ -86,3 +86,7 @@
 ## 2026-04-01 - [Promise-based Crypto Caching]
 **Learning:** Concurrent "cold start" cryptographic requests trigger redundant HKDF derivations, creating a "thundering herd" bottleneck (~43ms for 50 calls). Implementing a promise-based cache for the derivation process ensures only one operation is executed and shared, reducing total latency by ~73%.
 **Action:** Use promise-based caching for expensive, idempotent async operations that are likely to be called concurrently (like key derivation or auth token exchange). Hoist encoders/decoders to module level to further reduce allocation overhead.
+
+## 2026-04-05 - [Atomic Batch Claiming for Job Queues]
+**Learning:** Processing job queues by claiming tasks one-by-one results in $O(N)$ database round-trips, creating a major latency bottleneck. Using Supabase/PostgREST's `.delete().in().select()` capability allows for an atomic "claim" of an entire batch in a single $O(1)$ round-trip.
+**Action:** Replace individual `kv.del` loops with a centralized `kv.claimBatch` utility in the queue worker to reduce latency by >90% and minimize database load.
