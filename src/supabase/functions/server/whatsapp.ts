@@ -6,9 +6,6 @@
 import { getEnv } from "../../../lib/env.ts";
 import { Buffer } from "node:buffer";
 
-// PERFORMANCE: Hoist encoder to avoid redundant object creation per call
-const ENCODER = new TextEncoder();
-
 interface SendMessageParams {
   to: string;
   templateName: string;
@@ -120,15 +117,12 @@ export async function verifyWhatsAppSignature(rawBody: string, signatureHeader: 
     // PERFORMANCE: Cache the imported CryptoKey and use Singleflight pattern
     if (_cachedHmacSecret !== secret) {
       _cachedHmacKey = null;
-      _hmacKeyPromise = null;
       _cachedHmacSecret = secret;
       _hmacKeyPromise = null;
     }
 
-    let key: CryptoKey;
-    if (_cachedHmacKey) {
-      key = _cachedHmacKey;
-    } else {
+    let key: CryptoKey | null = _cachedHmacKey;
+    if (!key) {
       if (!_hmacKeyPromise) {
         _hmacKeyPromise = (async () => {
           try {
@@ -146,7 +140,10 @@ export async function verifyWhatsAppSignature(rawBody: string, signatureHeader: 
           }
         })();
       }
-      key = await _hmacKeyPromise;
+      // PERFORMANCE: Capture the promise in a local variable before awaiting
+      // to prevent race conditions during concurrent request cleanup.
+      const currentPromise = _hmacKeyPromise;
+      key = await currentPromise;
     }
 
     if (!key) {

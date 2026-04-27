@@ -200,15 +200,12 @@ async function verifyHmac(query: Record<string, string>, secret: string) {
   // PERFORMANCE: Cache the imported CryptoKey and use Singleflight pattern to avoid overhead during OAuth callback
   if (_cachedHmacSecret !== secret) {
     _cachedHmacKey = null;
-    _hmacKeyPromise = null;
     _cachedHmacSecret = secret;
     _hmacKeyPromise = null;
   }
 
-  let key: CryptoKey;
-  if (_cachedHmacKey) {
-    key = _cachedHmacKey;
-  } else {
+  let key: CryptoKey | null = _cachedHmacKey;
+  if (!key) {
     if (!_hmacKeyPromise) {
       _hmacKeyPromise = (async () => {
         try {
@@ -226,14 +223,15 @@ async function verifyHmac(query: Record<string, string>, secret: string) {
         }
       })();
     }
-    key = await _hmacKeyPromise;
+    // PERFORMANCE: Capture the promise in a local variable before awaiting
+    // to prevent race conditions during concurrent request cleanup.
+    const currentPromise = _hmacKeyPromise;
+    key = await currentPromise;
   }
 
   // Convert hex HMAC to Uint8Array for constant-time verification
-  const hmacBytes = new Uint8Array(hmac.length / 2);
-  for (let i = 0; i < hmac.length; i += 2) {
-    hmacBytes[i / 2] = parseInt(hmac.substring(i, i + 2), 16);
-  }
+  // PERFORMANCE: Use Buffer.from for faster hex-to-bytes conversion
+  const hmacBytes = Buffer.from(hmac, "hex");
 
   // Type narrowing for TypeScript safety
   if (!key) {
