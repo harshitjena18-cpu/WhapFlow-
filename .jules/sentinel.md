@@ -27,3 +27,8 @@
 **Vulnerability:** Dashboard API handlers used a fallback to an untrusted `shop` query parameter when the `verified_shop` context was missing, creating a potential IDOR vector if middleware was bypassed.
 **Learning:** Even with security middleware in place, handlers should not provide fallbacks to untrusted inputs. A missing verified identity should always result in an explicit authorization failure (Fail-Closed).
 **Prevention:** Remove all `|| c.req.query("shop")` fallbacks in protected routes and strictly rely on the context value provided by the verification middleware.
+
+## 2025-05-25 - [Timing Attack Risk in Authorization Token Comparisons]
+**Vulnerability:** Authorization headers (Bearer tokens) and webhook verification tokens were compared using standard string equality (`===`), which is susceptible to timing attacks that can leak the token character by character.
+**Learning:** Standard string comparison operators in many runtimes return as soon as a mismatch is found, leading to variable execution times. This is especially dangerous for high-entropy secrets like API keys or webhook tokens.
+**Prevention:** Use a constant-time comparison utility for all secret comparisons. For strings of varying lengths, hash them with a fixed-size digest (e.g., SHA-256) before using a timing-safe equality function.

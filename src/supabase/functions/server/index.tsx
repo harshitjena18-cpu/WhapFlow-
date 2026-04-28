@@ -6,6 +6,7 @@ import { processPendingJobs } from "./queue.ts";
 import { executeAutomation, processWhatsAppStatuses } from "./automation.ts";
 import { getEnv } from "../../../lib/env.ts";
 import { getErrorMessage } from "../../../lib/error.ts";
+import { secureCompare } from "./crypto.ts";
 import { sendWhatsAppTemplate, verifyWhatsAppSignature } from "./whatsapp.ts";
 
 import authApp from "./auth.tsx";
@@ -108,8 +109,8 @@ app.post(`${SERVER_BASE_PATH}/api/whatsapp/send`, async (c) => {
     const whatsappApiKey = getEnv("WHATSAPP_API_KEY");
     const serviceRoleKey = getEnv("SUPABASE_SERVICE_ROLE_KEY");
 
-    const isWhatsappAuth = whatsappApiKey && authHeader === `Bearer ${whatsappApiKey}`;
-    const isServiceAuth = serviceRoleKey && authHeader === `Bearer ${serviceRoleKey}`;
+    const isWhatsappAuth = whatsappApiKey && authHeader && secureCompare(authHeader, `Bearer ${whatsappApiKey}`);
+    const isServiceAuth = serviceRoleKey && authHeader && secureCompare(authHeader, `Bearer ${serviceRoleKey}`);
 
     if (!isWhatsappAuth && !isServiceAuth) {
       return c.json({ error: "Unauthorized: Invalid or missing token" }, 401);
