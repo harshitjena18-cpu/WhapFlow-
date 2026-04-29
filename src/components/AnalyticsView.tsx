@@ -1,4 +1,6 @@
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { TrendingUp, Clock, MessageCircle, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { motion } from 'motion/react';
 
 const conversionData = [
   { name: 'Mon', conversions: 24 },
@@ -18,6 +20,58 @@ const channelData = [
 
 const COLORS = ['#25D366', '#6b7280', '#d1d5db'];
 
+interface StatCardProps {
+  title: string;
+  value: string;
+  trend: string;
+  trendLabel?: string;
+  isGood?: boolean;
+  icon: React.ElementType;
+  index: number;
+}
+
+function StatCard({ title, value, trend, trendLabel, isGood = true, icon: Icon, index }: StatCardProps) {
+  // For recovery time, ↓ is good.
+  const displayTrend = trend.replace('↑', '').replace('↓', '').trim();
+  const IconTrend = trend.includes('↑') ? ArrowUpRight : ArrowDownRight;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: index * 0.1 }}
+      whileHover={{ y: -4 }}
+      className="bg-white border border-gray-100 rounded-2xl p-8 shadow-sm hover:shadow-md transition-all group"
+      role="region"
+      aria-label={`${title} metric`}
+    >
+      <div className="flex justify-between items-start mb-6">
+        <div className="p-3 bg-gray-50 rounded-xl group-hover:scale-110 group-hover:bg-[#25D366]/10 transition-all duration-300">
+          <Icon className="w-6 h-6 text-gray-400 group-hover:text-[#25D366]" aria-hidden="true" />
+        </div>
+        <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${
+          isGood ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
+        }`}>
+          <IconTrend className="w-3 h-3" aria-hidden="true" />
+          <span>{displayTrend}</span>
+          <span className="sr-only">{isGood ? 'improvement' : 'decrease'}</span>
+        </div>
+      </div>
+      <div>
+        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">{title}</h3>
+        <div className="flex items-baseline gap-2">
+          <p className="text-4xl font-bold text-gray-900 tracking-tight">{value}</p>
+          {trendLabel && (
+            <span className="text-xs text-gray-400 font-medium">
+              {trendLabel}
+            </span>
+          )}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 export function AnalyticsView() {
   return (
     <div className="space-y-10">
@@ -31,21 +85,31 @@ export function AnalyticsView() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white border border-gray-100 rounded-2xl p-8">
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Total Conversions</h3>
-          <p className="text-4xl font-semibold text-gray-900 tracking-tight">227</p>
-          <p className="text-sm text-gray-600 mt-4">↑ 12.5% from last week</p>
-        </div>
-        <div className="bg-white border border-gray-100 rounded-2xl p-8">
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Avg. Recovery Time</h3>
-          <p className="text-4xl font-semibold text-gray-900 tracking-tight">2.4h</p>
-          <p className="text-sm text-gray-600 mt-4">↓ 18% faster</p>
-        </div>
-        <div className="bg-white border border-gray-100 rounded-2xl p-8">
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Message Open Rate</h3>
-          <p className="text-4xl font-semibold text-gray-900 tracking-tight">87.3%</p>
-          <p className="text-sm text-gray-600 mt-4">↑ 5.2% improvement</p>
-        </div>
+        <StatCard
+          title="Total Conversions"
+          value="227"
+          trend="↑ 12.5%"
+          trendLabel="from last week"
+          icon={TrendingUp}
+          index={0}
+        />
+        <StatCard
+          title="Avg. Recovery Time"
+          value="2.4h"
+          trend="↓ 18%"
+          trendLabel="faster"
+          icon={Clock}
+          index={1}
+          isGood={true} // ↓ is good here
+        />
+        <StatCard
+          title="Message Open Rate"
+          value="87.3%"
+          trend="↑ 5.2%"
+          trendLabel="improvement"
+          icon={MessageCircle}
+          index={2}
+        />
       </div>
 
       {/* Charts Grid */}
@@ -69,7 +133,7 @@ export function AnalyticsView() {
                   tickLine={false}
                   axisLine={{ stroke: '#f3f4f6' }}
                 />
-                <Tooltip
+                <ChartTooltip
                   contentStyle={{
                     backgroundColor: '#ffffff',
                     border: '1px solid #f3f4f6',
@@ -106,7 +170,7 @@ export function AnalyticsView() {
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <ChartTooltip />
               </PieChart>
             </ResponsiveContainer>
           </div>
