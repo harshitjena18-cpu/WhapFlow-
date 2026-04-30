@@ -6,8 +6,6 @@
 import { getEnv } from "../../../lib/env.ts";
 import { Buffer } from "node:buffer";
 
-// PERFORMANCE: Hoist encoder to avoid redundant object creation per call
-const ENCODER = new TextEncoder();
 
 interface SendMessageParams {
   to: string;
@@ -122,7 +120,6 @@ export async function verifyWhatsAppSignature(rawBody: string, signatureHeader: 
       _cachedHmacKey = null;
       _hmacKeyPromise = null;
       _cachedHmacSecret = secret;
-      _hmacKeyPromise = null;
     }
 
     let key: CryptoKey;
@@ -131,19 +128,15 @@ export async function verifyWhatsAppSignature(rawBody: string, signatureHeader: 
     } else {
       if (!_hmacKeyPromise) {
         _hmacKeyPromise = (async () => {
-          try {
-            const keyData = encoder.encode(secret);
-            _cachedHmacKey = await crypto.subtle.importKey(
-              "raw",
-              keyData,
-              { name: "HMAC", hash: "SHA-256" },
-              false,
-              ["verify"]
-            );
-            return _cachedHmacKey;
-          } finally {
-            _hmacKeyPromise = null;
-          }
+          const keyData = encoder.encode(secret);
+          _cachedHmacKey = await crypto.subtle.importKey(
+            "raw",
+            keyData,
+            { name: "HMAC", hash: "SHA-256" },
+            false,
+            ["verify"]
+          );
+          return _cachedHmacKey;
         })();
       }
       key = await _hmacKeyPromise;
