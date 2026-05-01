@@ -1,5 +1,5 @@
 import { Hono, Context } from "npm:hono";
-import * as _kv from "./kv_store.tsx";
+import * as kv from "./kv_store.tsx";
 import * as billing from "./billing.ts";
 import { getMerchantCredentials, shopifyGraphql, verifyWebhookHmac } from "./shopify_client.ts";
 import { PlanLevel, PLAN_LIMITS } from "./billing.ts";
@@ -183,8 +183,8 @@ app.get("/status", async (c) => {
   }
 
   try {
-    // PERFORMANCE: Batch all independent KV lookups into a single round-trip
-    const [merchantData, preFetchedBilling] = await _kv.mget([
+    // PERFORMANCE: Use kv.mget to batch the merchant and billing lookups into a single round-trip.
+    const [merchantData, preFetchedBilling] = await kv.mget([
       `merchant:${shop}`,
       `${billing.BILLING_KEY_PREFIX}${shop}`
     ]);
@@ -219,8 +219,8 @@ app.get("/status", async (c) => {
       }
     `;
 
-    // PERFORMANCE: Parallelize Shopify API call and local database config fetch
-    // Using pre-fetched data to eliminate redundant internal KV round-trips
+    // PERFORMANCE: Parallelize Shopify API call and local database config fetch.
+    // Use pre-fetched billing config to eliminate redundant KV hits.
     const [data, currentConfig] = await Promise.all([
       shopifyGraphql(shop, merchant.access_token, query),
       billing.getBillingConfig(shop, preFetchedBilling)

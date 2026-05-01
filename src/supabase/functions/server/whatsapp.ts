@@ -6,6 +6,8 @@
 import { getEnv } from "../../../lib/env.ts";
 import { Buffer } from "node:buffer";
 
+// PERFORMANCE: Hoist encoder to avoid redundant object creation per call
+const encoder = new TextEncoder();
 
 interface SendMessageParams {
   to: string;
@@ -13,9 +15,6 @@ interface SendMessageParams {
   languageCode?: string;
   components?: any[];
 }
-
-// PERFORMANCE: Hoist encoder to avoid repeated object creation overhead
-const encoder = new TextEncoder();
 
 // Module-level cache for HMAC CryptoKeys
 let _cachedHmacKey: CryptoKey | null = null;
