@@ -56,17 +56,18 @@ export async function processPendingJobs<T = unknown>(handler: (payload: T) => P
 
   console.log(`[Queue] Found ${dueJobs.length} due jobs (capped at ${BATCH_SIZE}).`);
 
-  // PERFORMANCE: ATOMIC BATCH CLAIM
-  // Instead of claiming one-by-one in workers (N round-trips),
-  // we claim all due jobs in a single atomic database operation.
-  const allKeys = dueJobs.map(j => j.key);
-  const claimedKeys = new Set(await kv.claimBatch(allKeys));
+  // PERFORMANCE: ATOMIC BATCH CLAIM.
+  // We claim all jobs in ONE round-trip instead of N.
+  // This reduces latency by (N-1) * RTT.
+  const jobKeys = dueJobs.map(j => (j as Job<T>).key);
+  const claimedKeys = new Set(await kv.claimBatch(jobKeys));
 
-  console.log(`[Queue] Successfully claimed ${claimedKeys.size} out of ${dueJobs.length} jobs.`);
+  const jobsToProcess = (dueJobs as Job<T>[]).filter(j => claimedKeys.has(j.key));
+  console.log(`[Queue] Successfully claimed ${jobsToProcess.length}/${dueJobs.length} jobs.`);
 
-  // Process only claimed jobs concurrently
+  // Process jobs concurrently with a limit to avoid overwhelming resources
   const CONCURRENCY_LIMIT = 5;
-  const jobQueue = (dueJobs as Job<T>[]).filter(j => claimedKeys.has(j.key));
+  const jobQueue = [...jobsToProcess];
 
   const worker = async () => {
     while (jobQueue.length > 0) {
@@ -74,7 +75,7 @@ export async function processPendingJobs<T = unknown>(handler: (payload: T) => P
       if (!job) break;
 
       try {
-        console.log(`[Queue] Processing claimed job ${job.id}...`);
+        console.log(`[Queue] Processing job ${job.id}...`);
         await handler(job.payload);
         console.log(`[Queue] Job ${job.id} completed.`);
       } catch (error) {

@@ -4,7 +4,7 @@ import * as billing from "./billing.ts";
 import { getEnv } from "../../../lib/env.ts";
 import { getErrorMessage } from "../../../lib/error.ts";
 import { verifyWebhookHmac, getMerchantCredentials } from "./shopify_client.ts";
-import { encrypt, secureCompare } from "./crypto.ts";
+import { encrypt } from "./crypto.ts";
 import { processWhatsAppStatuses, AutomationTemplate } from "./automation.ts";
 import { createJob } from "./queue.ts";
 import { verifyWhatsAppSignature } from "./whatsapp.ts";
@@ -304,7 +304,7 @@ webhooksApp.get("/whatsapp", (c) => {
   const verifyToken = getEnv("WHATSAPP_VERIFY_TOKEN");
 
   // SECURITY: Ensure verifyToken is configured and matches the request token
-  if (mode === "subscribe" && verifyToken && secureCompare(token, verifyToken)) {
+  if (mode === "subscribe" && verifyToken && token === verifyToken) {
     console.log("[WhatsApp Webhook] Webhook verified.");
     return c.text(challenge || "");
   }

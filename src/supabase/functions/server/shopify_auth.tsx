@@ -1,7 +1,7 @@
 import { Hono } from "npm:hono";
 import { setCookie, getCookie } from "npm:hono/cookie";
 import * as kv from "./kv_store.tsx";
-import { encrypt, secureCompare } from "./crypto.ts";
+import { encrypt } from "./crypto.ts";
 import { getEnv } from "../../../lib/env.ts";
 import { getErrorMessage } from "../../../lib/error.ts";
 import { API_DOMAIN, APP_DOMAIN, SERVER_BASE_PATH } from "./constants.ts";
@@ -88,7 +88,7 @@ app.get("/callback", async (c) => {
 
   // 2. Verify State
   const savedState = getCookie(c, "shopify_oauth_state");
-  if (!secureCompare(state, savedState)) {
+  if (state !== savedState) {
     // SECURITY: Redact state tokens in logs to prevent session hijacking or token exposure
     console.error(`[OAuth] State mismatch for shop: ${shop}`);
     return c.text("Error: Request origin cannot be verified (State Mismatch)", 403);
@@ -138,20 +138,16 @@ app.get("/callback", async (c) => {
     // Update global config for MVP (Dashboard compatibility)
     // In a real multi-tenant app, this would be scoped to the user session.
     
-    // PERFORMANCE: Parallelize configuration fetch and token encryption
-    const shopifyKey = `shop:${shop}:config:shopify`;
-    const [existingConfig, encryptedToken] = await Promise.all([
-      kv.get(shopifyKey),
-      encrypt(accessToken)
-    ]);
-
     // 1. Update Scoped Config (Scoping by shop to prevent multi-tenancy leaks)
-    const shopifyConfig = existingConfig || {};
+    const shopifyKey = `shop:${shop}:config:shopify`;
+    const shopifyConfig = (await kv.get(shopifyKey)) || {};
     shopifyConfig.connected_at = new Date().toISOString();
     shopifyConfig.connection_status = "connected";
     shopifyConfig.shop_domain = shop; // Metadata
 
     // 2. Securely Store Credentials (keyed by shop)
+    // Encrypt the access token before storing it at rest
+    const encryptedToken = await encrypt(accessToken);
 
     const merchantRecord = {
       shop: shop,
