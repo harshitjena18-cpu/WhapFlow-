@@ -61,12 +61,16 @@ export function AnalyticsView() {
   return (
     <div className="space-y-10">
       {/* Page Header */}
-      <div className="pb-2">
+      <motion.div
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        className="pb-2"
+      >
         <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">Analytics</h1>
         <p className="text-sm text-gray-500 mt-2">
           Deep dive into your cart recovery performance metrics.
         </p>
-      </div>
+      </motion.div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -97,7 +101,12 @@ export function AnalyticsView() {
       {/* Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Conversions Chart */}
-        <div className="bg-white border border-gray-100 rounded-2xl p-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+          className="bg-white border border-gray-100 rounded-2xl p-8 shadow-sm hover:shadow-md transition-all"
+        >
           <h2 className="text-base font-semibold text-gray-900 mb-1">Daily Conversions</h2>
           <p className="text-sm text-gray-500 mb-8">Last 7 days</p>
           <div style={{ width: '100%', height: 288 }}>
@@ -121,6 +130,7 @@ export function AnalyticsView() {
                     border: '1px solid #f3f4f6',
                     borderRadius: '12px',
                     padding: '8px 12px',
+                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
                   }}
                   cursor={{ fill: 'rgba(0, 0, 0, 0.03)' }}
                 />
@@ -128,10 +138,15 @@ export function AnalyticsView() {
               </BarChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </motion.div>
 
         {/* Channel Distribution */}
-        <div className="bg-white border border-gray-100 rounded-2xl p-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.4 }}
+          className="bg-white border border-gray-100 rounded-2xl p-8 shadow-sm hover:shadow-md transition-all"
+        >
           <h2 className="text-base font-semibold text-gray-900 mb-1">Channel Distribution</h2>
           <p className="text-sm text-gray-500 mb-8">Message delivery by channel</p>
           <div style={{ width: '100%', height: 288 }}>
@@ -156,7 +171,7 @@ export function AnalyticsView() {
               </PieChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </motion.div>
       </div>
     </div>
   );
