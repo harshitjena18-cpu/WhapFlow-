@@ -1,4 +1,6 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { TrendingUp, Clock, MessageSquare } from 'lucide-react';
+import { motion } from 'motion/react';
 
 const conversionData = [
   { name: 'Mon', conversions: 24 },
@@ -18,6 +20,43 @@ const channelData = [
 
 const COLORS = ['#25D366', '#6b7280', '#d1d5db'];
 
+interface StatCardProps {
+  title: string;
+  value: string;
+  trend: string;
+  trendLabel: string;
+  icon: React.ElementType;
+  inverse?: boolean;
+}
+
+function StatCard({ title, value, trend, trendLabel, icon: Icon, inverse = false }: StatCardProps) {
+  const trendIsPositive = trend.startsWith('↑');
+  const isEmerald = inverse ? !trendIsPositive : trendIsPositive;
+  const displayColor = isEmerald ? 'text-emerald-600' : 'text-red-600';
+
+  return (
+    <motion.div
+      whileHover={{ y: -4 }}
+      role="region"
+      aria-label={`${title}: ${value}`}
+      className="bg-white border border-gray-100 rounded-2xl p-8 hover:shadow-md transition-all group"
+    >
+      <div className="flex justify-between items-start mb-4">
+        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{title}</h3>
+        <div className="p-2 bg-gray-50 rounded-lg group-hover:bg-[#25D366]/10 transition-colors">
+          <Icon className="w-5 h-5 text-gray-400 group-hover:text-[#25D366] group-hover:scale-110 transition-all" aria-hidden="true" />
+        </div>
+      </div>
+      <p className="text-4xl font-semibold text-gray-900 tracking-tight">{value}</p>
+      <div className={`flex items-center gap-1.5 mt-4 text-sm font-medium ${displayColor}`}>
+        <span className="sr-only">{trendIsPositive ? 'Increase of' : 'Decrease of'}</span>
+        {trend}
+        <span className="text-gray-500 font-normal ml-0.5">{trendLabel}</span>
+      </div>
+    </motion.div>
+  );
+}
+
 export function AnalyticsView() {
   return (
     <div className="space-y-10">
@@ -31,21 +70,28 @@ export function AnalyticsView() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white border border-gray-100 rounded-2xl p-8">
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Total Conversions</h3>
-          <p className="text-4xl font-semibold text-gray-900 tracking-tight">227</p>
-          <p className="text-sm text-gray-600 mt-4">↑ 12.5% from last week</p>
-        </div>
-        <div className="bg-white border border-gray-100 rounded-2xl p-8">
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Avg. Recovery Time</h3>
-          <p className="text-4xl font-semibold text-gray-900 tracking-tight">2.4h</p>
-          <p className="text-sm text-gray-600 mt-4">↓ 18% faster</p>
-        </div>
-        <div className="bg-white border border-gray-100 rounded-2xl p-8">
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Message Open Rate</h3>
-          <p className="text-4xl font-semibold text-gray-900 tracking-tight">87.3%</p>
-          <p className="text-sm text-gray-600 mt-4">↑ 5.2% improvement</p>
-        </div>
+        <StatCard
+          title="Total Conversions"
+          value="227"
+          trend="↑ 12.5%"
+          trendLabel="from last week"
+          icon={TrendingUp}
+        />
+        <StatCard
+          title="Avg. Recovery Time"
+          value="2.4h"
+          trend="↓ 18%"
+          trendLabel="faster"
+          icon={Clock}
+          inverse={true}
+        />
+        <StatCard
+          title="Message Open Rate"
+          value="87.3%"
+          trend="↑ 5.2%"
+          trendLabel="improvement"
+          icon={MessageSquare}
+        />
       </div>
 
       {/* Charts Grid */}
@@ -69,7 +115,7 @@ export function AnalyticsView() {
                   tickLine={false}
                   axisLine={{ stroke: '#f3f4f6' }}
                 />
-                <Tooltip
+                <ChartTooltip
                   contentStyle={{
                     backgroundColor: '#ffffff',
                     border: '1px solid #f3f4f6',
@@ -106,7 +152,7 @@ export function AnalyticsView() {
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <ChartTooltip />
               </PieChart>
             </ResponsiveContainer>
           </div>
