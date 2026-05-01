@@ -88,8 +88,14 @@ app.post("/create-subscription", async (c) => {
       return c.json({ error: "Invalid plan selected" }, 400);
     }
 
-    // 1. Get Credentials
-    const merchant = await getMerchantCredentials(shop);
+    // PERFORMANCE: Batch all independent KV lookups into a single round-trip
+    const [merchantData, preFetchedBilling] = await _kv.mget([
+      `merchant:${shop}`,
+      `${billing.BILLING_KEY_PREFIX}${shop}`
+    ]);
+
+    // 1. Get Credentials (using pre-fetched data)
+    const merchant = await getMerchantCredentials(shop, merchantData);
     if (!merchant || !merchant.access_token) {
       return c.json({ error: "Merchant not found or disconnected" }, 404);
     }
