@@ -1,7 +1,7 @@
 import { Hono } from "npm:hono";
 import { setCookie, getCookie } from "npm:hono/cookie";
 import * as kv from "./kv_store.tsx";
-import { encrypt } from "./crypto.ts";
+import { encrypt, secureCompare } from "./crypto.ts";
 import { getEnv } from "../../../lib/env.ts";
 import { getErrorMessage } from "../../../lib/error.ts";
 import { API_DOMAIN, APP_DOMAIN, SERVER_BASE_PATH } from "./constants.ts";
@@ -88,7 +88,7 @@ app.get("/callback", async (c) => {
 
   // 2. Verify State
   const savedState = getCookie(c, "shopify_oauth_state");
-  if (state !== savedState) {
+  if (!secureCompare(state, savedState)) {
     // SECURITY: Redact state tokens in logs to prevent session hijacking or token exposure
     console.error(`[OAuth] State mismatch for shop: ${shop}`);
     return c.text("Error: Request origin cannot be verified (State Mismatch)", 403);
