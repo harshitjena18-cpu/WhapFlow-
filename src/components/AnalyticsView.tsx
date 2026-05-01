@@ -1,24 +1,6 @@
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip as ChartTooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell
-} from 'recharts';
-import {
-  Clock,
-  MessageCircle,
-  ArrowUpRight,
-  ArrowDownRight,
-  Target
-} from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { TrendingUp, Clock, MessageSquare } from 'lucide-react';
 import { motion } from 'motion/react';
-import { memo } from 'react';
 
 const conversionData = [
   { name: 'Mon', conversions: 24 },
@@ -41,73 +23,39 @@ const COLORS = ['#25D366', '#6b7280', '#d1d5db'];
 interface StatCardProps {
   title: string;
   value: string;
-  change: string;
-  trend: 'up' | 'down';
-  isGood?: boolean; // Defaults to trend === 'up' is good
+  trend: string;
+  trendLabel: string;
   icon: React.ElementType;
-  iconColor: string;
-  iconBg: string;
-  index: number;
-  trendLabel?: string;
+  inverse?: boolean;
 }
 
-const StatCard = memo(({
-  title,
-  value,
-  change,
-  trend,
-  isGood = trend === 'up',
-  icon: Icon,
-  iconColor,
-  iconBg,
-  index,
-  trendLabel
-}: StatCardProps) => {
-  const isTrendPositive = trend === 'up';
+function StatCard({ title, value, trend, trendLabel, icon: Icon, inverse = false }: StatCardProps) {
+  const trendIsPositive = trend.startsWith('↑');
+  const isEmerald = inverse ? !trendIsPositive : trendIsPositive;
+  const displayColor = isEmerald ? 'text-emerald-600' : 'text-red-600';
 
   return (
     <motion.div
+      whileHover={{ y: -4 }}
       role="region"
       aria-label={`${title}: ${value}`}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: index * 0.1 }}
-      className="bg-white border border-gray-100 rounded-2xl p-8 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all group"
+      className="bg-white border border-gray-100 rounded-2xl p-8 hover:shadow-md transition-all group"
     >
-      <div className="flex items-start justify-between mb-4">
-        <div className={`w-12 h-12 ${iconBg} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform`}>
-          <Icon className={`w-6 h-6 ${iconColor}`} aria-hidden="true" />
-        </div>
-        <div
-          className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${
-            isGood ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'
-          }`}
-        >
-          {isTrendPositive ? (
-            <ArrowUpRight className="w-3.5 h-3.5" aria-hidden="true" />
-          ) : (
-            <ArrowDownRight className="w-3.5 h-3.5" aria-hidden="true" />
-          )}
-          <span>
-            <span className="sr-only">{isTrendPositive ? 'Increased by' : 'Decreased by'}</span>
-            {change}
-          </span>
+      <div className="flex justify-between items-start mb-4">
+        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{title}</h3>
+        <div className="p-2 bg-gray-50 rounded-lg group-hover:bg-[#25D366]/10 transition-colors">
+          <Icon className="w-5 h-5 text-gray-400 group-hover:text-[#25D366] group-hover:scale-110 transition-all" aria-hidden="true" />
         </div>
       </div>
-
-      <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">{title}</h3>
-      <p className="text-4xl font-bold text-gray-900 tracking-tight">{value}</p>
-      {trendLabel && (
-        <p className="text-sm text-gray-500 mt-4 flex items-center gap-1.5">
-          <span className="sr-only">Trend context:</span>
-          {trendLabel}
-        </p>
-      )}
+      <p className="text-4xl font-semibold text-gray-900 tracking-tight">{value}</p>
+      <div className={`flex items-center gap-1.5 mt-4 text-sm font-medium ${displayColor}`}>
+        <span className="sr-only">{trendIsPositive ? 'Increase of' : 'Decrease of'}</span>
+        {trend}
+        <span className="text-gray-500 font-normal ml-0.5">{trendLabel}</span>
+      </div>
     </motion.div>
   );
-});
-
-StatCard.displayName = 'StatCard';
+}
 
 export function AnalyticsView() {
   return (
@@ -129,36 +77,24 @@ export function AnalyticsView() {
         <StatCard
           title="Total Conversions"
           value="227"
-          change="12.5%"
-          trend="up"
-          icon={Target}
-          iconColor="text-teal-600"
-          iconBg="bg-teal-50"
-          index={0}
+          trend="↑ 12.5%"
           trendLabel="from last week"
+          icon={TrendingUp}
         />
         <StatCard
           title="Avg. Recovery Time"
           value="2.4h"
-          change="18%"
-          trend="down"
-          isGood={true} // Lower recovery time is good
+          trend="↓ 18%"
+          trendLabel="faster"
           icon={Clock}
-          iconColor="text-blue-600"
-          iconBg="bg-blue-50"
-          index={1}
-          trendLabel="faster than average"
+          inverse={true}
         />
         <StatCard
           title="Message Open Rate"
           value="87.3%"
-          change="5.2%"
-          trend="up"
-          icon={MessageCircle}
-          iconColor="text-[#25D366]"
-          iconBg="bg-[#25D366]/10"
-          index={2}
-          trendLabel="improvement today"
+          trend="↑ 5.2%"
+          trendLabel="improvement"
+          icon={MessageSquare}
         />
       </div>
 
@@ -231,15 +167,7 @@ export function AnalyticsView() {
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <ChartTooltip
-                   contentStyle={{
-                    backgroundColor: '#ffffff',
-                    border: '1px solid #f3f4f6',
-                    borderRadius: '12px',
-                    padding: '8px 12px',
-                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-                  }}
-                />
+                <ChartTooltip />
               </PieChart>
             </ResponsiveContainer>
           </div>
