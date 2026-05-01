@@ -115,7 +115,7 @@ export function AnalyticsView() {
                   tickLine={false}
                   axisLine={{ stroke: '#f3f4f6' }}
                 />
-                <Tooltip
+                <ChartTooltip
                   contentStyle={{
                     backgroundColor: '#ffffff',
                     border: '1px solid #f3f4f6',
@@ -152,7 +152,7 @@ export function AnalyticsView() {
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <ChartTooltip />
               </PieChart>
             </ResponsiveContainer>
           </div>
