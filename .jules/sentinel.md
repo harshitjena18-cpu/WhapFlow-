@@ -23,6 +23,11 @@
 **Learning:** Centralized error helpers should include PII redaction logic to ensure defense-in-depth across the entire application, as developers may forget to manually redact in every catch block.
 **Prevention:** Use a `redactPII` utility in the global `getErrorMessage` helper and ensure all external API clients (Shopify, WhatsApp, OpenAI) explicitly redact or omit full error objects from logs.
 
+## 2025-05-24 - [Timing Attack Vulnerability in Token Comparisons]
+**Vulnerability:** Sensitive tokens (WhatsApp verify token, OAuth state, API keys) were compared using standard equality operators (`===`), which are not constant-time and can leak information via timing side-channels.
+**Learning:** Standard string comparisons return early on the first mismatched character. `node:crypto`'s `timingSafeEqual` provides constant-time comparison but requires equal-length buffers. Hashing inputs with SHA-256 before comparison allows for safe, constant-time comparison of strings with arbitrary lengths.
+**Prevention:** Use a `secureCompare` utility that hashes inputs before using `timingSafeEqual` for all security-sensitive string comparisons.
+
 ## 2025-05-23 - [Redundant Query Parameter Fallback in Dashboard Routes]
 **Vulnerability:** Dashboard API handlers used a fallback to an untrusted `shop` query parameter when the `verified_shop` context was missing, creating a potential IDOR vector if middleware was bypassed.
 **Learning:** Even with security middleware in place, handlers should not provide fallbacks to untrusted inputs. A missing verified identity should always result in an explicit authorization failure (Fail-Closed).

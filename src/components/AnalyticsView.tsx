@@ -1,5 +1,5 @@
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { TrendingUp, Clock, MessageSquare, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { TrendingUp, Clock, MessageSquare } from 'lucide-react';
 import { motion } from 'motion/react';
 
 const conversionData = [
@@ -23,39 +23,35 @@ const COLORS = ['#25D366', '#6b7280', '#d1d5db'];
 interface StatCardProps {
   title: string;
   value: string;
-  icon: React.ElementType;
-  trendValue: string;
+  trend: string;
   trendLabel: string;
-  isGood?: boolean;
+  icon: React.ElementType;
+  inverse?: boolean;
 }
 
-function StatCard({ title, value, icon: Icon, trendValue, trendLabel, isGood = true }: StatCardProps) {
-  const isUp = trendValue.includes('↑');
-  const colorClass = isGood ? 'text-emerald-600' : 'text-red-600';
+function StatCard({ title, value, trend, trendLabel, icon: Icon, inverse = false }: StatCardProps) {
+  const trendIsPositive = trend.startsWith('↑');
+  const isEmerald = inverse ? !trendIsPositive : trendIsPositive;
+  const displayColor = isEmerald ? 'text-emerald-600' : 'text-red-600';
 
   return (
     <motion.div
+      whileHover={{ y: -4 }}
       role="region"
       aria-label={`${title}: ${value}`}
-      whileHover={{ y: -4 }}
-      className="bg-white border border-gray-100 rounded-2xl p-8 shadow-sm hover:shadow-md transition-all group"
+      className="bg-white border border-gray-100 rounded-2xl p-8 hover:shadow-md transition-all group"
     >
-      <div className="flex justify-between items-start mb-6">
-        <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center group-hover:bg-[#25D366]/10 transition-colors duration-300">
-          <Icon className="w-5 h-5 text-gray-400 group-hover:text-[#25D366] group-hover:scale-110 transition-all duration-300" aria-hidden="true" />
+      <div className="flex justify-between items-start mb-4">
+        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{title}</h3>
+        <div className="p-2 bg-gray-50 rounded-lg group-hover:bg-[#25D366]/10 transition-colors">
+          <Icon className="w-5 h-5 text-gray-400 group-hover:text-[#25D366] group-hover:scale-110 transition-all" aria-hidden="true" />
         </div>
       </div>
-      <div>
-        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">{title}</h3>
-        <p className="text-4xl font-semibold text-gray-900 tracking-tight">{value}</p>
-        <div className="flex items-center gap-1 mt-4">
-          <span className={`flex items-center text-sm font-medium ${colorClass}`}>
-            <span className="sr-only">{isUp ? 'Increased by' : 'Decreased by'}</span>
-            {isUp ? <ArrowUpRight className="w-3.5 h-3.5 mr-0.5" aria-hidden="true" /> : <ArrowDownRight className="w-3.5 h-3.5 mr-0.5" aria-hidden="true" />}
-            {trendValue.replace(/[↑↓]/, '').trim()}
-          </span>
-          <span className="text-sm text-gray-500">{trendLabel}</span>
-        </div>
+      <p className="text-4xl font-semibold text-gray-900 tracking-tight">{value}</p>
+      <div className={`flex items-center gap-1.5 mt-4 text-sm font-medium ${displayColor}`}>
+        <span className="sr-only">{trendIsPositive ? 'Increase of' : 'Decrease of'}</span>
+        {trend}
+        <span className="text-gray-500 font-normal ml-0.5">{trendLabel}</span>
       </div>
     </motion.div>
   );
@@ -77,26 +73,24 @@ export function AnalyticsView() {
         <StatCard
           title="Total Conversions"
           value="227"
-          icon={TrendingUp}
-          trendValue="↑ 12.5%"
+          trend="↑ 12.5%"
           trendLabel="from last week"
-          isGood={true}
+          icon={TrendingUp}
         />
         <StatCard
           title="Avg. Recovery Time"
           value="2.4h"
-          icon={Clock}
-          trendValue="↓ 18%"
+          trend="↓ 18%"
           trendLabel="faster"
-          isGood={true}
+          icon={Clock}
+          inverse={true}
         />
         <StatCard
           title="Message Open Rate"
           value="87.3%"
-          icon={MessageSquare}
-          trendValue="↑ 5.2%"
+          trend="↑ 5.2%"
           trendLabel="improvement"
-          isGood={true}
+          icon={MessageSquare}
         />
       </div>
 
