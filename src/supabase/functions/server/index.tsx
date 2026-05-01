@@ -8,6 +8,7 @@ import { getEnv } from "../../../lib/env.ts";
 import { getErrorMessage } from "../../../lib/error.ts";
 import { secureCompare } from "./crypto.ts";
 import { sendWhatsAppTemplate, verifyWhatsAppSignature } from "./whatsapp.ts";
+import { secureCompare } from "./crypto.ts";
 
 import authApp from "./auth.tsx";
 import dashboardApp from "./dashboard.tsx";

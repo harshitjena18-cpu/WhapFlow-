@@ -32,3 +32,8 @@
 **Vulnerability:** Dashboard API handlers used a fallback to an untrusted `shop` query parameter when the `verified_shop` context was missing, creating a potential IDOR vector if middleware was bypassed.
 **Learning:** Even with security middleware in place, handlers should not provide fallbacks to untrusted inputs. A missing verified identity should always result in an explicit authorization failure (Fail-Closed).
 **Prevention:** Remove all `|| c.req.query("shop")` fallbacks in protected routes and strictly rely on the context value provided by the verification middleware.
+
+## 2025-05-24 - [Timing Attacks on Variable-Length Tokens]
+**Vulnerability:** Internal API endpoints and webhook verification used standard string equality (===) for sensitive tokens like SUPABASE_SERVICE_ROLE_KEY and WHATSAPP_VERIFY_TOKEN.
+**Learning:** Standard string comparison can leak information about the secret through timing differences, and Node's timingSafeEqual requires equal-length inputs. Hashing both inputs with SHA-256 before constant-time comparison allows for secure verification of variable-length secrets.
+**Prevention:** Always use a timing-safe comparison utility (like secureCompare) that hashes inputs before invoking timingSafeEqual for any sensitive token or API key validation.
