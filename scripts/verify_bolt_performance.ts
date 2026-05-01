@@ -1,56 +1,73 @@
 
-import { performance } from "node:perf_hooks";
-
 /**
- * BOLT PERFORMANCE BENCHMARK: Job Queue Claiming
- * This script compares the latency of sequential job claiming (current)
- * vs batched job claiming (optimized).
+ * scripts/verify_bolt_performance.ts
+ *
+ * Benchmarks sequential vs batched claiming to verify performance impact of kv.claimBatch.
  */
 
-const SIMULATED_RTT_MS = 10; // Simulated database round-trip time
-const BATCH_SIZE = 100;
+const DB_LATENCY = 100; // Simulated database round-trip latency in ms
 
-async function simulateSequentialClaiming(count: number) {
-    console.log(`[Benchmark] Simulating SEQUENTIAL claiming of ${count} jobs...`);
+async function mockDel(key: string) {
+    // Simulate a successful delete round-trip
+    await new Promise(resolve => setTimeout(resolve, DB_LATENCY));
+    return true;
+}
+
+async function mockClaimBatch(keys: string[]) {
+    // Simulate a successful batch delete round-trip (O(1) regardless of N)
+    await new Promise(resolve => setTimeout(resolve, DB_LATENCY));
+    return keys;
+}
+
+async function sequentialClaim(keys: string[]) {
     const start = performance.now();
-
-    // In current implementation, each worker tries to claim jobs one by one.
-    // Even with concurrency, many calls happen sequentially per worker.
-    for (let i = 0; i < count; i++) {
-        await new Promise(resolve => setTimeout(resolve, SIMULATED_RTT_MS));
+    const results = [];
+    for (const key of keys) {
+        if (await mockDel(key)) {
+            results.push(key);
+        }
     }
-
-    const end = performance.now();
-    return end - start;
+    return performance.now() - start;
 }
 
-async function simulateBatchedClaiming(count: number) {
-    console.log(`[Benchmark] Simulating BATCHED claiming of ${count} jobs...`);
+async function parallelClaim(keys: string[]) {
     const start = performance.now();
-
-    // In optimized implementation, we claim all jobs in ONE round-trip.
-    await new Promise(resolve => setTimeout(resolve, SIMULATED_RTT_MS));
-
-    const end = performance.now();
-    return end - start;
+    const results = await Promise.all(keys.map(key => mockDel(key)));
+    return performance.now() - start;
 }
 
-async function run() {
-    console.log("⚡ Bolt Performance Benchmark: Queue Claiming ⚡");
-    console.log("-----------------------------------------------");
-
-    const seqTime = await simulateSequentialClaiming(BATCH_SIZE);
-    const batchTime = await simulateBatchedClaiming(BATCH_SIZE);
-
-    console.log("\n📊 Results:");
-    console.log(`  - Sequential Claiming: ${seqTime.toFixed(2)}ms`);
-    console.log(`  - Batched Claiming:    ${batchTime.toFixed(2)}ms`);
-    console.log(`  - Speedup:            ${(seqTime / batchTime).toFixed(1)}x faster`);
-    console.log(`  - Latency Reduction:  ${(seqTime - batchTime).toFixed(2)}ms`);
-
-    if (batchTime < seqTime) {
-        console.log("\n✅ PERFORMANCE WIN: Batching significantly reduces claiming latency.");
-    }
+async function batchedClaim(keys: string[]) {
+    const start = performance.now();
+    await mockClaimBatch(keys);
+    return performance.now() - start;
 }
 
-run().catch(console.error);
+async function runBenchmark() {
+    const BATCH_SIZE = 100;
+    const testKeys = Array.from({ length: BATCH_SIZE }, (_, i) => `key-${i}`);
+
+    console.log(`⚡ Bolt Performance Benchmark: Job Claiming (N=${BATCH_SIZE})`);
+    console.log(`Database Latency: ${DB_LATENCY}ms\n`);
+
+    // 1. Sequential (Worst case: O(N))
+    console.log("Measuring Sequential Claim...");
+    const seqTime = await sequentialClaim(testKeys);
+    console.log(`  - Sequential: ${seqTime.toFixed(2)}ms`);
+
+    // 2. Parallel (Best case concurrent but still N requests)
+    console.log("Measuring Parallel Claim...");
+    const parTime = await parallelClaim(testKeys);
+    console.log(`  - Parallel:   ${parTime.toFixed(2)}ms`);
+
+    // 3. Batched (Optimal: O(1) request)
+    console.log("Measuring Batched Claim...");
+    const batchTime = await batchedClaim(testKeys);
+    console.log(`  - Batched:    ${batchTime.toFixed(2)}ms`);
+
+    console.log("\n--- Comparison ---");
+    console.log(`Speedup vs Sequential: ${(seqTime / batchTime).toFixed(2)}x`);
+    console.log(`Speedup vs Parallel:   ${(parTime / batchTime).toFixed(2)}x`);
+    console.log(`Latency Reduction:     ${(seqTime - batchTime).toFixed(2)}ms`);
+}
+
+runBenchmark().catch(console.error);

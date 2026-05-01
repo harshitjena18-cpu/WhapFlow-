@@ -1,5 +1,5 @@
 import { Hono, Context } from "npm:hono";
-import * as _kv from "./kv_store.tsx";
+import * as kv from "./kv_store.tsx";
 import * as billing from "./billing.ts";
 import { getMerchantCredentials, shopifyGraphql, verifyWebhookHmac } from "./shopify_client.ts";
 import { PlanLevel, PLAN_LIMITS } from "./billing.ts";
@@ -88,8 +88,14 @@ app.post("/create-subscription", async (c) => {
       return c.json({ error: "Invalid plan selected" }, 400);
     }
 
-    // 1. Get Credentials
-    const merchant = await getMerchantCredentials(shop);
+    // PERFORMANCE: Batch all independent KV lookups into a single round-trip
+    const [merchantData, preFetchedBilling] = await _kv.mget([
+      `merchant:${shop}`,
+      `${billing.BILLING_KEY_PREFIX}${shop}`
+    ]);
+
+    // 1. Get Credentials (using pre-fetched data)
+    const merchant = await getMerchantCredentials(shop, merchantData);
     if (!merchant || !merchant.access_token) {
       return c.json({ error: "Merchant not found or disconnected" }, 404);
     }
@@ -177,7 +183,13 @@ app.get("/status", async (c) => {
   }
 
   try {
-    const merchant = await getMerchantCredentials(shop);
+    // PERFORMANCE: Use kv.mget to batch the merchant and billing lookups into a single round-trip.
+    const [merchantData, preFetchedBilling] = await kv.mget([
+      `merchant:${shop}`,
+      `${billing.BILLING_KEY_PREFIX}${shop}`
+    ]);
+
+    const merchant = await getMerchantCredentials(shop, merchantData);
     if (!merchant || !merchant.access_token) {
         // Fallback to free if no credentials
         return c.json({ plan: "free", active: true });
@@ -207,10 +219,11 @@ app.get("/status", async (c) => {
       }
     `;
 
-    // PERFORMANCE: Parallelize Shopify API call and local database config fetch
+    // PERFORMANCE: Parallelize Shopify API call and local database config fetch.
+    // Use pre-fetched billing config to eliminate redundant KV hits.
     const [data, currentConfig] = await Promise.all([
       shopifyGraphql(shop, merchant.access_token, query),
-      billing.getBillingConfig(shop)
+      billing.getBillingConfig(shop, preFetchedBilling)
     ]);
 
     const subscriptions = data.currentAppInstallation.activeSubscriptions;
