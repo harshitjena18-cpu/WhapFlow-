@@ -138,16 +138,20 @@ app.get("/callback", async (c) => {
     // Update global config for MVP (Dashboard compatibility)
     // In a real multi-tenant app, this would be scoped to the user session.
     
-    // 1. Update Scoped Config (Scoping by shop to prevent multi-tenancy leaks)
+    // PERFORMANCE: Parallelize configuration fetch and token encryption
     const shopifyKey = `shop:${shop}:config:shopify`;
-    const shopifyConfig = (await kv.get(shopifyKey)) || {};
+    const [existingConfig, encryptedToken] = await Promise.all([
+      kv.get(shopifyKey),
+      encrypt(accessToken)
+    ]);
+
+    // 1. Update Scoped Config (Scoping by shop to prevent multi-tenancy leaks)
+    const shopifyConfig = existingConfig || {};
     shopifyConfig.connected_at = new Date().toISOString();
     shopifyConfig.connection_status = "connected";
     shopifyConfig.shop_domain = shop; // Metadata
 
     // 2. Securely Store Credentials (keyed by shop)
-    // Encrypt the access token before storing it at rest
-    const encryptedToken = await encrypt(accessToken);
 
     const merchantRecord = {
       shop: shop,
