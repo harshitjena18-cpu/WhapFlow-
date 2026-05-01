@@ -11,10 +11,9 @@ authApp.post("/signup", async (c) => {
   const authHeader = c.req.header("Authorization");
   const serviceKey = getEnv("SUPABASE_SERVICE_ROLE_KEY");
 
-  const providedToken = authHeader?.startsWith("Bearer ") ? authHeader.substring(7) : null;
+  const providedKey = authHeader?.startsWith("Bearer ") ? authHeader.substring(7) : null;
 
-  // SECURITY: Use constant-time comparison to prevent timing attacks
-  if (!serviceKey || !providedToken || !secureCompare(providedToken, serviceKey)) {
+  if (!serviceKey || !providedKey || !secureCompare(serviceKey, providedKey)) {
     console.error("[Auth] Unauthorized attempt to call /signup");
     return c.json({ error: "Unauthorized: Invalid or missing token" }, 401);
   }

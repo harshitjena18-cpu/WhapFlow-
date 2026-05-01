@@ -6,6 +6,7 @@ import { processPendingJobs } from "./queue.ts";
 import { executeAutomation, processWhatsAppStatuses } from "./automation.ts";
 import { getEnv } from "../../../lib/env.ts";
 import { getErrorMessage } from "../../../lib/error.ts";
+import { secureCompare } from "./crypto.ts";
 import { sendWhatsAppTemplate, verifyWhatsAppSignature } from "./whatsapp.ts";
 import { secureCompare } from "./crypto.ts";
 
@@ -109,11 +110,8 @@ app.post(`${SERVER_BASE_PATH}/api/whatsapp/send`, async (c) => {
     const whatsappApiKey = getEnv("WHATSAPP_API_KEY");
     const serviceRoleKey = getEnv("SUPABASE_SERVICE_ROLE_KEY");
 
-    const providedToken = authHeader?.startsWith("Bearer ") ? authHeader.substring(7) : null;
-
-    // SECURITY: Use constant-time comparison to prevent timing attacks
-    const isWhatsappAuth = whatsappApiKey && providedToken && secureCompare(providedToken, whatsappApiKey);
-    const isServiceAuth = serviceRoleKey && providedToken && secureCompare(providedToken, serviceRoleKey);
+    const isWhatsappAuth = whatsappApiKey && secureCompare(authHeader, `Bearer ${whatsappApiKey}`);
+    const isServiceAuth = serviceRoleKey && secureCompare(authHeader, `Bearer ${serviceRoleKey}`);
 
     if (!isWhatsappAuth && !isServiceAuth) {
       return c.json({ error: "Unauthorized: Invalid or missing token" }, 401);
@@ -160,7 +158,7 @@ app.get(`${SERVER_BASE_PATH}/api/webhooks/whatsapp`, (c) => {
   const verifyToken = getEnv("WHATSAPP_VERIFY_TOKEN");
 
   // SECURITY: Ensure verifyToken is configured and matches the request token
-  if (mode === "subscribe" && verifyToken && token === verifyToken) {
+  if (mode === "subscribe" && verifyToken && secureCompare(token, verifyToken)) {
     console.log("[WhatsApp Webhook] Webhook verified.");
     return c.text(challenge || "");
   }
