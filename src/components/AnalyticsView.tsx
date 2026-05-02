@@ -1,5 +1,5 @@
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { TrendingUp, Clock, MessageSquare } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { TrendingUp, Clock, MessageSquare, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { motion } from 'motion/react';
 
 const conversionData = [
@@ -30,9 +30,10 @@ interface StatCardProps {
 }
 
 function StatCard({ title, value, trend, trendLabel, icon: Icon, inverse = false }: StatCardProps) {
-  const trendIsPositive = trend.startsWith('↑');
+  const trendIsPositive = trend.includes('↑');
   const isEmerald = inverse ? !trendIsPositive : trendIsPositive;
   const displayColor = isEmerald ? 'text-emerald-600' : 'text-red-600';
+  const TrendIcon = trendIsPositive ? ArrowUpRight : ArrowDownRight;
 
   return (
     <motion.div
@@ -48,9 +49,16 @@ function StatCard({ title, value, trend, trendLabel, icon: Icon, inverse = false
         </div>
       </div>
       <p className="text-4xl font-semibold text-gray-900 tracking-tight">{value}</p>
-      <div className={`flex items-center gap-1.5 mt-4 text-sm font-medium ${displayColor}`}>
+      <div className={`flex items-center gap-1 mt-4 text-sm font-medium ${displayColor}`}>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.5 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.3, delay: 0.2 }}
+        >
+          <TrendIcon className="w-4 h-4" aria-hidden="true" />
+        </motion.div>
         <span className="sr-only">{trendIsPositive ? 'Increase of' : 'Decrease of'}</span>
-        {trend}
+        {trend.replace(/[↑↓]\s?/, '')}
         <span className="text-gray-500 font-normal ml-0.5">{trendLabel}</span>
       </div>
     </motion.div>
