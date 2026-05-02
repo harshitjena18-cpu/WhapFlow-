@@ -37,3 +37,8 @@
 **Vulnerability:** Internal API endpoints and webhook verification used standard string equality (===) for sensitive tokens like SUPABASE_SERVICE_ROLE_KEY and WHATSAPP_VERIFY_TOKEN.
 **Learning:** Standard string comparison can leak information about the secret through timing differences, and Node's timingSafeEqual requires equal-length inputs. Hashing both inputs with SHA-256 before constant-time comparison allows for secure verification of variable-length secrets.
 **Prevention:** Always use a timing-safe comparison utility (like secureCompare) that hashes inputs before invoking timingSafeEqual for any sensitive token or API key validation.
+
+## 2025-05-25 - [Duplicate Security Utilities and Timing-Safe Consistency]
+**Vulnerability:** Redundant definitions of security utilities like `secureCompare` can lead to inconsistent application of security measures (e.g., using `===` instead of the utility) and developer confusion.
+**Learning:** Maintaining a single, well-documented source of truth for security operations is critical. Redeclaring functions can lead to maintenance overhead and potential bypasses if one version is updated but others are missed.
+**Prevention:** Strictly enforce a single-source-of-truth policy for security helpers. Use automated checks (linting/grep) to find standard equality checks on sensitive tokens and replace them with the verified utility.
