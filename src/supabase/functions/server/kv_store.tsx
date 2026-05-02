@@ -103,7 +103,13 @@ export const mget = async <T = any>(keys: string[]): Promise<(T | null)[]> => {
   }
 
   // Create a map for O(1) lookup of results by key
-  const resultsMap = new Map(data?.map((item) => [item.key, item.value]));
+  // PERFORMANCE: Use a loop to avoid intermediate array allocation from data?.map()
+  const resultsMap = new Map<string, any>();
+  if (data) {
+    for (let i = 0; i < data.length; i++) {
+      resultsMap.set(data[i].key, data[i].value);
+    }
+  }
 
   // Return results in the exact order of requested keys
   return keys.map((key) => resultsMap.get(key) as T ?? null as unknown as T);
@@ -129,25 +135,6 @@ export const scanQueue = async <T = any>(endKey: string, limit?: number): Promis
     throw new Error(error.message);
   }
   return data?.map((d) => d.value as T) ?? [];
-};
-
-/**
- * Claim multiple keys atomically by deleting them and returning those that were found.
- * PERFORMANCE: Reduces O(N) database round-trips to O(1) for job queue claiming.
- */
-export const claimBatch = async (keys: string[]): Promise<string[]> => {
-  if (keys.length === 0) return [];
-  const supabase = client();
-  const { data, error } = await supabase
-    .from("kv_store_c8eef56a")
-    .delete()
-    .in("key", keys)
-    .select("key");
-
-  if (error) {
-    throw new Error(error.message);
-  }
-  return data?.map((d) => d.key) ?? [];
 };
 
 // Deletes multiple key-value pairs from the database.
