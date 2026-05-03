@@ -94,7 +94,7 @@ export function Sidebar() {
                   to={item.path}
                   onClick={() => setIsMobileMenuOpen(false)}
                   className={({ isActive }) =>
-                    `flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 active:scale-[0.98] ${
+                    `flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 active:scale-[0.98] group ${
                       isActive
                         ? 'bg-[#25D366] text-white'
                         : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
@@ -103,7 +103,7 @@ export function Sidebar() {
                 >
                   {({ isActive }) => (
                     <>
-                      <item.icon className="w-5 h-5" />
+                      <item.icon className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" />
                       <span className="font-medium text-sm">{item.name}</span>
                     </>
                   )}
