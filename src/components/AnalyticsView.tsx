@@ -1,4 +1,4 @@
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { TrendingUp, Clock, MessageSquare } from 'lucide-react';
 import { motion } from 'motion/react';
 
@@ -38,7 +38,7 @@ function StatCard({ title, value, trend, trendLabel, icon: Icon, inverse = false
     <motion.div
       whileHover={{ y: -4 }}
       role="region"
-      aria-label={`${title}: ${value}`}
+      aria-label={title}
       className="bg-white border border-gray-100 rounded-2xl p-8 hover:shadow-md transition-all group"
     >
       <div className="flex justify-between items-start mb-4">
