@@ -102,11 +102,20 @@ export const mget = async <T = any>(keys: string[]): Promise<(T | null)[]> => {
     throw new Error(error.message);
   }
 
-  // Create a map for O(1) lookup of results by key
-  const resultsMap = new Map(data?.map((item) => [item.key, item.value]));
+  // PERFORMANCE: Populate results map using a standard loop to avoid intermediate array allocations from .map()
+  const resultsMap = new Map<string, T>();
+  if (data) {
+    for (let i = 0; i < data.length; i++) {
+      resultsMap.set(data[i].key, data[i].value);
+    }
+  }
 
   // Return results in the exact order of requested keys
-  return keys.map((key) => resultsMap.get(key) as T ?? null as unknown as T);
+  const result: (T | null)[] = new Array(keys.length);
+  for (let i = 0; i < keys.length; i++) {
+    result[i] = resultsMap.get(keys[i]) ?? null;
+  }
+  return result;
 };
 
 // Scan Queue (Efficient Range Query)
@@ -128,16 +137,26 @@ export const scanQueue = async <T = any>(endKey: string, limit?: number): Promis
   if (error) {
     throw new Error(error.message);
   }
-  return data?.map((d) => d.value as T) ?? [];
+
+  // PERFORMANCE: Use standard loop for mapping results to avoid intermediate array allocations
+  if (!data) return [];
+  const results: T[] = new Array(data.length);
+  for (let i = 0; i < data.length; i++) {
+    results[i] = data[i].value as T;
+  }
+  return results;
 };
 
 /**
- * Claim multiple keys atomically by deleting them and returning those that were found.
- * PERFORMANCE: Reduces O(N) database round-trips to O(1) for job queue claiming.
+ * Atomic batch claim (Claim multiple keys by deleting them and returning which ones existed).
+ * PERFORMANCE: Reduces N database round-trips to 1 for job queue claiming.
  */
 export const claimBatch = async (keys: string[]): Promise<string[]> => {
   if (keys.length === 0) return [];
   const supabase = client();
+
+  // PERFORMANCE: Delete multiple keys and return only 'key' to confirm which were actually deleted.
+  // This ensures atomicity: if multiple workers call this, each key is only "claimed" by one.
   const { data, error } = await supabase
     .from("kv_store_c8eef56a")
     .delete()
@@ -147,7 +166,14 @@ export const claimBatch = async (keys: string[]): Promise<string[]> => {
   if (error) {
     throw new Error(error.message);
   }
-  return data?.map((d) => d.key) ?? [];
+
+  // PERFORMANCE: Use standard loop for mapping results to avoid intermediate array allocations
+  if (!data) return [];
+  const results: string[] = new Array(data.length);
+  for (let i = 0; i < data.length; i++) {
+    results[i] = data[i].key;
+  }
+  return results;
 };
 
 // Deletes multiple key-value pairs from the database.
@@ -173,7 +199,14 @@ export const getByPrefix = async <T = any>(prefix: string, limit?: number): Prom
   if (error) {
     throw new Error(error.message);
   }
-  return data?.map((d) => d.value as T) ?? [];
+
+  // PERFORMANCE: Use standard loop for mapping results to avoid intermediate array allocations
+  if (!data) return [];
+  const results: T[] = new Array(data.length);
+  for (let i = 0; i < data.length; i++) {
+    results[i] = data[i].value as T;
+  }
+  return results;
 };
 // Search for key-value pairs by prefix and value (JSONB column query)
 // Uses Supabase's arrow operators for JSONB filtering (e.g., 'value->enabled')
@@ -193,5 +226,12 @@ export const getByPrefixAndValue = async <T = any>(prefix: string, jsonPath: str
   if (error) {
     throw new Error(error.message);
   }
-  return data?.map((d) => d.value as T) ?? [];
+
+  // PERFORMANCE: Use standard loop for mapping results to avoid intermediate array allocations
+  if (!data) return [];
+  const results: T[] = new Array(data.length);
+  for (let i = 0; i < data.length; i++) {
+    results[i] = data[i].value as T;
+  }
+  return results;
 };
