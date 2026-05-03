@@ -90,3 +90,7 @@
 ## 2024-05-20 - [Atomic Batch Claiming in Job Queue]
 **Learning:** Sequential claiming of jobs in a distributed worker environment using individual `kv.del` calls creates a significant bottleneck (O(N) network round-trips) and increases the race condition window. Implementing an atomic `claimBatch` utility using Postgres `DELETE ... RETURNING` reduces this to O(1) round-trips, yielding a ~100x speedup in claim latency.
 **Action:** Always prefer atomic batch operations (like `DELETE ... RETURNING` or `INSERT ... ON CONFLICT`) for coordination primitives in high-throughput queues. Use `kv.claimBatch` to drastically reduce the latency floor for job processing.
+
+## 2024-05-21 - [Core Utility & Middleware Optimizations]
+**Learning:** In high-traffic Edge Functions, even minor overheads in middleware (CORS regex checks) and logging (PII regex compilation) add up. Prioritizing string equality checks before regex tests in CORS origin validation and hoisting PII regexes to the module level in `error.ts` reduces the per-request latency floor.
+**Action:** Always hoist Regex literals to the module level in hot-paths. Order conditional checks in middleware to execute the fastest, most common cases (like production domain matches) before expensive regex or I/O operations.
