@@ -37,3 +37,8 @@
 **Vulnerability:** Internal API endpoints and webhook verification used standard string equality (===) for sensitive tokens like SUPABASE_SERVICE_ROLE_KEY and WHATSAPP_VERIFY_TOKEN.
 **Learning:** Standard string comparison can leak information about the secret through timing differences, and Node's timingSafeEqual requires equal-length inputs. Hashing both inputs with SHA-256 before constant-time comparison allows for secure verification of variable-length secrets.
 **Prevention:** Always use a timing-safe comparison utility (like secureCompare) that hashes inputs before invoking timingSafeEqual for any sensitive token or API key validation.
+
+## 2025-06-01 - [Redundant Security Implementation and Insecure Webhook Verification]
+**Vulnerability:** WhatsApp webhook verification used insecure string equality (`===`) in one route while using `secureCompare` in others. Redundant route definitions in `index.tsx` and sub-apps created inconsistent security postures.
+**Learning:** Consolidating routing logic and centralizing security utilities is critical to ensure uniform protection. Multiple definitions of the same endpoint can lead to "security debt" where one version is hardened but others remain vulnerable.
+**Prevention:** Strictly follow a single-source-of-truth pattern for routes and middleware. Use a centralized security utility for all sensitive comparisons and audit all entry points during hardening.
