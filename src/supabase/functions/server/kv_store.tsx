@@ -57,7 +57,13 @@ export const claimBatch = async (keys: string[]): Promise<string[]> => {
     throw new Error(error.message);
   }
 
-  return data?.map(d => d.key) ?? [];
+  // PERFORMANCE: Use for-loop to reduce intermediate array allocations
+  if (!data) return [];
+  const result: string[] = new Array(data.length);
+  for (let i = 0; i < data.length; i++) {
+    result[i] = data[i].key;
+  }
+  return result;
 };
 
 // Get retrieves a key-value pair from the database.
@@ -85,7 +91,14 @@ export const del = async (key: string): Promise<boolean> => {
 // Sets multiple key-value pairs in the database.
 export const mset = async <T = any>(keys: string[], values: T[]): Promise<void> => {
   const supabase = client();
-  const { error } = await supabase.from("kv_store_c8eef56a").upsert(keys.map((k, i) => ({ key: k, value: values[i] })));
+
+  // PERFORMANCE: Use for-loop to reduce intermediate array allocations
+  const rows = new Array(keys.length);
+  for (let i = 0; i < keys.length; i++) {
+    rows[i] = { key: keys[i], value: values[i] };
+  }
+
+  const { error } = await supabase.from("kv_store_c8eef56a").upsert(rows);
   if (error) {
     throw new Error(error.message);
   }
@@ -102,11 +115,20 @@ export const mget = async <T = any>(keys: string[]): Promise<(T | null)[]> => {
     throw new Error(error.message);
   }
 
-  // Create a map for O(1) lookup of results by key
-  const resultsMap = new Map(data?.map((item) => [item.key, item.value]));
+  // PERFORMANCE: Use O(1) lookup map and for-loops to reduce intermediate array allocations
+  const resultsMap = new Map();
+  if (data) {
+    for (let i = 0; i < data.length; i++) {
+      resultsMap.set(data[i].key, data[i].value);
+    }
+  }
 
-  // Return results in the exact order of requested keys
-  return keys.map((key) => resultsMap.get(key) as T ?? null as unknown as T);
+  const result: (T | null)[] = new Array(keys.length);
+  for (let i = 0; i < keys.length; i++) {
+    const val = resultsMap.get(keys[i]);
+    result[i] = val !== undefined ? (val as T) : null;
+  }
+  return result;
 };
 
 // Scan Queue (Efficient Range Query)
@@ -128,26 +150,14 @@ export const scanQueue = async <T = any>(endKey: string, limit?: number): Promis
   if (error) {
     throw new Error(error.message);
   }
-  return data?.map((d) => d.value as T) ?? [];
-};
 
-/**
- * Claim multiple keys atomically by deleting them and returning those that were found.
- * PERFORMANCE: Reduces O(N) database round-trips to O(1) for job queue claiming.
- */
-export const claimBatch = async (keys: string[]): Promise<string[]> => {
-  if (keys.length === 0) return [];
-  const supabase = client();
-  const { data, error } = await supabase
-    .from("kv_store_c8eef56a")
-    .delete()
-    .in("key", keys)
-    .select("key");
-
-  if (error) {
-    throw new Error(error.message);
+  // PERFORMANCE: Use for-loop to reduce intermediate array allocations
+  if (!data) return [];
+  const result: T[] = new Array(data.length);
+  for (let i = 0; i < data.length; i++) {
+    result[i] = data[i].value as T;
   }
-  return data?.map((d) => d.key) ?? [];
+  return result;
 };
 
 // Deletes multiple key-value pairs from the database.
@@ -173,7 +183,14 @@ export const getByPrefix = async <T = any>(prefix: string, limit?: number): Prom
   if (error) {
     throw new Error(error.message);
   }
-  return data?.map((d) => d.value as T) ?? [];
+
+  // PERFORMANCE: Use for-loop to reduce intermediate array allocations
+  if (!data) return [];
+  const result: T[] = new Array(data.length);
+  for (let i = 0; i < data.length; i++) {
+    result[i] = data[i].value as T;
+  }
+  return result;
 };
 // Search for key-value pairs by prefix and value (JSONB column query)
 // Uses Supabase's arrow operators for JSONB filtering (e.g., 'value->enabled')
@@ -193,5 +210,12 @@ export const getByPrefixAndValue = async <T = any>(prefix: string, jsonPath: str
   if (error) {
     throw new Error(error.message);
   }
-  return data?.map((d) => d.value as T) ?? [];
+
+  // PERFORMANCE: Use for-loop to reduce intermediate array allocations
+  if (!data) return [];
+  const result: T[] = new Array(data.length);
+  for (let i = 0; i < data.length; i++) {
+    result[i] = data[i].value as T;
+  }
+  return result;
 };

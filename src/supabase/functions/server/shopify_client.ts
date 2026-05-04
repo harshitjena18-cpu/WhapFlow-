@@ -12,12 +12,15 @@ let _cachedHmacKey: CryptoKey | null = null;
 let _cachedHmacSecret: string | null = null;
 let _hmacKeyPromise: Promise<CryptoKey> | null = null;
 
+// PERFORMANCE: Hoist Regex literal to module level to prevent repeated compilation overhead
+const SHOPIFY_ESCAPE_REGEX = /([\\"])/g;
+
 /**
  * Utility to escape special characters in Shopify search queries to prevent injection.
  * Escapes backslashes and double quotes.
  */
 export function escapeShopifySearch(value: string): string {
-  return value.replace(/([\\"])/g, "\\$1");
+  return value.replace(SHOPIFY_ESCAPE_REGEX, "\\$1");
 }
 
 /**
