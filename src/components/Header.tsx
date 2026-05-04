@@ -64,13 +64,13 @@ export function Header() {
         <Link
           to="/settings"
           aria-label="User Profile and Settings"
-          className="hidden md:flex items-center gap-3 px-3 py-1.5 rounded-xl hover:bg-white/50 transition-all duration-200 active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-purple-500/20"
+          className="group hidden md:flex items-center gap-3 px-3 py-1.5 rounded-xl hover:bg-white/50 transition-all duration-200 active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-purple-500/20"
         >
           <div className="text-right">
             <p className="text-sm font-medium text-gray-900">Whapflow Store</p>
             <p className="text-xs text-gray-500">Shopify Connected</p>
           </div>
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center text-indigo-600 font-bold text-xs border border-indigo-200/50">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center text-indigo-600 font-bold text-xs border border-indigo-200/50 transition-transform duration-200 group-hover:scale-110">
             WS
           </div>
         </Link>
