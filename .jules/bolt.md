@@ -90,3 +90,11 @@
 ## 2024-05-20 - [Atomic Batch Claiming in Job Queue]
 **Learning:** Sequential claiming of jobs in a distributed worker environment using individual `kv.del` calls creates a significant bottleneck (O(N) network round-trips) and increases the race condition window. Implementing an atomic `claimBatch` utility using Postgres `DELETE ... RETURNING` reduces this to O(1) round-trips, yielding a ~100x speedup in claim latency.
 **Action:** Always prefer atomic batch operations (like `DELETE ... RETURNING` or `INSERT ... ON CONFLICT`) for coordination primitives in high-throughput queues. Use `kv.claimBatch` to drastically reduce the latency floor for job processing.
+
+## 2024-05-21 - [Rejection of micro-optimizations in I/O bound logic]
+**Learning:** Replacing idiomatic functional methods (like .map()) with imperative for-loops in I/O bound functions (like those in kv_store.tsx) is considered a "premature optimization" that sacrifices code readability for negligible performance gains (nanoseconds vs milliseconds of network latency).
+**Action:** Prioritize code clarity and maintainability for utility layers. Only implement micro-optimizations in extremely hot paths where the CPU is the primary bottleneck, and always document the measurable impact.
+
+## 2024-05-21 - [CORS Middleware Optimization]
+**Learning:** In request-level middleware like CORS, reordering checks to prioritize fast string comparisons for production domains (APP_DOMAIN, API_DOMAIN) over regex validation for development environments (LOCALHOST_REGEX) provides a measurable speedup (~5x in micro-benchmarks) by avoiding regex engine overhead on every production request.
+**Action:** Always place strict string equality checks for production domains before regex-based validation in global middleware to minimize the latency floor for the majority of traffic.
