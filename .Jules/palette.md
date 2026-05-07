@@ -5,3 +5,7 @@
 ## 2025-05-15 - Semantic Inversion of Trend Indicators
 **Learning:** For dashboard metrics where a numerical decrease is desirable (e.g., Recovery Time, Latency, Churn), standard green-up/red-down trend indicators are semantically incorrect and confusing.
 **Action:** Implement an `inverse` or `isGood` property on status/trend components to ensure downward trends are styled as positive (emerald green) when they represent improvement.
+
+## 2025-05-16 - Accessible Metric Card Landmarks
+**Learning:** Metric cards should be defined as semantic regions using `role="region"` with an `aria-label` matching the title. Including the metric value in the `aria-label` leads to redundant announcements by screen readers, as they will naturally read the child content (the value) after the label.
+**Action:** Use `role="region"` and `aria-label={title}` on metric card containers. Ensure decorative icons are hidden with `aria-hidden="true"` and provide textual context for directional icons (e.g., trend arrows) using `sr-only` spans.
