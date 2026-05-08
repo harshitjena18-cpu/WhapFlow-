@@ -579,10 +579,12 @@ const MetricCard = memo(({ title, value, change, icon: Icon, iconColor, iconBg, 
       variants={cardVariants}
       initial="hidden"
       animate={inView ? "visible" : "hidden"}
+      role="region"
+      aria-label={title}
     >
       <div className="flex items-start justify-between mb-4">
         <div className={`w-12 h-12 ${iconBg} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform`}>
-          <Icon className={`w-6 h-6 ${iconColor}`} />
+          <Icon className={`w-6 h-6 ${iconColor}`} aria-hidden="true" />
         </div>
         {change !== 0 && (
           <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
@@ -590,7 +592,12 @@ const MetricCard = memo(({ title, value, change, icon: Icon, iconColor, iconBg, 
               ? 'bg-teal-50 text-teal-700' 
               : 'bg-red-50 text-red-700'
           }`}>
-            {isPositive ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+            <span className="sr-only">{isPositive ? 'Increase of' : 'Decrease of'}</span>
+            {isPositive ? (
+              <ArrowUpRight className="w-3 h-3" aria-hidden="true" />
+            ) : (
+              <ArrowDownRight className="w-3 h-3" aria-hidden="true" />
+            )}
             {Math.abs(change)}%
           </div>
         )}
