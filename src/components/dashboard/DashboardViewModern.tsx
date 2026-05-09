@@ -524,7 +524,7 @@ export function DashboardViewModern() {
                 transition={{ delay: index * 0.1 + 0.2 }}
               >
                 <div className="flex items-center gap-3 flex-1">
-                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-teal-50 to-emerald-50 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-teal-50 to-emerald-50 flex items-center justify-center transition-transform group-hover:scale-110">
                     <CheckCircle2 className="w-5 h-5 text-teal-600" />
                   </div>
                   <div>
