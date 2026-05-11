@@ -41,7 +41,7 @@ export function WhapflowLogo({
     >
       {/* Custom SVG Icon */}
       <svg
-        className={config.icon}
+        className={cn(config.icon, "group-hover:scale-110 transition-transform duration-200")}
         viewBox="0 0 32 32"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
