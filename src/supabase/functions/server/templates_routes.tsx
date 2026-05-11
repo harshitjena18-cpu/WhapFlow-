@@ -178,7 +178,7 @@ app.post("/ai-generate", async (c) => {
       }, 429);
     }
 
-    const apiKey = Deno.env.get("OPENAI_API_KEY");
+    const apiKey = getEnv("OPENAI_API_KEY");
 
     if (!apiKey) {
       return c.json({ error: "OpenAI API key not configured" }, 500);
