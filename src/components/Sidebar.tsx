@@ -127,10 +127,10 @@ export function Sidebar() {
             <Link
               to="/settings"
               onClick={() => setIsMobileMenuOpen(false)}
-              className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 transition-all active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-[#25D366]/20"
+              className="group flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 transition-all active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-[#25D366]/20"
               aria-label="User Profile and Settings"
             >
-              <div className="w-9 h-9 bg-[#25D366] rounded-full flex items-center justify-center flex-shrink-0">
+              <div className="w-9 h-9 bg-[#25D366] rounded-full flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-200">
                 <span className="text-white font-semibold text-xs">{initials}</span>
               </div>
               <div className="flex-1 min-w-0">
