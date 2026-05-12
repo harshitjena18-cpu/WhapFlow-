@@ -446,7 +446,10 @@ export function DashboardViewModern() {
               <h3 className="text-base font-semibold text-gray-900">Cart Distribution</h3>
               <p className="text-sm text-gray-500 mt-1">Recovery status breakdown</p>
             </div>
-            <select className="text-xs border border-gray-200 rounded-lg px-2 py-1 text-gray-600 focus:outline-none focus:ring-2 focus:ring-teal-500">
+            <select
+              className="text-xs border border-gray-200 rounded-lg px-2 py-1 text-gray-600 focus:outline-none focus:ring-2 focus:ring-teal-500"
+              aria-label="Select timeframe for breakdown"
+            >
               <option>Monthly</option>
               <option>Weekly</option>
               <option>Daily</option>
@@ -579,9 +582,14 @@ const MetricCard = memo(({ title, value, change, icon: Icon, iconColor, iconBg, 
       variants={cardVariants}
       initial="hidden"
       animate={inView ? "visible" : "hidden"}
+      role="region"
+      aria-label={title}
     >
       <div className="flex items-start justify-between mb-4">
-        <div className={`w-12 h-12 ${iconBg} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform`}>
+        <div
+          className={`w-12 h-12 ${iconBg} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform`}
+          aria-hidden="true"
+        >
           <Icon className={`w-6 h-6 ${iconColor}`} />
         </div>
         {change !== 0 && (
@@ -590,6 +598,7 @@ const MetricCard = memo(({ title, value, change, icon: Icon, iconColor, iconBg, 
               ? 'bg-teal-50 text-teal-700' 
               : 'bg-red-50 text-red-700'
           }`}>
+            <span className="sr-only">{isPositive ? "Increase of" : "Decrease of"}</span>
             {isPositive ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
             {Math.abs(change)}%
           </div>
