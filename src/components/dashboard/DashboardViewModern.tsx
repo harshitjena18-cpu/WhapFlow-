@@ -574,6 +574,8 @@ const MetricCard = memo(({ title, value, change, icon: Icon, iconColor, iconBg, 
   
   return (
     <motion.div
+      role="region"
+      aria-label={title}
       className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all group"
       custom={index}
       variants={cardVariants}
@@ -581,7 +583,10 @@ const MetricCard = memo(({ title, value, change, icon: Icon, iconColor, iconBg, 
       animate={inView ? "visible" : "hidden"}
     >
       <div className="flex items-start justify-between mb-4">
-        <div className={`w-12 h-12 ${iconBg} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform`}>
+        <div
+          aria-hidden="true"
+          className={`w-12 h-12 ${iconBg} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform`}
+        >
           <Icon className={`w-6 h-6 ${iconColor}`} />
         </div>
         {change !== 0 && (
@@ -590,7 +595,10 @@ const MetricCard = memo(({ title, value, change, icon: Icon, iconColor, iconBg, 
               ? 'bg-teal-50 text-teal-700' 
               : 'bg-red-50 text-red-700'
           }`}>
-            {isPositive ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+            <span className="sr-only">
+              {isPositive ? "Increase of" : "Decrease of"}
+            </span>
+            {isPositive ? <ArrowUpRight className="w-3 h-3" aria-hidden="true" /> : <ArrowDownRight className="w-3 h-3" aria-hidden="true" />}
             {Math.abs(change)}%
           </div>
         )}
