@@ -5,3 +5,7 @@
 ## 2025-05-15 - Semantic Inversion of Trend Indicators
 **Learning:** For dashboard metrics where a numerical decrease is desirable (e.g., Recovery Time, Latency, Churn), standard green-up/red-down trend indicators are semantically incorrect and confusing.
 **Action:** Implement an `inverse` or `isGood` property on status/trend components to ensure downward trends are styled as positive (emerald green) when they represent improvement.
+
+## 2025-05-16 - Contextualizing Visual-Only Trend Indicators
+**Learning:** Dashboard metrics that communicate change direction solely via icons and color (e.g., green up arrow) are opaque to screen readers.
+**Action:** Always pair visual trend indicators with `sr-only` spans (e.g., "Increase of" or "Decrease of") to provide essential context for assistive technologies without cluttering the visual UI.
