@@ -580,7 +580,12 @@ export function TemplatesView() {
                         <div className="md:col-span-2 pt-2 border-t border-gray-200 mt-2">
                           <div className="flex items-center justify-between">
                             <div>
-                              <span className="block text-sm font-medium text-gray-900">Enable Automation</span>
+                              <Label
+                                htmlFor={`enable-automation-${selectedTemplate.id}`}
+                                className="block text-sm font-medium text-gray-900 cursor-pointer"
+                              >
+                                Enable Automation
+                              </Label>
                               {canEnableAutomation ? (
                                 <span className="block text-xs text-gray-500">
                                   Activating this will disable any other active templates.
@@ -593,6 +598,7 @@ export function TemplatesView() {
                               )}
                             </div>
                             <Switch 
+                              id={`enable-automation-${selectedTemplate.id}`}
                               checked={selectedTemplate.enabled}
                               onCheckedChange={(c) => handleToggleEnabled(selectedTemplate, c)}
                               disabled={!canEnableAutomation}

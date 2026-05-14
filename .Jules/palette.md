@@ -5,3 +5,7 @@
 ## 2025-05-15 - Semantic Inversion of Trend Indicators
 **Learning:** For dashboard metrics where a numerical decrease is desirable (e.g., Recovery Time, Latency, Churn), standard green-up/red-down trend indicators are semantically incorrect and confusing.
 **Action:** Implement an `inverse` or `isGood` property on status/trend components to ensure downward trends are styled as positive (emerald green) when they represent improvement.
+
+## 2025-05-16 - Dynamic IDs for Label Association
+**Learning:** Using static hardcoded IDs for `Label` associations (e.g., `id="toggle"`) within views that render dynamic data or could be reused leads to DOM ID collisions. This breaks accessibility for subsequent elements as the label will always trigger the first element with that ID.
+**Action:** Always use dynamic, unique IDs derived from entity IDs (e.g., `id={`enable-${item.id}`}`) for form controls in list-based or multi-item views.
