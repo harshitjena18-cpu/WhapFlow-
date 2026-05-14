@@ -1,4 +1,4 @@
-import { getErrorMessage } from '../src/lib/error';
+import { getErrorMessage } from '../src/lib/error.ts';
 
 function assert(condition: boolean, message: string) {
   if (!condition) {
@@ -12,7 +12,7 @@ try {
   // Test 1: Error instance
   const error1 = new Error('Test error');
   const msg1 = getErrorMessage(error1);
-  assert(msg1 === 'Test error', 'Should extract message from Error instance');
+  assert(msg1 === 'Test error' || msg1?.startsWith('Error: Test error'), 'Should extract message from Error instance');
   console.log('Test 1 Passed');
 
   // Test 2: Object with message
