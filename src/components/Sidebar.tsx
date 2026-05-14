@@ -1,4 +1,5 @@
 import { NavLink, Link } from 'react-router';
+import { cn } from './ui/utils';
 import { 
   LayoutDashboard, 
   Zap, 
@@ -71,12 +72,10 @@ export function Sidebar() {
 
       {/* Sidebar */}
       <aside
-        className={`
-          fixed top-0 left-0 h-full bg-white border-r border-gray-100 z-40
-          transition-transform duration-300 ease-in-out
-          w-72
-          ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-        `}
+        className={cn(
+          "fixed top-0 left-0 h-full bg-white border-r border-gray-100 z-40 transition-transform duration-300 ease-in-out w-72",
+          isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        )}
       >
         {/* Logo */}
         <div className="px-8 py-8 border-b border-gray-100">
@@ -94,16 +93,17 @@ export function Sidebar() {
                   to={item.path}
                   onClick={() => setIsMobileMenuOpen(false)}
                   className={({ isActive }) =>
-                    `flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 active:scale-[0.98] ${
+                    cn(
+                      "group flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-[#25D366]/20",
                       isActive
-                        ? 'bg-[#25D366] text-white'
-                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                    }`
+                        ? "bg-[#25D366] text-white"
+                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                    )
                   }
                 >
                   {({ isActive }) => (
                     <>
-                      <item.icon className="w-5 h-5" />
+                      <item.icon className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" />
                       <span className="font-medium text-sm">{item.name}</span>
                     </>
                   )}
@@ -127,10 +127,10 @@ export function Sidebar() {
             <Link
               to="/settings"
               onClick={() => setIsMobileMenuOpen(false)}
-              className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 transition-all active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-[#25D366]/20"
+              className="group flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 transition-all active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-[#25D366]/20"
               aria-label="User Profile and Settings"
             >
-              <div className="w-9 h-9 bg-[#25D366] rounded-full flex items-center justify-center flex-shrink-0">
+              <div className="w-9 h-9 bg-[#25D366] rounded-full flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-200">
                 <span className="text-white font-semibold text-xs">{initials}</span>
               </div>
               <div className="flex-1 min-w-0">
