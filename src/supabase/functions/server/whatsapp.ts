@@ -5,6 +5,7 @@
 
 import { getEnv } from "../../../lib/env.ts";
 import { Buffer } from "node:buffer";
+import { getErrorMessage } from "../../../lib/error.ts";
 
 // PERFORMANCE: Hoist encoder to avoid redundant object creation per call
 const encoder = new TextEncoder();
@@ -75,8 +76,10 @@ export const sendWhatsAppTemplate = async ({
     console.log("✅ WhatsApp Message Sent. ID:", wamid);
     return { success: true, data, wamid };
   } catch (error) {
-    console.error("❌ Network/Server Error sending WhatsApp:", error);
-    return { success: false, error };
+    // SECURITY: Use getErrorMessage to redact PII from the error before logging and returning it
+    const errorMessage = getErrorMessage(error) || "Unknown WhatsApp Network Error";
+    console.error("❌ Network/Server Error sending WhatsApp:", errorMessage);
+    return { success: false, error: errorMessage };
   }
 };
 
