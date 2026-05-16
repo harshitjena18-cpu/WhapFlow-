@@ -54,10 +54,10 @@ export function Header() {
       </div>
       <div className="flex items-center gap-4">
         <button
-          className="relative p-2 text-gray-400 hover:text-gray-600 hover:bg-white/50 rounded-full transition-colors"
+          className="group relative p-2 text-gray-400 hover:text-gray-600 hover:bg-white/50 rounded-full transition-colors"
           aria-label="Notifications"
         >
-          <Bell className="w-5 h-5" />
+          <Bell className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" />
           <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
         </button>
         <div className="h-8 w-px bg-gray-200/50 mx-1 hidden md:block"></div>
