@@ -88,6 +88,7 @@ export function TemplatesView() {
 
   // Integration State
   const [integrations, setIntegrations] = useState<{ shopify_connected: boolean; whatsapp_connected: boolean } | null>(null);
+  const [isConnecting, setIsConnecting] = useState(false);
 
   // Copy State
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -405,20 +406,33 @@ export function TemplatesView() {
         </div>
         <div className="flex gap-2">
             {/* Demo Button to Simulate Connection */}
-            <Button variant="outline" size="sm" onClick={async () => {
-                const newStatus = { shopify_connected: true, whatsapp_connected: true, shop };
-                await fetch(`${SERVER_URL}/api/integrations/status`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${publicAnonKey}` },
-                    body: JSON.stringify(newStatus)
-                });
-                setIntegrations(newStatus);
-                toast.success("Integrations connected (Demo Mode)");
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isConnecting}
+              onClick={async () => {
+                try {
+                  setIsConnecting(true);
+                  const newStatus = { shopify_connected: true, whatsapp_connected: true, shop };
+                  await fetch(`${SERVER_URL}/api/integrations/status`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${publicAnonKey}` },
+                      body: JSON.stringify(newStatus)
+                  });
+                  setIntegrations(newStatus);
+                  toast.success("Integrations connected (Demo Mode)");
+                } catch (err) {
+                  console.error(err);
+                  toast.error("Failed to connect integrations");
+                } finally {
+                  setIsConnecting(false);
+                }
             }}>
+                {isConnecting ? <Loader2 className="w-4 h-4 animate-spin mr-2" aria-hidden="true" /> : null}
                 Connect Integrations (Demo)
             </Button>
             <Button onClick={() => handleOpenCreate()} className="bg-[#25D366] hover:bg-[#1fb855] text-white">
-            <Plus className="w-4 h-4 mr-2" />
+            <Plus className="w-4 h-4 mr-2" aria-hidden="true" />
             New Template
             </Button>
         </div>
@@ -428,7 +442,7 @@ export function TemplatesView() {
         <TabsList className="mb-6">
           <TabsTrigger value="manage" className="px-4">Manage Templates</TabsTrigger>
           <TabsTrigger value="ai-generator" className="px-4 flex items-center gap-2">
-            <Sparkles className="w-3.5 h-3.5 text-purple-500" />
+            <Sparkles className="w-3.5 h-3.5 text-purple-500" aria-hidden="true" />
             AI Template Generator
           </TabsTrigger>
         </TabsList>
@@ -446,7 +460,7 @@ export function TemplatesView() {
               <div className="divide-y divide-gray-100 max-h-[600px] overflow-y-auto">
                 {loading ? (
                   <div className="p-8 flex justify-center text-gray-500">
-                    <Loader2 className="w-6 h-6 animate-spin" />
+                    <Loader2 className="w-6 h-6 animate-spin" aria-hidden="true" />
                   </div>
                 ) : templates.length === 0 ? (
                   <div className="p-8 text-center space-y-4">
@@ -457,7 +471,7 @@ export function TemplatesView() {
                       onClick={() => handleOpenCreate()}
                       className="border-[#25D366] text-[#128C7E] hover:bg-[#25D366]/5"
                     >
-                      <Plus className="w-4 h-4 mr-2" />
+                      <Plus className="w-4 h-4 mr-2" aria-hidden="true" />
                       Create Template
                     </Button>
                   </div>
@@ -487,7 +501,7 @@ export function TemplatesView() {
                         </p>
                         <p className="text-[10px] text-gray-500 mt-1 flex items-center gap-1">
                           Wait: {template.delay_minutes} mins
-                          {template.generated_by_ai && <span className="text-purple-400 flex items-center gap-0.5 ml-1"><Sparkles className="w-2 h-2" /> AI</span>}
+                          {template.generated_by_ai && <span className="text-purple-400 flex items-center gap-0.5 ml-1"><Sparkles className="w-2 h-2" aria-hidden="true" /> AI</span>}
                         </p>
                       </div>
                     </button>
@@ -522,7 +536,7 @@ export function TemplatesView() {
                              onClick={() => setTemplateToDelete(selectedTemplate.id)}
                              aria-label="Delete template"
                            >
-                             <Trash2 className="w-4 h-4" />
+                             <Trash2 className="w-4 h-4" aria-hidden="true" />
                            </Button>
                          </TooltipTrigger>
                          <TooltipContent>
@@ -538,7 +552,7 @@ export function TemplatesView() {
                     {/* Configuration Card */}
                     <div className="bg-gray-50 rounded-lg p-5 border border-gray-100">
                       <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                        <MessageCircle className="w-4 h-4 text-gray-500" />
+                        <MessageCircle className="w-4 h-4 text-gray-500" aria-hidden="true" />
                         Configuration
                       </h3>
                       
@@ -558,7 +572,7 @@ export function TemplatesView() {
                                   onClick={() => handleCopy(selectedTemplate.template_name, 'template_name')}
                                   aria-label={copiedId === 'template_name' ? "Copied template name" : "Copy template name"}
                                 >
-                                  {copiedId === 'template_name' ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                                  {copiedId === 'template_name' ? <Check className="w-4 h-4 text-green-500" aria-hidden="true" /> : <Copy className="w-4 h-4" aria-hidden="true" />}
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>
@@ -580,22 +594,29 @@ export function TemplatesView() {
                         <div className="md:col-span-2 pt-2 border-t border-gray-200 mt-2">
                           <div className="flex items-center justify-between">
                             <div>
-                              <span className="block text-sm font-medium text-gray-900">Enable Automation</span>
+                              <Label
+                                htmlFor={`enable-automation-${selectedTemplate.id}`}
+                                className="block text-sm font-medium text-gray-900 cursor-pointer"
+                              >
+                                Enable Automation
+                              </Label>
                               {canEnableAutomation ? (
-                                <span className="block text-xs text-gray-500">
+                                <span id="automation-description" className="block text-xs text-gray-500">
                                   Activating this will disable any other active templates.
                                 </span>
                               ) : (
-                                <span className="block text-xs text-red-500 flex items-center gap-1 mt-1">
-                                  <AlertCircle className="w-3 h-3" />
+                                <span id="automation-description" className="block text-xs text-red-500 flex items-center gap-1 mt-1">
+                                  <AlertCircle className="w-3 h-3" aria-hidden="true" />
                                   Connect Shopify and WhatsApp to activate automation
                                 </span>
                               )}
                             </div>
                             <Switch 
+                              id={`enable-automation-${selectedTemplate.id}`}
                               checked={selectedTemplate.enabled}
                               onCheckedChange={(c) => handleToggleEnabled(selectedTemplate, c)}
                               disabled={!canEnableAutomation}
+                              aria-describedby="automation-description"
                             />
                           </div>
                         </div>
@@ -621,7 +642,7 @@ export function TemplatesView() {
                                   }}
                                   aria-label={copiedId === 'template_content' ? "Copied message content" : "Copy message content"}
                                 >
-                                  {copiedId === 'template_content' ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                                  {copiedId === 'template_content' ? <Check className="w-3 h-3 text-green-500" aria-hidden="true" /> : <Copy className="w-3 h-3" aria-hidden="true" />}
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>
@@ -631,7 +652,7 @@ export function TemplatesView() {
                           </div>
                           {selectedTemplate.generated_by_ai && (
                             <span className="text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full flex items-center gap-1">
-                              <Sparkles className="w-3 h-3" /> AI Generated ({selectedTemplate.ai_tone})
+                              <Sparkles className="w-3 h-3" aria-hidden="true" /> AI Generated ({selectedTemplate.ai_tone})
                             </span>
                           )}
                         </h3>
@@ -655,7 +676,7 @@ export function TemplatesView() {
                 </div>
               ) : (
                  <div className="h-full flex flex-col items-center justify-center p-12 text-center text-gray-500 bg-gray-50 rounded-xl border border-dashed border-gray-200">
-                   <MessageCircle className="w-12 h-12 mb-4 opacity-20" />
+                   <MessageCircle className="w-12 h-12 mb-4 opacity-20" aria-hidden="true" />
                    <p className="text-lg font-medium text-gray-500">Select a template</p>
                    <p className="text-sm mt-1">or create a new one to get started</p>
                  </div>
@@ -670,7 +691,7 @@ export function TemplatesView() {
             <div className="lg:col-span-1 bg-white border border-purple-100 rounded-xl overflow-hidden shadow-sm">
               <div className="bg-gradient-to-r from-purple-50 to-white px-6 py-4 border-b border-purple-100">
                 <h2 className="text-lg font-semibold text-purple-900 flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-purple-600" />
+                  <Sparkles className="w-5 h-5 text-purple-600" aria-hidden="true" />
                   AI Generator
                 </h2>
                 <p className="text-sm text-purple-700 mt-1">
@@ -684,7 +705,7 @@ export function TemplatesView() {
                   <div className="bg-gray-50 rounded-lg p-3 border border-gray-100 space-y-2">
                     <div className="flex justify-between items-center text-xs">
                        <span className="font-medium text-gray-600 flex items-center gap-1">
-                         <Zap className="w-3 h-3 text-orange-400" /> Monthly Credits
+                         <Zap className="w-3 h-3 text-orange-400" aria-hidden="true" /> Monthly Credits
                        </span>
                        <span className="text-gray-900 font-mono">
                          {aiUsage.ai_generations_used} / {aiUsage.ai_generations_limit}
@@ -742,12 +763,12 @@ export function TemplatesView() {
                       >
                         {aiGenerating ? (
                           <>
-                            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                            <Loader2 className="w-4 h-4 animate-spin mr-2" aria-hidden="true" />
                             Generating...
                           </>
                         ) : (
                           <>
-                            <Bot className="w-4 h-4 mr-2" />
+                            <Bot className="w-4 h-4 mr-2" aria-hidden="true" />
                             {isLimitReached ? "Limit Reached" : "Generate Drafts"}
                           </>
                         )}
@@ -762,7 +783,7 @@ export function TemplatesView() {
                 </Tooltip>
 
                 <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded border border-gray-100 flex gap-2">
-                  <Info className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                  <Info className="w-4 h-4 text-blue-400 flex-shrink-0" aria-hidden="true" />
                   <p>AI usage is limited to prevent abuse. Credits reset automatically every month.</p>
                 </div>
               </div>
@@ -788,7 +809,7 @@ export function TemplatesView() {
                                  onClick={() => handleCopy(text, `ai-suggestion-${idx}`)}
                                  aria-label={copiedId === `ai-suggestion-${idx}` ? "Copied suggestion" : "Copy suggestion"}
                                >
-                                 {copiedId === `ai-suggestion-${idx}` ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                                 {copiedId === `ai-suggestion-${idx}` ? <Check className="w-4 h-4 text-green-500" aria-hidden="true" /> : <Copy className="w-4 h-4" aria-hidden="true" />}
                                </Button>
                              </TooltipTrigger>
                              <TooltipContent>
@@ -814,12 +835,12 @@ export function TemplatesView() {
                  <div className="h-full min-h-[400px] flex flex-col items-center justify-center text-center text-gray-500 bg-gray-50/50 rounded-xl border border-dashed border-gray-200">
                    {aiGenerating ? (
                       <div className="space-y-4">
-                        <Loader2 className="w-12 h-12 animate-spin text-purple-400 mx-auto" />
+                        <Loader2 className="w-12 h-12 animate-spin text-purple-400 mx-auto" aria-hidden="true" />
                         <p className="text-purple-900 font-medium">Crafting messages...</p>
                       </div>
                    ) : (
                       <div className="space-y-2">
-                        <Sparkles className="w-12 h-12 text-gray-300 mx-auto" />
+                        <Sparkles className="w-12 h-12 text-gray-300 mx-auto" aria-hidden="true" />
                         <p className="text-gray-900 font-medium">Ready to generate</p>
                         <p className="text-sm max-w-sm mx-auto">Fill in the details on the left and let AI write your recovery messages.</p>
                       </div>
@@ -914,7 +935,7 @@ export function TemplatesView() {
                           className="text-[10px] bg-gray-50 hover:bg-[#25D366]/10 hover:text-[#128C7E] hover:border-[#25D366]/30 text-gray-600 px-2.5 py-1.5 rounded-full border border-gray-200 transition-all flex items-center gap-1.5 active:scale-95 focus-visible:ring-2 focus-visible:ring-[#25D366]/20 outline-none"
                           aria-label={variable.desc}
                         >
-                          <Plus className="w-3 h-3" /> {variable.tag}
+                          <Plus className="w-3 h-3" aria-hidden="true" /> {variable.tag}
                         </button>
                       </TooltipTrigger>
                       <TooltipContent side="top">
@@ -934,16 +955,16 @@ export function TemplatesView() {
                 
                 {/* Validation Messages */}
                 {(validationErrors.length > 0 || validationWarnings.length > 0) && (
-                  <div className="space-y-2 mt-1">
+                  <div className="space-y-2 mt-1" aria-live="polite">
                     {validationErrors.map((err, idx) => (
                       <div key={`err-${idx}`} className="text-[10px] text-red-600 bg-red-50 p-2 rounded flex items-start gap-1.5 border border-red-100">
-                        <AlertCircle className="w-3 h-3 flex-shrink-0 mt-0.5" />
+                        <AlertCircle className="w-3 h-3 flex-shrink-0 mt-0.5" aria-hidden="true" />
                         <span>{err}</span>
                       </div>
                     ))}
                     {validationWarnings.map((warn, idx) => (
                       <div key={`warn-${idx}`} className="text-[10px] text-orange-600 bg-orange-50 p-2 rounded flex items-start gap-1.5 border border-orange-100">
-                        <Info className="w-3 h-3 flex-shrink-0 mt-0.5" />
+                        <Info className="w-3 h-3 flex-shrink-0 mt-0.5" aria-hidden="true" />
                         <span>{warn}</span>
                       </div>
                     ))}
@@ -952,12 +973,12 @@ export function TemplatesView() {
 
                 {formData.generated_by_ai && (
                   <p className="text-[10px] text-purple-600 flex items-center gap-1 mt-1">
-                    <Sparkles className="w-3 h-3" /> 
+                    <Sparkles className="w-3 h-3" aria-hidden="true" />
                     Generated by AI ({formData.ai_tone})
                   </p>
                 )}
                 <div className="bg-blue-50 text-blue-800 p-2 rounded text-[10px] border border-blue-100 flex items-start gap-2 mt-1">
-                  <AlertCircle className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                  <AlertCircle className="w-3 h-3 mt-0.5 flex-shrink-0" aria-hidden="true" />
                   <p>Editing this text does NOT update WhatsApp. You must update the template in Meta Business Manager to match. Validation helps ensure approval.</p>
                 </div>
               </div>
@@ -971,7 +992,7 @@ export function TemplatesView() {
                 aria-keyshortcuts={`${modifierKey}+Enter`}
                 title={`Save Template (${modifierKey}+Enter)`}
               >
-                {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" aria-hidden="true" /> : null}
                 Save Template
               </Button>
             </DialogFooter>
