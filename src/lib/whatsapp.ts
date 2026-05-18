@@ -9,6 +9,7 @@
 
 import type { WhatsAppMessageRequest } from "../types/index.ts";
 import { getEnv } from "./env.ts";
+import { getErrorMessage } from "./error.ts";
 
 export const sendWhatsAppMessage = async (request: WhatsAppMessageRequest): Promise<boolean> => {
   const phoneNumberId = getEnv("WHATSAPP_PHONE_NUMBER_ID");
@@ -71,7 +72,8 @@ export const sendWhatsAppMessage = async (request: WhatsAppMessageRequest): Prom
     const data = await response.json();
 
     if (!response.ok) {
-      console.error("[WhatsApp] API Error:", JSON.stringify(data, null, 2));
+      // SECURITY: Avoid logging full 'data' as it contains customer PII (phone number)
+      console.error(`[WhatsApp] API Error: Status ${response.status}`);
       return false;
     }
 
@@ -79,7 +81,8 @@ export const sendWhatsAppMessage = async (request: WhatsAppMessageRequest): Prom
     console.log("[WhatsApp] Message sent successfully to [REDACTED]");
     return true;
   } catch (error) {
-    console.error("[WhatsApp] Network error:", error);
+    // SECURITY: Redact PII from error messages
+    console.error("[WhatsApp] Network error:", getErrorMessage(error));
     return false;
   }
 };
@@ -110,15 +113,15 @@ export const getTemplateStatus = async (templateId: string, accessTokenOverride?
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      console.error("[WhatsApp] Failed to fetch template status:", JSON.stringify(errorData, null, 2));
+      // SECURITY: Redact error response to avoid leaking sensitive template metadata or account info
+      console.error(`[WhatsApp] Failed to fetch template status: Status ${response.status}`);
       return null;
     }
 
     const data = await response.json();
 
     // Find the template with the target language, or fallback to the first one if only one exists
-    const template = data.data.find((t: any) => t.language === targetLanguage) || data.data[0];
+    const template = data.data?.find((t: any) => t.language === targetLanguage) || data.data?.[0];
 
     if (template) {
       return template.status;
@@ -128,7 +131,8 @@ export const getTemplateStatus = async (templateId: string, accessTokenOverride?
     }
 
   } catch (error) {
-    console.error("[WhatsApp] Network error checking template status:", error);
+    // SECURITY: Redact PII from error messages
+    console.error("[WhatsApp] Network error checking template status:", getErrorMessage(error));
     return null;
   }
 };
