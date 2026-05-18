@@ -466,7 +466,7 @@ export function TemplatesView() {
                     <button
                       key={template.id}
                       onClick={() => setSelectedTemplate(template)}
-                      className={`w-full px-4 py-4 text-left transition-all hover:bg-gray-50 flex items-start gap-3 group ${
+                      className={`w-full px-4 py-4 text-left transition-all hover:bg-gray-50 flex items-start gap-3 group outline-none focus-visible:ring-2 focus-visible:ring-[#25D366] focus-visible:ring-offset-2 active:scale-[0.98] ${
                         selectedTemplate?.id === template.id ? 'bg-[#25D366]/5 border-l-4 border-l-[#25D366]' : 'border-l-4 border-l-transparent'
                       }`}
                     >

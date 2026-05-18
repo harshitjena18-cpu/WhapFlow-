@@ -34,14 +34,14 @@ export function WhapflowLogo({
   return (
     <div 
       className={cn(
-        'inline-flex items-center',
+        'inline-flex items-center group',
         variant === 'full' && config.gap,
         className
       )}
     >
       {/* Custom SVG Icon */}
       <svg
-        className={config.icon}
+        className={cn(config.icon, 'transition-transform duration-200 group-hover:scale-110')}
         viewBox="0 0 32 32"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
