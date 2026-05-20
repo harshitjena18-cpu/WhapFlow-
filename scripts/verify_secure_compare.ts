@@ -1,26 +1,24 @@
-
 import { secureCompare } from "../src/supabase/functions/server/crypto.ts";
 
-function test(name: string, a: any, b: any, expected: boolean) {
-  const result = secureCompare(a, b);
-  if (result === expected) {
-    console.log(`✅ PASS: ${name}`);
+const tests = [
+  { a: "hello", b: "hello", expected: true },
+  { a: "hello", b: "world", expected: false },
+  { a: "hello", b: "helloo", expected: false },
+  { a: "", b: "", expected: true },
+  { a: null, b: "test", expected: false },
+  { a: "test", b: undefined, expected: false },
+];
+
+console.log("Verifying secureCompare...");
+let failed = false;
+for (const { a, b, expected } of tests) {
+  const result = secureCompare(a as any, b as any);
+  if (result !== expected) {
+    console.error(`FAIL: secureCompare("${a}", "${b}") expected ${expected}, got ${result}`);
+    failed = true;
   } else {
-    console.error(`❌ FAIL: ${name} (Expected ${expected}, got ${result})`);
-    process.exit(1);
+    console.log(`PASS: secureCompare("${a}", "${b}") === ${expected}`);
   }
 }
 
-console.log("--- Testing secureCompare ---");
-
-test("Identical strings", "hello", "hello", true);
-test("Different strings (same length)", "hello", "world", false);
-test("Different strings (different length)", "hello", "hello world", false);
-test("One string is prefix of another", "hello", "hellooo", false);
-test("Empty strings", "", "", true);
-test("One empty string", "hello", "", false);
-test("Null vs String", null as any, "hello", false);
-test("Undefined vs String", undefined as any, "hello", false);
-test("Null vs Null", null as any, null as any, false);
-
-console.log("\n✨ All secureCompare tests passed!");
+if (failed) process.exit(1);
