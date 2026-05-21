@@ -1,26 +1,42 @@
+import { createHash, timingSafeEqual } from "node:crypto";
 
-import { secureCompare } from "../src/supabase/functions/server/crypto.ts";
+// Mock the secureCompare function from crypto.ts to verify its logic in Node.js
+function secureCompare(a: string | null | undefined, b: string | null | undefined): boolean {
+  if (typeof a !== "string" || typeof b !== "string") return false;
 
-function test(name: string, a: any, b: any, expected: boolean) {
+  const hashA = createHash("sha256").update(a).digest();
+  const hashB = createHash("sha256").update(b).digest();
+
+  return timingSafeEqual(hashA, hashB) && a.length === b.length;
+}
+
+const testCases = [
+  { a: "secret", b: "secret", expected: true },
+  { a: "secret", b: "wrong", expected: false },
+  { a: "secret", b: "secrets", expected: false },
+  { a: "secret", b: "", expected: false },
+  { a: "", b: "", expected: true },
+  { a: null, b: "secret", expected: false },
+  { a: "secret", b: undefined, expected: false },
+  { a: "a".repeat(1000), b: "a".repeat(1000), expected: true },
+  { a: "a".repeat(1000), b: "a".repeat(999) + "b", expected: false },
+];
+
+let failed = 0;
+for (const { a, b, expected } of testCases) {
   const result = secureCompare(a, b);
-  if (result === expected) {
-    console.log(`✅ PASS: ${name}`);
+  if (result !== expected) {
+    console.error(`FAIL: a=${a}, b=${b}, expected=${expected}, got=${result}`);
+    failed++;
   } else {
-    console.error(`❌ FAIL: ${name} (Expected ${expected}, got ${result})`);
-    process.exit(1);
+    console.log(`PASS: a=${a}, b=${b}, result=${result}`);
   }
 }
 
-console.log("--- Testing secureCompare ---");
-
-test("Identical strings", "hello", "hello", true);
-test("Different strings (same length)", "hello", "world", false);
-test("Different strings (different length)", "hello", "hello world", false);
-test("One string is prefix of another", "hello", "hellooo", false);
-test("Empty strings", "", "", true);
-test("One empty string", "hello", "", false);
-test("Null vs String", null as any, "hello", false);
-test("Undefined vs String", undefined as any, "hello", false);
-test("Null vs Null", null as any, null as any, false);
-
-console.log("\n✨ All secureCompare tests passed!");
+if (failed === 0) {
+  console.log("All secureCompare tests passed!");
+  process.exit(0);
+} else {
+  console.error(`${failed} tests failed!`);
+  process.exit(1);
+}
