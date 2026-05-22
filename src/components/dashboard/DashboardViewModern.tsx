@@ -17,9 +17,11 @@ import {
   CheckCircle2,
   Zap,
   Target,
-  Activity
+  Activity,
+  Info
 } from 'lucide-react';
 import { motion, useInView } from 'motion/react';
+import { Tooltip as TooltipUI, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 import { 
   BarChart, 
   Bar, 
@@ -222,6 +224,7 @@ export function DashboardViewModern() {
           title="Cart Recovery Rate"
           value={`${metrics.cartRecoveryRate}%`}
           change={metrics.cartRecoveryChange}
+          description="Percentage of abandoned carts successfully recovered through automation."
           icon={Target}
           iconColor="text-teal-500"
           iconBg="bg-teal-50"
@@ -233,6 +236,7 @@ export function DashboardViewModern() {
           title="Total Revenue"
           value={`$${metrics.totalRevenue.toLocaleString()}`}
           change={metrics.revenueChange}
+          description="Total sales generated from recovered checkouts in the selected period."
           icon={DollarSign}
           iconColor="text-emerald-500"
           iconBg="bg-emerald-50"
@@ -244,6 +248,7 @@ export function DashboardViewModern() {
           title="Messages Delivered"
           value={metrics.messagesDelivered.toLocaleString()}
           change={metrics.messagesChange}
+          description="Total number of WhatsApp recovery messages sent to customers."
           icon={MessageCircle}
           iconColor="text-blue-500"
           iconBg="bg-blue-50"
@@ -255,6 +260,7 @@ export function DashboardViewModern() {
           title="Active Automations"
           value={metrics.activeAutomations.toString()}
           change={metrics.automationsChange}
+          description="Number of currently running automated recovery workflows."
           icon={Zap}
           iconColor="text-purple-500"
           iconBg="bg-purple-50"
@@ -566,15 +572,16 @@ interface MetricCardProps {
   iconBg: string;
   index: number;
   inView: boolean;
+  description?: string;
 }
 
 // PERFORMANCE: Memoize MetricCard to prevent unnecessary re-renders when parent state changes.
-const MetricCard = memo(({ title, value, change, icon: Icon, iconColor, iconBg, index, inView }: MetricCardProps) => {
+const MetricCard = memo(({ title, value, change, icon: Icon, iconColor, iconBg, index, inView, description }: MetricCardProps) => {
   const isPositive = change >= 0;
   
   return (
     <motion.div
-      className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all group"
+      className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all group relative"
       custom={index}
       variants={cardVariants}
       initial="hidden"
@@ -585,11 +592,12 @@ const MetricCard = memo(({ title, value, change, icon: Icon, iconColor, iconBg, 
           <Icon className={`w-6 h-6 ${iconColor}`} />
         </div>
         {change !== 0 && (
-          <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
-            isPositive 
-              ? 'bg-teal-50 text-teal-700' 
-              : 'bg-red-50 text-red-700'
-          }`}>
+          <div
+            className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+              isPositive ? 'bg-teal-50 text-teal-700' : 'bg-red-50 text-red-700'
+            }`}
+            aria-label={`${Math.abs(change)}% ${isPositive ? 'increase' : 'decrease'}`}
+          >
             {isPositive ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
             {Math.abs(change)}%
           </div>
@@ -598,7 +606,19 @@ const MetricCard = memo(({ title, value, change, icon: Icon, iconColor, iconBg, 
       
       <div>
         <div className="text-3xl font-bold text-gray-900 mb-1">{value}</div>
-        <div className="text-sm text-gray-500">{title}</div>
+        <div className="flex items-center gap-1.5 text-sm text-gray-500">
+          {title}
+          {description && (
+            <TooltipUI>
+              <TooltipTrigger asChild>
+                <button aria-label={`About ${title}`} className="inline-flex text-gray-300 hover:text-gray-400 focus-visible:text-gray-500 outline-none">
+                  <Info className="w-3.5 h-3.5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>{description}</TooltipContent>
+            </TooltipUI>
+          )}
+        </div>
       </div>
     </motion.div>
   );
