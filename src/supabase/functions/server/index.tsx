@@ -39,10 +39,8 @@ app.use(
       // Allow requests with no origin (e.g. mobile apps, curl)
       if (!origin) return origin;
 
-      // Localhost for development (Strict regex validation)
-      if (LOCALHOST_REGEX.test(origin)) {
-        return origin;
-      }
+      // PERFORMANCE: Prioritize static string comparisons over regex for production requests.
+      // This reduces latency by avoiding regex execution in the vast majority of calls.
 
       // Production frontend
       if (origin === APP_DOMAIN) {
@@ -51,6 +49,11 @@ app.use(
 
       // Allow API domain if it calls itself
       if (origin === API_DOMAIN) {
+        return origin;
+      }
+
+      // Localhost for development (Strict regex validation)
+      if (LOCALHOST_REGEX.test(origin)) {
         return origin;
       }
 
