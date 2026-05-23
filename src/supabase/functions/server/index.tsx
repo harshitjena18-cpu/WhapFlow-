@@ -6,7 +6,6 @@ import { processPendingJobs } from "./queue.ts";
 import { executeAutomation, processWhatsAppStatuses } from "./automation.ts";
 import { getEnv } from "../../../lib/env.ts";
 import { getErrorMessage } from "../../../lib/error.ts";
-import { secureCompare } from "./crypto.ts";
 import { sendWhatsAppTemplate, verifyWhatsAppSignature } from "./whatsapp.ts";
 import { secureCompare } from "./crypto.ts";
 
