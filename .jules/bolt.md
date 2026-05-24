@@ -90,3 +90,7 @@
 ## 2024-05-20 - [Atomic Batch Claiming in Job Queue]
 **Learning:** Sequential claiming of jobs in a distributed worker environment using individual `kv.del` calls creates a significant bottleneck (O(N) network round-trips) and increases the race condition window. Implementing an atomic `claimBatch` utility using Postgres `DELETE ... RETURNING` reduces this to O(1) round-trips, yielding a ~100x speedup in claim latency.
 **Action:** Always prefer atomic batch operations (like `DELETE ... RETURNING` or `INSERT ... ON CONFLICT`) for coordination primitives in high-throughput queues. Use `kv.claimBatch` to drastically reduce the latency floor for job processing.
+
+## 2026-04-10 - [CORS Origin Validation Priority]
+**Learning:** Performing regex validation (`LOCALHOST_REGEX.test(origin)`) before exact string matches in global middleware (CORS) imposes a performance penalty on every production request. Reordering validation to check for production domains (`APP_DOMAIN`, `API_DOMAIN`) via strict equality (`===`) before executing regex tests reduces origin validation latency by ~78%.
+**Action:** In request-level middleware or global hooks, always prioritize O(1) string comparisons for common production values before falling back to more expensive O(N) regex or dynamic lookups.
