@@ -305,7 +305,7 @@ export function LandingPagePremium() {
                   <motion.button 
                     className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-teal-500 to-emerald-500 text-white text-lg font-semibold rounded-xl shadow-2xl shadow-teal-500/40 hover:shadow-teal-500/60 transition-all relative overflow-hidden group"
                     whileHover={{ scale: 1.02, y: -2 }}
-                    whileTap={{ scale: 0.98 }}
+                    whileTap={{ scale: 0.95 }}
                   >
                     <span className="relative z-10 flex items-center gap-2">
                       <Store className="w-5 h-5" />
@@ -318,7 +318,7 @@ export function LandingPagePremium() {
                 <motion.button 
                   className="w-full sm:w-auto px-8 py-4 bg-white/10 backdrop-blur-sm border border-white/20 text-white text-lg font-semibold rounded-xl hover:bg-white/15 transition-all"
                   whileHover={{ scale: 1.02, y: -2 }}
-                  whileTap={{ scale: 0.98 }}
+                  whileTap={{ scale: 0.95 }}
                 >
                   <span className="flex items-center gap-2 justify-center">
                     <Play className="w-5 h-5" />
@@ -716,7 +716,7 @@ export function LandingPagePremium() {
                           : 'bg-white/10 border border-white/20 text-white hover:bg-white/15'
                       }`}
                       whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
+                      whileTap={{ scale: 0.95 }}
                     >
                       <span className="flex items-center justify-center gap-2">
                         Get Started
