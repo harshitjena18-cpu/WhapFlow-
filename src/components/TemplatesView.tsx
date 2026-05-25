@@ -88,6 +88,7 @@ export function TemplatesView() {
 
   // Integration State
   const [integrations, setIntegrations] = useState<{ shopify_connected: boolean; whatsapp_connected: boolean } | null>(null);
+  const [isConnecting, setIsConnecting] = useState(false);
 
   // Copy State
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -405,16 +406,30 @@ export function TemplatesView() {
         </div>
         <div className="flex gap-2">
             {/* Demo Button to Simulate Connection */}
-            <Button variant="outline" size="sm" onClick={async () => {
-                const newStatus = { shopify_connected: true, whatsapp_connected: true, shop };
-                await fetch(`${SERVER_URL}/api/integrations/status`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${publicAnonKey}` },
-                    body: JSON.stringify(newStatus)
-                });
-                setIntegrations(newStatus);
-                toast.success("Integrations connected (Demo Mode)");
-            }}>
+            <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                    try {
+                        setIsConnecting(true);
+                        const newStatus = { shopify_connected: true, whatsapp_connected: true, shop };
+                        await fetch(`${SERVER_URL}/api/integrations/status`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${publicAnonKey}` },
+                            body: JSON.stringify(newStatus)
+                        });
+                        setIntegrations(newStatus);
+                        toast.success("Integrations connected (Demo Mode)");
+                    } catch (error) {
+                        console.error(error);
+                        toast.error("Failed to connect integrations");
+                    } finally {
+                        setIsConnecting(false);
+                    }
+                }}
+                disabled={isConnecting}
+            >
+                {isConnecting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
                 Connect Integrations (Demo)
             </Button>
             <Button onClick={() => handleOpenCreate()} className="bg-[#25D366] hover:bg-[#1fb855] text-white">
@@ -580,7 +595,12 @@ export function TemplatesView() {
                         <div className="md:col-span-2 pt-2 border-t border-gray-200 mt-2">
                           <div className="flex items-center justify-between">
                             <div>
-                              <span className="block text-sm font-medium text-gray-900">Enable Automation</span>
+                              <Label
+                                htmlFor={`enable-automation-${selectedTemplate.id}`}
+                                className="block text-sm font-medium text-gray-900 cursor-pointer"
+                              >
+                                Enable Automation
+                              </Label>
                               {canEnableAutomation ? (
                                 <span className="block text-xs text-gray-500">
                                   Activating this will disable any other active templates.
@@ -593,6 +613,7 @@ export function TemplatesView() {
                               )}
                             </div>
                             <Switch 
+                              id={`enable-automation-${selectedTemplate.id}`}
                               checked={selectedTemplate.enabled}
                               onCheckedChange={(c) => handleToggleEnabled(selectedTemplate, c)}
                               disabled={!canEnableAutomation}
