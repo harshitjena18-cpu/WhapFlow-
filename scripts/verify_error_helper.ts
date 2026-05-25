@@ -12,8 +12,8 @@ try {
   // Test 1: Error instance
   const error1 = new Error('Test error');
   const msg1 = getErrorMessage(error1);
-  // In Node.js, error.stack starts with 'Error: Test error' or similar.
-  // The memory indicates we should use startsWith or regex.
+  // In Node.js, error.stack includes the error message along with the stack trace.
+  // We use .includes() to verify the presence of the original message while allowing for stack trace metadata.
   assert(msg1?.includes('Test error') === true, 'Should extract message from Error instance');
   console.log('Test 1 Passed');
 
