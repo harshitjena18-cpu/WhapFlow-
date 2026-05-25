@@ -77,6 +77,7 @@ export function TemplatesView() {
     ai_tone: ''
   });
   const [submitting, setSubmitting] = useState(false);
+  const [isUpdating, setIsUpdating] = useState<Record<string, boolean>>({});
 
   // AI Generator State
   const [aiTone, setAiTone] = useState("Friendly");
@@ -320,6 +321,7 @@ export function TemplatesView() {
   };
 
   const handleToggleEnabled = async (template: Template, checked: boolean) => {
+    setIsUpdating(prev => ({ ...prev, [template.id]: true }));
     // Optimistic UI update
     const oldTemplates = [...templates];
     setTemplates(prev => prev.map(t => {
@@ -346,6 +348,8 @@ export function TemplatesView() {
       console.error(err);
       toast.error("Failed to update status");
       setTemplates(oldTemplates);
+    } finally {
+      setIsUpdating(prev => ({ ...prev, [template.id]: false }));
     }
   };
 
@@ -466,11 +470,17 @@ export function TemplatesView() {
                     <button
                       key={template.id}
                       onClick={() => setSelectedTemplate(template)}
-                      className={`w-full px-4 py-4 text-left transition-all hover:bg-gray-50 flex items-start gap-3 group ${
+                      className={`w-full px-4 py-4 text-left transition-all hover:bg-gray-50 flex items-start gap-3 group outline-none focus-visible:ring-2 focus-visible:ring-[#25D366]/20 ${
                         selectedTemplate?.id === template.id ? 'bg-[#25D366]/5 border-l-4 border-l-[#25D366]' : 'border-l-4 border-l-transparent'
                       }`}
                     >
-                      <div className={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${template.enabled ? 'bg-green-500' : 'bg-gray-300'}`} />
+                      <div className={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${
+                        isUpdating[template.id]
+                          ? 'bg-blue-400 animate-pulse ring-4 ring-blue-100'
+                          : template.enabled
+                            ? 'bg-green-500'
+                            : 'bg-gray-300'
+                      }`} />
                       <div className="flex-1 min-w-0">
                         <div className="flex justify-between items-start">
                           <h3 className={`text-sm font-medium truncate ${selectedTemplate?.id === template.id ? 'text-[#128C7E]' : 'text-gray-900'}`}>
@@ -505,8 +515,23 @@ export function TemplatesView() {
                   <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/30">
                     <div>
                       <h2 className="text-lg font-semibold text-gray-900">{selectedTemplate.display_name}</h2>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${selectedTemplate.enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                        {selectedTemplate.enabled ? 'Enabled - Sending Live' : 'Disabled - Not sending'}
+                      <span className={`text-xs px-2 py-0.5 rounded-full inline-flex items-center gap-1.5 ${
+                        isUpdating[selectedTemplate.id]
+                          ? 'bg-blue-50 text-blue-600'
+                          : selectedTemplate.enabled
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-gray-100 text-gray-600'
+                      }`}>
+                        {isUpdating[selectedTemplate.id] ? (
+                          <>
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                            Updating...
+                          </>
+                        ) : selectedTemplate.enabled ? (
+                          'Enabled - Sending Live'
+                        ) : (
+                          'Disabled - Not sending'
+                        )}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -595,7 +620,7 @@ export function TemplatesView() {
                             <Switch 
                               checked={selectedTemplate.enabled}
                               onCheckedChange={(c) => handleToggleEnabled(selectedTemplate, c)}
-                              disabled={!canEnableAutomation}
+                              disabled={!canEnableAutomation || isUpdating[selectedTemplate.id]}
                             />
                           </div>
                         </div>
