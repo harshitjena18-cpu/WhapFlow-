@@ -90,3 +90,7 @@
 ## 2024-05-20 - [Atomic Batch Claiming in Job Queue]
 **Learning:** Sequential claiming of jobs in a distributed worker environment using individual `kv.del` calls creates a significant bottleneck (O(N) network round-trips) and increases the race condition window. Implementing an atomic `claimBatch` utility using Postgres `DELETE ... RETURNING` reduces this to O(1) round-trips, yielding a ~100x speedup in claim latency.
 **Action:** Always prefer atomic batch operations (like `DELETE ... RETURNING` or `INSERT ... ON CONFLICT`) for coordination primitives in high-throughput queues. Use `kv.claimBatch` to drastically reduce the latency floor for job processing.
+
+## 2024-05-21 - [Fast-path PII Redaction]
+**Learning:** Hoisting regex objects (e.g., `EMAIL_REGEX`, `PHONE_REGEX`) to the module level in hot-path utilities like `redactPII` in `src/lib/error.ts` reduces repeated allocation and compilation overhead. Furthermore, implementing fast-path checks using `String.prototype.includes('@')` and a simple digit-presence regex allows skipping expensive replacement operations for strings that definitely do not contain PII (like generic log messages).
+**Action:** Always hoist regex patterns used in hot-paths to module scope. Use lightweight string checks (includes, indexOf) to bypass complex regex logic when possible.

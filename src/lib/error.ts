@@ -1,18 +1,30 @@
+// PERFORMANCE: Hoist regex objects to module level to avoid repeated allocation and compilation overhead.
+const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+const PHONE_REGEX = /(?:\+?\d{1,3}[ \-]?)?\(?\d{3}\)?[ \-]?\d{3}[ \-]?\d{4,}/g;
+
+// PERFORMANCE: Fast-path check for presence of digits to skip expensive phone number regex check.
+const HAS_DIGITS_REGEX = /\d/;
+
 /**
  * Redacts Personally Identifiable Information (PII) like emails and phone numbers from a string.
  * This is a security defense-in-depth measure to prevent leaking sensitive customer data in logs.
  */
 export function redactPII(text: string): string {
   if (!text) return text;
-  // Regex for emails
-  const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
-  // Regex for common phone number formats (7+ digits)
-  // Optimized to reduce backtracking and handle varied delimiters safely
-  const phoneRegex = /(?:\+?\d{1,3}[ \-]?)?\(?\d{3}\)?[ \-]?\d{3}[ \-]?\d{4,}/g;
 
-  return text
-    .replace(emailRegex, "[REDACTED_EMAIL]")
-    .replace(phoneRegex, "[REDACTED_PHONE]");
+  let redacted = text;
+
+  // PERFORMANCE: Fast-path check for '@' to skip email redaction for strings that don't contain it.
+  if (redacted.includes("@")) {
+    redacted = redacted.replace(EMAIL_REGEX, "[REDACTED_EMAIL]");
+  }
+
+  // PERFORMANCE: Fast-path check for digits to skip phone number redaction for strings that don't contain any.
+  if (HAS_DIGITS_REGEX.test(redacted)) {
+    redacted = redacted.replace(PHONE_REGEX, "[REDACTED_PHONE]");
+  }
+
+  return redacted;
 }
 
 /**
