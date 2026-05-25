@@ -6,9 +6,9 @@ export function redactPII(text: string): string {
   if (!text) return text;
   // Regex for emails
   const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
-  // Regex for common phone number formats (7+ digits)
+  // Regex for common phone number formats (8+ digits)
   // Optimized to reduce backtracking and handle varied delimiters safely
-  const phoneRegex = /(?:\+?\d{1,3}[ \-]?)?\(?\d{3}\)?[ \-]?\d{3}[ \-]?\d{4,}/g;
+  const phoneRegex = /(?:\+?\d{1,3}[ \-]?)?\(?\d{3}\)?[ \-]?\d{2,3}[ \-]?\d{2,}/g;
 
   return text
     .replace(emailRegex, "[REDACTED_EMAIL]")
