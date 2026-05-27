@@ -52,7 +52,7 @@ export function Sidebar() {
       <button
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         className="lg:hidden fixed top-6 right-6 z-50 p-3 rounded-xl bg-white border border-gray-100 hover:bg-gray-50 transition-all active:scale-95"
-        aria-label="Toggle menu"
+        aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
       >
         {isMobileMenuOpen ? (
           <X className="w-5 h-5 text-gray-600" />
@@ -134,8 +134,8 @@ export function Sidebar() {
                 <span className="text-white font-semibold text-xs">{initials}</span>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate group-hover:text-[#25D366] transition-colors">{displayName}</p>
-                <p className="text-xs text-gray-500 truncate">{displayEmail}</p>
+                <p className="text-sm font-medium text-gray-900 truncate group-hover:text-[#25D366] transition-colors" title={displayName}>{displayName}</p>
+                <p className="text-xs text-gray-500 truncate" title={displayEmail}>{displayEmail}</p>
               </div>
             </Link>
           )}
