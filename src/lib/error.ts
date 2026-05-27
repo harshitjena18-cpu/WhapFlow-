@@ -1,18 +1,19 @@
+// PERFORMANCE: Hoist regex objects to the module level to avoid repeated allocation and compilation overhead in hot paths.
+const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+// Regex for common phone number formats (7+ digits)
+// Optimized to reduce backtracking and handle varied delimiters safely
+const PHONE_REGEX = /(?:\+?\d{1,3}[ \-]?)?\(?\d{3}\)?[ \-]?\d{3}[ \-]?\d{4,}/g;
+
 /**
  * Redacts Personally Identifiable Information (PII) like emails and phone numbers from a string.
  * This is a security defense-in-depth measure to prevent leaking sensitive customer data in logs.
  */
 export function redactPII(text: string): string {
   if (!text) return text;
-  // Regex for emails
-  const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
-  // Regex for common phone number formats (7+ digits)
-  // Optimized to reduce backtracking and handle varied delimiters safely
-  const phoneRegex = /(?:\+?\d{1,3}[ \-]?)?\(?\d{3}\)?[ \-]?\d{3}[ \-]?\d{4,}/g;
 
   return text
-    .replace(emailRegex, "[REDACTED_EMAIL]")
-    .replace(phoneRegex, "[REDACTED_PHONE]");
+    .replace(EMAIL_REGEX, "[REDACTED_EMAIL]")
+    .replace(PHONE_REGEX, "[REDACTED_PHONE]");
 }
 
 /**
