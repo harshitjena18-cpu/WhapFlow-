@@ -51,8 +51,9 @@ export function Sidebar() {
       {/* Mobile menu button */}
       <button
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        className="lg:hidden fixed top-6 right-6 z-50 p-3 rounded-xl bg-white border border-gray-100 hover:bg-gray-50 transition-all active:scale-95"
-        aria-label="Toggle menu"
+        className="lg:hidden fixed top-6 right-6 z-50 p-3 rounded-xl bg-white border border-gray-100 hover:bg-gray-50 transition-all active:scale-[0.98]"
+        aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
+        title={isMobileMenuOpen ? "Close menu" : "Open menu"}
       >
         {isMobileMenuOpen ? (
           <X className="w-5 h-5 text-gray-600" />
@@ -127,15 +128,15 @@ export function Sidebar() {
             <Link
               to="/settings"
               onClick={() => setIsMobileMenuOpen(false)}
-              className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 transition-all active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-[#25D366]/20"
+              className="group flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 transition-all active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-[#25D366]/20"
               aria-label="User Profile and Settings"
             >
-              <div className="w-9 h-9 bg-[#25D366] rounded-full flex items-center justify-center flex-shrink-0">
+              <div className="w-9 h-9 bg-[#25D366] rounded-full flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105">
                 <span className="text-white font-semibold text-xs">{initials}</span>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate group-hover:text-[#25D366] transition-colors">{displayName}</p>
-                <p className="text-xs text-gray-500 truncate">{displayEmail}</p>
+                <p className="text-sm font-medium text-gray-900 truncate group-hover:text-[#25D366] transition-colors" title={displayName}>{displayName}</p>
+                <p className="text-xs text-gray-500 truncate" title={displayEmail}>{displayEmail}</p>
               </div>
             </Link>
           )}
