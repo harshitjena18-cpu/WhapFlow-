@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
-import { MessageCircle, Plus, Trash2, Check, Loader2, Sparkles, Copy, AlertCircle, Bot, Zap, Info } from 'lucide-react';
+import { MessageCircle, Plus, Trash2, Check, Loader2, Sparkles, Copy, AlertCircle, Bot, Zap, Info, FileText } from 'lucide-react';
 import { toast } from "sonner";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -92,6 +92,7 @@ export function TemplatesView() {
   // Copy State
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [modifierKey, setModifierKey] = useState('⌘');
+  const [isMac, setIsMac] = useState(true);
   const contentRef = useRef<HTMLTextAreaElement>(null);
 
   const handleCopy = async (text: string, id: string) => {
@@ -181,8 +182,9 @@ export function TemplatesView() {
     fetchTemplates();
     fetchAIUsage();
     fetchIntegrations();
-    const isMac = /Mac|iPod|iPhone|iPad/.test(navigator.userAgent || '');
-    setModifierKey(isMac ? '⌘' : 'Ctrl');
+    const mac = /Mac|iPod|iPhone|iPad/.test(navigator.userAgent || '');
+    setModifierKey(mac ? '⌘' : 'Ctrl');
+    setIsMac(mac);
   }, []);
 
   // Validation Logic
@@ -426,7 +428,10 @@ export function TemplatesView() {
 
       <Tabs defaultValue="manage" className="w-full">
         <TabsList className="mb-6">
-          <TabsTrigger value="manage" className="px-4">Manage Templates</TabsTrigger>
+          <TabsTrigger value="manage" className="px-4 flex items-center gap-2">
+            <FileText className="w-3.5 h-3.5" />
+            Manage Templates
+          </TabsTrigger>
           <TabsTrigger value="ai-generator" className="px-4 flex items-center gap-2">
             <Sparkles className="w-3.5 h-3.5 text-purple-500" />
             AI Template Generator
@@ -466,6 +471,7 @@ export function TemplatesView() {
                     <button
                       key={template.id}
                       onClick={() => setSelectedTemplate(template)}
+                      title={template.display_name}
                       className={`w-full px-4 py-4 text-left transition-all hover:bg-gray-50 flex items-start gap-3 group ${
                         selectedTemplate?.id === template.id ? 'bg-[#25D366]/5 border-l-4 border-l-[#25D366]' : 'border-l-4 border-l-transparent'
                       }`}
@@ -700,9 +706,9 @@ export function TemplatesView() {
                 )}
 
                 <div className="space-y-3">
-                  <Label>Message Tone</Label>
+                  <Label htmlFor="ai-tone-select">Message Tone</Label>
                   <Select value={aiTone} onValueChange={setAiTone}>
-                    <SelectTrigger>
+                    <SelectTrigger id="ai-tone-select">
                       <SelectValue placeholder="Select tone" />
                     </SelectTrigger>
                     <SelectContent>
@@ -715,8 +721,9 @@ export function TemplatesView() {
                 </div>
 
                 <div className="space-y-3">
-                  <Label>Brand Name (Optional)</Label>
+                  <Label htmlFor="ai-brand-name">Brand Name (Optional)</Label>
                   <Input 
+                    id="ai-brand-name"
                     placeholder="e.g. Whapflow Store" 
                     value={aiBrand}
                     onChange={(e) => setAiBrand(e.target.value)}
@@ -724,8 +731,9 @@ export function TemplatesView() {
                 </div>
 
                 <div className="space-y-3">
-                  <Label>Discount Offer (Optional)</Label>
+                  <Label htmlFor="ai-discount-offer">Discount Offer (Optional)</Label>
                   <Input 
+                    id="ai-discount-offer"
                     placeholder="e.g. 10% OFF, Free Shipping" 
                     value={aiDiscount}
                     onChange={(e) => setAiDiscount(e.target.value)}
@@ -836,9 +844,11 @@ export function TemplatesView() {
         <DialogContent
           className="max-w-2xl"
           onKeyDown={(e) => {
-            if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && !submitting && validationErrors.length === 0) {
-              e.preventDefault();
-              handleSave();
+            if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+              if (!submitting && validationErrors.length === 0 && formData.display_name && formData.template_name) {
+                e.preventDefault();
+                handleSave();
+              }
             }
           }}
         >
@@ -968,11 +978,14 @@ export function TemplatesView() {
               <Button
                 onClick={handleSave}
                 disabled={submitting || validationErrors.length > 0}
-                aria-keyshortcuts={`${modifierKey}+Enter`}
+                aria-keyshortcuts={`${isMac ? 'Meta' : 'Control'}+Enter`}
                 title={`Save Template (${modifierKey}+Enter)`}
               >
                 {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                 Save Template
+                <kbd className="ml-2 px-1.5 py-0.5 text-[10px] bg-white/20 border border-white/30 rounded font-sans uppercase">
+                  {modifierKey}↵
+                </kbd>
               </Button>
             </DialogFooter>
         </DialogContent>
