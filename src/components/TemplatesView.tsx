@@ -844,11 +844,9 @@ export function TemplatesView() {
         <DialogContent
           className="max-w-2xl"
           onKeyDown={(e) => {
-            if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-              if (!submitting && validationErrors.length === 0 && formData.display_name && formData.template_name) {
-                e.preventDefault();
-                handleSave();
-              }
+            if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && !submitting && validationErrors.length === 0) {
+              e.preventDefault();
+              handleSave();
             }
           }}
         >
