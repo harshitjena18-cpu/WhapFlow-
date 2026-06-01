@@ -14,6 +14,12 @@ import {
 import { useState } from 'react';
 import { WhapflowLogo } from './WhapflowLogo';
 import { useAuth } from '../hooks/useAuth';
+import { motion, AnimatePresence } from 'motion/react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from './ui/tooltip';
 
 const navItems = [
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
@@ -49,17 +55,34 @@ export function Sidebar() {
   return (
     <>
       {/* Mobile menu button */}
-      <button
-        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        className="lg:hidden fixed top-6 right-6 z-50 p-3 rounded-xl bg-white border border-gray-100 hover:bg-gray-50 transition-all active:scale-95"
-        aria-label="Toggle menu"
-      >
-        {isMobileMenuOpen ? (
-          <X className="w-5 h-5 text-gray-600" />
-        ) : (
-          <Menu className="w-5 h-5 text-gray-600" />
-        )}
-      </button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="lg:hidden fixed top-6 right-6 z-50 p-3 rounded-xl bg-white border border-gray-100 hover:bg-gray-50 transition-all active:scale-95 shadow-sm"
+            aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
+          >
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={isMobileMenuOpen ? 'close' : 'menu'}
+                initial={{ opacity: 0, rotate: -90, scale: 0.5 }}
+                animate={{ opacity: 1, rotate: 0, scale: 1 }}
+                exit={{ opacity: 0, rotate: 90, scale: 0.5 }}
+                transition={{ duration: 0.15, ease: "easeOut" }}
+              >
+                {isMobileMenuOpen ? (
+                  <X className="w-5 h-5 text-gray-600" />
+                ) : (
+                  <Menu className="w-5 h-5 text-gray-600" />
+                )}
+              </motion.div>
+            </AnimatePresence>
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="left">
+          <p>{isMobileMenuOpen ? "Close menu" : "Open menu"}</p>
+        </TooltipContent>
+      </Tooltip>
 
       {/* Mobile overlay */}
       {isMobileMenuOpen && (
@@ -80,7 +103,7 @@ export function Sidebar() {
       >
         {/* Logo */}
         <div className="px-8 py-8 border-b border-gray-100">
-          <Link to="/" className="group">
+          <Link to="/" className="group" aria-label="Whapflow Home">
             <WhapflowLogo size="md" variant="full" className="hover:opacity-80 transition-opacity" />
           </Link>
         </div>
@@ -127,7 +150,7 @@ export function Sidebar() {
             <Link
               to="/settings"
               onClick={() => setIsMobileMenuOpen(false)}
-              className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 transition-all active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-[#25D366]/20"
+              className="group flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 transition-all active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-[#25D366]/20"
               aria-label="User Profile and Settings"
             >
               <div className="w-9 h-9 bg-[#25D366] rounded-full flex items-center justify-center flex-shrink-0">
