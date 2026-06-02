@@ -700,9 +700,9 @@ export function TemplatesView() {
                 )}
 
                 <div className="space-y-3">
-                  <Label>Message Tone</Label>
+                  <Label htmlFor="ai-tone">Message Tone</Label>
                   <Select value={aiTone} onValueChange={setAiTone}>
-                    <SelectTrigger>
+                    <SelectTrigger id="ai-tone">
                       <SelectValue placeholder="Select tone" />
                     </SelectTrigger>
                     <SelectContent>
@@ -715,8 +715,9 @@ export function TemplatesView() {
                 </div>
 
                 <div className="space-y-3">
-                  <Label>Brand Name (Optional)</Label>
+                  <Label htmlFor="ai-brand">Brand Name (Optional)</Label>
                   <Input 
+                    id="ai-brand"
                     placeholder="e.g. Whapflow Store" 
                     value={aiBrand}
                     onChange={(e) => setAiBrand(e.target.value)}
@@ -724,8 +725,9 @@ export function TemplatesView() {
                 </div>
 
                 <div className="space-y-3">
-                  <Label>Discount Offer (Optional)</Label>
+                  <Label htmlFor="ai-discount">Discount Offer (Optional)</Label>
                   <Input 
+                    id="ai-discount"
                     placeholder="e.g. 10% OFF, Free Shipping" 
                     value={aiDiscount}
                     onChange={(e) => setAiDiscount(e.target.value)}
@@ -852,9 +854,12 @@ export function TemplatesView() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="display_name">Display Name</Label>
+                <Label htmlFor="display_name">
+                  Display Name <span className="text-red-500" aria-hidden="true">*</span>
+                </Label>
                 <Input 
                   id="display_name" 
+                  required
                   placeholder="e.g. Standard Recovery 30m" 
                   value={formData.display_name}
                   onChange={e => setFormData({...formData, display_name: e.target.value})}
@@ -863,20 +868,27 @@ export function TemplatesView() {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="template_name">WhatsApp Template Name (ID)</Label>
+                <Label htmlFor="template_name">
+                  WhatsApp Template Name (ID) <span className="text-red-500" aria-hidden="true">*</span>
+                </Label>
                 <Input 
                   id="template_name" 
+                  required
                   placeholder="e.g. abandoned_cart_recovery_v1" 
                   value={formData.template_name}
                   onChange={e => setFormData({...formData, template_name: e.target.value})}
+                  aria-describedby="template_name_hint"
                 />
-                <p className="text-[10px] text-gray-500">MUST match the exact name in Meta Business Manager.</p>
+                <p id="template_name_hint" className="text-[10px] text-gray-500">MUST match the exact name in Meta Business Manager.</p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="delay">Delay (Minutes)</Label>
+                <Label htmlFor="delay">
+                  Delay (Minutes) <span className="text-red-500" aria-hidden="true">*</span>
+                </Label>
                 <Input 
                   id="delay" 
+                  required
                   type="number"
                   min="1"
                   placeholder="30" 
@@ -888,14 +900,21 @@ export function TemplatesView() {
 
               <div className="space-y-2 h-full flex flex-col">
                 <div className="flex justify-between items-center">
-                  <Label htmlFor="content">Template Content (Reference Only)</Label>
-                  <span className={`text-[10px] ${
-                    (formData.content?.length || 0) > 1024
-                      ? 'text-red-500 font-bold'
-                      : (formData.content?.length || 0) > 921
-                        ? 'text-orange-500 font-semibold'
-                        : 'text-gray-500'
-                  }`}>
+                  <Label htmlFor="content">
+                    Template Content (Reference Only) <span className="text-red-500" aria-hidden="true">*</span>
+                  </Label>
+                  <span
+                    className={`text-[10px] ${
+                      (formData.content?.length || 0) > 1024
+                        ? 'text-red-500 font-bold'
+                        : (formData.content?.length || 0) > 921
+                          ? 'text-orange-500 font-semibold'
+                          : 'text-gray-500'
+                    }`}
+                    aria-live="polite"
+                    aria-atomic="true"
+                  >
+                    <span className="sr-only">Character count: </span>
                     {formData.content?.length || 0} / 1024 chars
                   </span>
                 </div>
@@ -926,6 +945,8 @@ export function TemplatesView() {
                 <Textarea 
                   id="content"
                   ref={contentRef}
+                  required
+                  aria-describedby="content_hint"
                   placeholder="Paste your template content here... e.g. Hi {{customer_name}}, you left {{product_name}} in your cart. Check out here: {{checkout_link}}" 
                   className={`flex-1 min-h-[150px] font-mono text-sm resize-none bg-gray-50 ${validationErrors.length > 0 ? 'border-red-300 focus:ring-red-200' : ''}`}
                   value={formData.content}
@@ -956,8 +977,8 @@ export function TemplatesView() {
                     Generated by AI ({formData.ai_tone})
                   </p>
                 )}
-                <div className="bg-blue-50 text-blue-800 p-2 rounded text-[10px] border border-blue-100 flex items-start gap-2 mt-1">
-                  <AlertCircle className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                <div id="content_hint" className="bg-blue-50 text-blue-800 p-2 rounded text-[10px] border border-blue-100 flex items-start gap-2 mt-1">
+                  <AlertCircle className="w-3 h-3 mt-0.5 flex-shrink-0" aria-hidden="true" />
                   <p>Editing this text does NOT update WhatsApp. You must update the template in Meta Business Manager to match. Validation helps ensure approval.</p>
                 </div>
               </div>
