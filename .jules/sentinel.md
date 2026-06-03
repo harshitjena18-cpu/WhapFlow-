@@ -37,3 +37,8 @@
 **Vulnerability:** Internal API endpoints and webhook verification used standard string equality (===) for sensitive tokens like SUPABASE_SERVICE_ROLE_KEY and WHATSAPP_VERIFY_TOKEN.
 **Learning:** Standard string comparison can leak information about the secret through timing differences, and Node's timingSafeEqual requires equal-length inputs. Hashing both inputs with SHA-256 before constant-time comparison allows for secure verification of variable-length secrets.
 **Prevention:** Always use a timing-safe comparison utility (like secureCompare) that hashes inputs before invoking timingSafeEqual for any sensitive token or API key validation.
+
+## 2025-05-25 - [Insecure Length Check in Timing-Safe Comparison]
+**Vulnerability:** The `secureCompare` utility included an explicit length check (`a.length === b.length`) after the constant-time hash comparison, re-introducing a timing side-channel that leaks the secret's length.
+**Learning:** Standard string length comparisons in JavaScript are not constant-time and return early. When using hashing to equalize lengths for `timingSafeEqual`, adding a subsequent length check defeats the purpose of masking variable-length secrets.
+**Prevention:** Rely solely on constant-time comparison of fixed-length hashes (like SHA-256) to verify secrets. Avoid any short-circuiting logic or explicit length comparisons in security-sensitive paths.
