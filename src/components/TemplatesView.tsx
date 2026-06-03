@@ -579,20 +579,24 @@ export function TemplatesView() {
 
                         <div className="md:col-span-2 pt-2 border-t border-gray-200 mt-2">
                           <div className="flex items-center justify-between">
-                            <div>
-                              <span className="block text-sm font-medium text-gray-900">Enable Automation</span>
+                            <div className="space-y-0.5">
+                              <Label htmlFor="automation-switch" className="text-sm font-medium text-gray-900 cursor-pointer">
+                                Enable Automation
+                              </Label>
                               {canEnableAutomation ? (
-                                <span className="block text-xs text-gray-500">
+                                <p id="automation-desc" className="text-xs text-gray-500">
                                   Activating this will disable any other active templates.
-                                </span>
+                                </p>
                               ) : (
-                                <span className="block text-xs text-red-500 flex items-center gap-1 mt-1">
+                                <p id="automation-desc" className="text-xs text-red-500 flex items-center gap-1">
                                   <AlertCircle className="w-3 h-3" />
                                   Connect Shopify and WhatsApp to activate automation
-                                </span>
+                                </p>
                               )}
                             </div>
                             <Switch 
+                              id="automation-switch"
+                              aria-describedby="automation-desc"
                               checked={selectedTemplate.enabled}
                               onCheckedChange={(c) => handleToggleEnabled(selectedTemplate, c)}
                               disabled={!canEnableAutomation}
@@ -852,25 +856,33 @@ export function TemplatesView() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="display_name">Display Name</Label>
+                <Label htmlFor="display_name">
+                  Display Name <span className="text-red-500">*</span>
+                </Label>
                 <Input 
                   id="display_name" 
                   placeholder="e.g. Standard Recovery 30m" 
                   value={formData.display_name}
                   onChange={e => setFormData({...formData, display_name: e.target.value})}
+                  aria-describedby="display_name_hint"
+                  required
                 />
-                <p className="text-[10px] text-gray-500">Internal name for your reference.</p>
+                <p id="display_name_hint" className="text-[10px] text-gray-500">Internal name for your reference.</p>
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="template_name">WhatsApp Template Name (ID)</Label>
+                <Label htmlFor="template_name">
+                  WhatsApp Template Name (ID) <span className="text-red-500">*</span>
+                </Label>
                 <Input 
                   id="template_name" 
                   placeholder="e.g. abandoned_cart_recovery_v1" 
                   value={formData.template_name}
                   onChange={e => setFormData({...formData, template_name: e.target.value})}
+                  aria-describedby="template_name_hint"
+                  required
                 />
-                <p className="text-[10px] text-gray-500">MUST match the exact name in Meta Business Manager.</p>
+                <p id="template_name_hint" className="text-[10px] text-gray-500">MUST match the exact name in Meta Business Manager.</p>
               </div>
 
               <div className="space-y-2">
@@ -888,8 +900,13 @@ export function TemplatesView() {
 
               <div className="space-y-2 h-full flex flex-col">
                 <div className="flex justify-between items-center">
-                  <Label htmlFor="content">Template Content (Reference Only)</Label>
-                  <span className={`text-[10px] ${
+                  <Label htmlFor="content">
+                    Template Content (Reference Only) <span className="text-red-500">*</span>
+                  </Label>
+                  <span
+                    id="char_counter"
+                    aria-live="polite"
+                    className={`text-[10px] ${
                     (formData.content?.length || 0) > 1024
                       ? 'text-red-500 font-bold'
                       : (formData.content?.length || 0) > 921
@@ -899,7 +916,11 @@ export function TemplatesView() {
                     {formData.content?.length || 0} / 1024 chars
                   </span>
                 </div>
-                <Progress value={Math.min(((formData.content?.length || 0) / 1024) * 100, 100)} className="h-1.5 mb-1" />
+                <Progress
+                  value={Math.min(((formData.content?.length || 0) / 1024) * 100, 100)}
+                  className="h-1.5 mb-1"
+                  aria-label="Character limit progress"
+                />
                 <div className="flex flex-wrap gap-2 mt-1 mb-2">
                   {[
                     { tag: '{{customer_name}}', desc: 'Insert customer full name' },
@@ -930,11 +951,13 @@ export function TemplatesView() {
                   className={`flex-1 min-h-[150px] font-mono text-sm resize-none bg-gray-50 ${validationErrors.length > 0 ? 'border-red-300 focus:ring-red-200' : ''}`}
                   value={formData.content}
                   onChange={e => setFormData({...formData, content: e.target.value})}
+                  aria-describedby="char_counter validation_msgs content_hint"
+                  required
                 />
                 
                 {/* Validation Messages */}
                 {(validationErrors.length > 0 || validationWarnings.length > 0) && (
-                  <div className="space-y-2 mt-1">
+                  <div id="validation_msgs" className="space-y-2 mt-1">
                     {validationErrors.map((err, idx) => (
                       <div key={`err-${idx}`} className="text-[10px] text-red-600 bg-red-50 p-2 rounded flex items-start gap-1.5 border border-red-100">
                         <AlertCircle className="w-3 h-3 flex-shrink-0 mt-0.5" />
@@ -956,7 +979,7 @@ export function TemplatesView() {
                     Generated by AI ({formData.ai_tone})
                   </p>
                 )}
-                <div className="bg-blue-50 text-blue-800 p-2 rounded text-[10px] border border-blue-100 flex items-start gap-2 mt-1">
+                <div id="content_hint" className="bg-blue-50 text-blue-800 p-2 rounded text-[10px] border border-blue-100 flex items-start gap-2 mt-1">
                   <AlertCircle className="w-3 h-3 mt-0.5 flex-shrink-0" />
                   <p>Editing this text does NOT update WhatsApp. You must update the template in Meta Business Manager to match. Validation helps ensure approval.</p>
                 </div>
