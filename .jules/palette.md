@@ -41,3 +41,7 @@
 ## 2026-03-20 - [Standardizing Settings UI and Tactile Feedback]
 **Learning:** Native HTML elements (like <select>) often look out of place in a highly-themed Radix-based UI and lack consistent focus/hover states. Standardizing on project-specific themed components automatically brings in accessibility features (like proper keyboard navigation) and visual cohesion. Additionally, unifying tactile feedback (e.g., active:scale-95) across the app prevents a "jittery" or inconsistent feel for users navigating different sections.
 **Action:** Always audit for native HTML form elements and replace them with project-standard themed components. Ensure tactile micro-animations use a single, consistent scale factor across all interactive elements.
+
+## 2026-06-06 - [Programmatic Label Linking and Progress Accessibility]
+**Learning:** Custom UI component wrappers (like Radix-based `Select`) often encapsulate their internal `input` or `button` elements, making traditional `label` association tricky if unique `id`s are not passed down. Explicitly linking labels via `htmlFor` and `id` is crucial for screen reader users to identify form fields. Additionally, `Progress` indicators for usage metrics must have descriptive `aria-label`s to provide context beyond the visual bar.
+**Action:** Always ensure custom form wrappers accept and correctly apply an `id` prop to their underlying interactive element. Always provide descriptive `aria-label`s for informational components like `Progress` that lack visible text associations.
