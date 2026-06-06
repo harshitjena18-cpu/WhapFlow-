@@ -690,7 +690,7 @@ export function TemplatesView() {
                          {aiUsage.ai_generations_used} / {aiUsage.ai_generations_limit}
                        </span>
                     </div>
-                    <Progress value={usagePercentage} className="h-1.5" />
+                    <Progress value={usagePercentage} className="h-1.5" aria-label="AI generation credits usage" />
                     {isLimitReached && (
                       <p className="text-[10px] text-red-500 font-medium">
                         Monthly limit reached. Resets {new Date(aiUsage.ai_usage_reset_at).toLocaleDateString()}.
@@ -700,9 +700,9 @@ export function TemplatesView() {
                 )}
 
                 <div className="space-y-3">
-                  <Label>Message Tone</Label>
+                  <Label htmlFor="ai-tone">Message Tone</Label>
                   <Select value={aiTone} onValueChange={setAiTone}>
-                    <SelectTrigger>
+                    <SelectTrigger id="ai-tone">
                       <SelectValue placeholder="Select tone" />
                     </SelectTrigger>
                     <SelectContent>
@@ -715,8 +715,9 @@ export function TemplatesView() {
                 </div>
 
                 <div className="space-y-3">
-                  <Label>Brand Name (Optional)</Label>
+                  <Label htmlFor="ai-brand">Brand Name (Optional)</Label>
                   <Input 
+                    id="ai-brand"
                     placeholder="e.g. Whapflow Store" 
                     value={aiBrand}
                     onChange={(e) => setAiBrand(e.target.value)}
@@ -724,8 +725,9 @@ export function TemplatesView() {
                 </div>
 
                 <div className="space-y-3">
-                  <Label>Discount Offer (Optional)</Label>
+                  <Label htmlFor="ai-discount">Discount Offer (Optional)</Label>
                   <Input 
+                    id="ai-discount"
                     placeholder="e.g. 10% OFF, Free Shipping" 
                     value={aiDiscount}
                     onChange={(e) => setAiDiscount(e.target.value)}
@@ -899,7 +901,11 @@ export function TemplatesView() {
                     {formData.content?.length || 0} / 1024 chars
                   </span>
                 </div>
-                <Progress value={Math.min(((formData.content?.length || 0) / 1024) * 100, 100)} className="h-1.5 mb-1" />
+                <Progress
+                  value={Math.min(((formData.content?.length || 0) / 1024) * 100, 100)}
+                  className="h-1.5 mb-1"
+                  aria-label="Template content character limit"
+                />
                 <div className="flex flex-wrap gap-2 mt-1 mb-2">
                   {[
                     { tag: '{{customer_name}}', desc: 'Insert customer full name' },
