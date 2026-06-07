@@ -21,14 +21,23 @@ let _cachedHmacKey: CryptoKey | null = null;
 let _cachedHmacSecret: string | null = null;
 let _hmacKeyPromise: Promise<CryptoKey> | null = null;
 
+// PERFORMANCE: Cache environment variables to avoid repeated lookups in hot paths
+let _cachedToken: string | undefined;
+let _cachedPhoneId: string | undefined;
+let _cachedAppSecret: string | undefined;
+
 export const sendWhatsAppTemplate = async ({
   to,
   templateName = "abandoned_cart_test",
   languageCode = "en_US",
   components = []
 }: SendMessageParams) => {
-  const token = getEnv("WHATSAPP_ACCESS_TOKEN");
-  const phoneId = getEnv("WHATSAPP_PHONE_NUMBER_ID");
+  // PERFORMANCE: Use module-level cache for environment variables
+  if (!_cachedToken) _cachedToken = getEnv("WHATSAPP_ACCESS_TOKEN");
+  if (!_cachedPhoneId) _cachedPhoneId = getEnv("WHATSAPP_PHONE_NUMBER_ID");
+
+  const token = _cachedToken;
+  const phoneId = _cachedPhoneId;
 
   if (!token || !phoneId) {
     console.error("❌ Missing WhatsApp configuration (WHATSAPP_ACCESS_TOKEN or WHATSAPP_PHONE_NUMBER_ID)");
@@ -88,7 +97,10 @@ export const sendWhatsAppTemplate = async ({
  * only trigger a single key importation, solving the thundering herd problem.
  */
 export async function verifyWhatsAppSignature(rawBody: string, signatureHeader: string | null): Promise<boolean> {
-  const secret = getEnv("WHATSAPP_APP_SECRET");
+  // PERFORMANCE: Use module-level cache for environment variables
+  if (!_cachedAppSecret) _cachedAppSecret = getEnv("WHATSAPP_APP_SECRET");
+  const secret = _cachedAppSecret;
+
   if (!secret) {
       console.error("[WhatsApp Webhook] Critical Error: WHATSAPP_APP_SECRET not configured");
       return false;
