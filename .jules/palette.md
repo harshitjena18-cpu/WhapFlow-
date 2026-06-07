@@ -41,3 +41,7 @@
 ## 2026-03-20 - [Standardizing Settings UI and Tactile Feedback]
 **Learning:** Native HTML elements (like <select>) often look out of place in a highly-themed Radix-based UI and lack consistent focus/hover states. Standardizing on project-specific themed components automatically brings in accessibility features (like proper keyboard navigation) and visual cohesion. Additionally, unifying tactile feedback (e.g., active:scale-95) across the app prevents a "jittery" or inconsistent feel for users navigating different sections.
 **Action:** Always audit for native HTML form elements and replace them with project-standard themed components. Ensure tactile micro-animations use a single, consistent scale factor across all interactive elements.
+
+## 2026-06-18 - [Discoverable Keyboard Shortcuts and Screen Reader Feedback]
+**Learning:** In high-intensity creation flows (like template editing), keyboard shortcuts are essential but often hidden. Using <kbd> elements within tooltips or labels provides a low-clutter way to teach power-user behaviors. Furthermore, validation messages should reside in an aria-live="polite" region to ensure that errors triggered by keyboard actions (like Save) are immediately announced without requiring the user to manually move focus to the error area.
+**Action:** Include <kbd> hints in tooltips for primary actions. Wrap form-level validation messages in a persistent aria-live container to ensure immediate feedback on submission failures.
