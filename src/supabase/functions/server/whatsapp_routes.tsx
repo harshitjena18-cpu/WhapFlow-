@@ -7,17 +7,24 @@ import { sendWhatsAppTemplate, verifyWhatsAppSignature } from "./whatsapp.ts";
 
 const app = new Hono();
 
+// PERFORMANCE: Module-level cache for configuration to avoid redundant getEnv lookups on every request
+let _cachedWhatsappApiKey: string | undefined;
+let _cachedServiceRoleKey: string | undefined;
+
 /**
  * WhatsApp Sender
  * Path: /api/whatsapp/send
  */
-app.post("/whatsapp/send", async (c) => {
+app.post("/send", async (c) => {
   try {
     const authHeader = c.req.header("Authorization");
     // SECURITY: Protect endpoint from unauthorized use
     // Verify against API key for internal/admin access or legacy service role key
-    const whatsappApiKey = getEnv("WHATSAPP_API_KEY");
-    const serviceRoleKey = getEnv("SUPABASE_SERVICE_ROLE_KEY");
+    if (!_cachedWhatsappApiKey) _cachedWhatsappApiKey = getEnv("WHATSAPP_API_KEY");
+    if (!_cachedServiceRoleKey) _cachedServiceRoleKey = getEnv("SUPABASE_SERVICE_ROLE_KEY");
+
+    const whatsappApiKey = _cachedWhatsappApiKey;
+    const serviceRoleKey = _cachedServiceRoleKey;
 
     const isWhatsappAuth = whatsappApiKey && authHeader && secureCompare(authHeader, `Bearer ${whatsappApiKey}`);
     const isServiceAuth = serviceRoleKey && authHeader && secureCompare(authHeader, `Bearer ${serviceRoleKey}`);
@@ -52,7 +59,7 @@ app.post("/whatsapp/send", async (c) => {
  * Path: /api/webhooks/whatsapp
  */
 // GET: Verification Challenge
-app.get("/webhooks/whatsapp", (c) => {
+app.get("/webhooks", (c) => {
   const mode = c.req.query("hub.mode");
   const token = c.req.query("hub.verify_token");
   const challenge = c.req.query("hub.challenge");
@@ -70,7 +77,7 @@ app.get("/webhooks/whatsapp", (c) => {
 });
 
 // POST: Status Updates & Messages
-app.post("/webhooks/whatsapp", async (c) => {
+app.post("/webhooks", async (c) => {
   try {
     const signature = c.req.header("X-Hub-Signature-256");
     const rawBody = await c.req.text();
