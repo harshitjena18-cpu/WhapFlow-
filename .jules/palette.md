@@ -41,3 +41,7 @@
 ## 2026-03-20 - [Standardizing Settings UI and Tactile Feedback]
 **Learning:** Native HTML elements (like <select>) often look out of place in a highly-themed Radix-based UI and lack consistent focus/hover states. Standardizing on project-specific themed components automatically brings in accessibility features (like proper keyboard navigation) and visual cohesion. Additionally, unifying tactile feedback (e.g., active:scale-95) across the app prevents a "jittery" or inconsistent feel for users navigating different sections.
 **Action:** Always audit for native HTML form elements and replace them with project-standard themed components. Ensure tactile micro-animations use a single, consistent scale factor across all interactive elements.
+
+## 2025-05-25 - [Form Accessibility and Dynamic Feedback]
+**Learning:** Linking help text via `aria-describedby` and using `aria-live` for dynamic content like character counters ensures that form constraints are effectively communicated to assistive technology users. Additionally, keeping validation containers persistently in the DOM (even when empty) prevents broken ARIA references when states change.
+**Action:** Always use `aria-describedby` for hint text and `aria-live="polite"` for character counters. Ensure containers targeted by ARIA attributes are always rendered to maintain accessibility link integrity.
