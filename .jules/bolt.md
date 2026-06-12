@@ -90,3 +90,7 @@
 ## 2024-05-20 - [Atomic Batch Claiming in Job Queue]
 **Learning:** Sequential claiming of jobs in a distributed worker environment using individual `kv.del` calls creates a significant bottleneck (O(N) network round-trips) and increases the race condition window. Implementing an atomic `claimBatch` utility using Postgres `DELETE ... RETURNING` reduces this to O(1) round-trips, yielding a ~100x speedup in claim latency.
 **Action:** Always prefer atomic batch operations (like `DELETE ... RETURNING` or `INSERT ... ON CONFLICT`) for coordination primitives in high-throughput queues. Use `kv.claimBatch` to drastically reduce the latency floor for job processing.
+
+## 2026-05-15 - [Sequential useEffect Fetching & Static Hoisting]
+**Learning:** React components often accumulate sequential `await` calls in `useEffect` as features are added, turning a fast UI into a sluggish one as latency compounds (e.g., 600ms vs 200ms in `TemplatesView`). Additionally, re-allocating static configuration arrays (like `AI_TONES`) inside the render function causes unnecessary garbage collection and prevents React from optimizing props.
+**Action:** Always audit `useEffect` hooks for independent `await` calls and parallelize them with `Promise.all`. Hoist all static configuration objects and arrays outside the component definition to ensure stability and efficiency.
