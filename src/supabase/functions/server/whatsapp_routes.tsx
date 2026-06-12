@@ -1,4 +1,5 @@
 import { Hono } from "npm:hono";
+import { z } from "npm:zod";
 import { getEnv } from "../../../lib/env.ts";
 import { getErrorMessage } from "../../../lib/error.ts";
 import { secureCompare } from "./crypto.ts";
@@ -6,6 +7,13 @@ import { processWhatsAppStatuses } from "./automation.ts";
 import { sendWhatsAppTemplate, verifyWhatsAppSignature } from "./whatsapp.ts";
 
 const app = new Hono();
+
+// SECURITY: Define Zod schema for WhatsApp sending request
+// Requirement: Validate phone numbers to E.164 format
+const WhatsAppSendSchema = z.object({
+  phoneNumber: z.string().regex(/^\+?[1-9]\d{1,14}$/, "Invalid phone number format. Expected E.164 (e.g., +15551234567)"),
+  templateId: z.string().min(1, "templateId is required"),
+});
 
 /**
  * WhatsApp Sender
@@ -27,7 +35,18 @@ app.post("/whatsapp/send", async (c) => {
     }
 
 
-    const { phoneNumber, templateId } = await c.req.json();
+    const body = await c.req.json();
+
+    // SECURITY: Validate request body using Zod
+    const validation = WhatsAppSendSchema.safeParse(body);
+    if (!validation.success) {
+      return c.json({
+        error: "Invalid input",
+        details: validation.error.format()
+      }, 400);
+    }
+
+    const { phoneNumber, templateId } = validation.data;
 
     // Call the shared helper
     const result = await sendWhatsAppTemplate({
@@ -60,7 +79,7 @@ app.get("/webhooks/whatsapp", (c) => {
   const verifyToken = getEnv("WHATSAPP_VERIFY_TOKEN");
 
   // SECURITY: Ensure verifyToken is configured and matches the request token
-  if (mode === "subscribe" && verifyToken && token === verifyToken) {
+  if (mode === "subscribe" && verifyToken && secureCompare(token, verifyToken)) {
     console.log("[WhatsApp Webhook] Webhook verified.");
     return c.text(challenge || "");
   }
