@@ -37,3 +37,8 @@
 **Vulnerability:** Internal API endpoints and webhook verification used standard string equality (===) for sensitive tokens like SUPABASE_SERVICE_ROLE_KEY and WHATSAPP_VERIFY_TOKEN.
 **Learning:** Standard string comparison can leak information about the secret through timing differences, and Node's timingSafeEqual requires equal-length inputs. Hashing both inputs with SHA-256 before constant-time comparison allows for secure verification of variable-length secrets.
 **Prevention:** Always use a timing-safe comparison utility (like secureCompare) that hashes inputs before invoking timingSafeEqual for any sensitive token or API key validation.
+
+## 2026-06-13 - [Duplicate Security Utilities Blocking Verification]
+**Vulnerability:** Duplicate exports of the `secureCompare` utility in `crypto.ts` caused build failures in security verification scripts, potentially leaving vulnerabilities undetected.
+**Learning:** Security-critical utilities are prone to "copy-paste" duplication during rapid remediation. Deno and modern build tools (like `tsx`) will fail on redeclarations, which can block the execution of security CI/CD or manual verification scripts.
+**Prevention:** Strictly enforce linting (`deno lint`) in security-focused PRs and consolidate common security primitives into a single, well-tested implementation.
