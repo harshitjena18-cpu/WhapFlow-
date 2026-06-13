@@ -466,7 +466,8 @@ export function TemplatesView() {
                     <button
                       key={template.id}
                       onClick={() => setSelectedTemplate(template)}
-                      className={`w-full px-4 py-4 text-left transition-all hover:bg-gray-50 flex items-start gap-3 group ${
+                      aria-current={selectedTemplate?.id === template.id ? 'true' : undefined}
+                      className={`w-full px-4 py-4 text-left transition-all hover:bg-gray-50 flex items-start gap-3 group active:scale-[0.98] ${
                         selectedTemplate?.id === template.id ? 'bg-[#25D366]/5 border-l-4 border-l-[#25D366]' : 'border-l-4 border-l-transparent'
                       }`}
                     >
@@ -852,25 +853,33 @@ export function TemplatesView() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="display_name">Display Name</Label>
+                <Label htmlFor="display_name">
+                  Display Name <span className="text-red-500" aria-hidden="true">*</span>
+                </Label>
                 <Input 
                   id="display_name" 
+                  required
+                  aria-describedby="display_name_help"
                   placeholder="e.g. Standard Recovery 30m" 
                   value={formData.display_name}
                   onChange={e => setFormData({...formData, display_name: e.target.value})}
                 />
-                <p className="text-[10px] text-gray-500">Internal name for your reference.</p>
+                <p id="display_name_help" className="text-[10px] text-gray-500">Internal name for your reference.</p>
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="template_name">WhatsApp Template Name (ID)</Label>
+                <Label htmlFor="template_name">
+                  WhatsApp Template Name (ID) <span className="text-red-500" aria-hidden="true">*</span>
+                </Label>
                 <Input 
                   id="template_name" 
+                  required
+                  aria-describedby="template_name_help"
                   placeholder="e.g. abandoned_cart_recovery_v1" 
                   value={formData.template_name}
                   onChange={e => setFormData({...formData, template_name: e.target.value})}
                 />
-                <p className="text-[10px] text-gray-500">MUST match the exact name in Meta Business Manager.</p>
+                <p id="template_name_help" className="text-[10px] text-gray-500">MUST match the exact name in Meta Business Manager.</p>
               </div>
 
               <div className="space-y-2">
@@ -889,13 +898,16 @@ export function TemplatesView() {
               <div className="space-y-2 h-full flex flex-col">
                 <div className="flex justify-between items-center">
                   <Label htmlFor="content">Template Content (Reference Only)</Label>
-                  <span className={`text-[10px] ${
-                    (formData.content?.length || 0) > 1024
-                      ? 'text-red-500 font-bold'
-                      : (formData.content?.length || 0) > 921
-                        ? 'text-orange-500 font-semibold'
-                        : 'text-gray-500'
-                  }`}>
+                  <span
+                    aria-live="polite"
+                    className={`text-[10px] ${
+                      (formData.content?.length || 0) > 1024
+                        ? 'text-red-500 font-bold'
+                        : (formData.content?.length || 0) > 921
+                          ? 'text-orange-500 font-semibold'
+                          : 'text-gray-500'
+                    }`}
+                  >
                     {formData.content?.length || 0} / 1024 chars
                   </span>
                 </div>
@@ -926,6 +938,7 @@ export function TemplatesView() {
                 <Textarea 
                   id="content"
                   ref={contentRef}
+                  aria-describedby="content_validation content_help"
                   placeholder="Paste your template content here... e.g. Hi {{customer_name}}, you left {{product_name}} in your cart. Check out here: {{checkout_link}}" 
                   className={`flex-1 min-h-[150px] font-mono text-sm resize-none bg-gray-50 ${validationErrors.length > 0 ? 'border-red-300 focus:ring-red-200' : ''}`}
                   value={formData.content}
@@ -933,22 +946,20 @@ export function TemplatesView() {
                 />
                 
                 {/* Validation Messages */}
-                {(validationErrors.length > 0 || validationWarnings.length > 0) && (
-                  <div className="space-y-2 mt-1">
-                    {validationErrors.map((err, idx) => (
-                      <div key={`err-${idx}`} className="text-[10px] text-red-600 bg-red-50 p-2 rounded flex items-start gap-1.5 border border-red-100">
-                        <AlertCircle className="w-3 h-3 flex-shrink-0 mt-0.5" />
-                        <span>{err}</span>
-                      </div>
-                    ))}
-                    {validationWarnings.map((warn, idx) => (
-                      <div key={`warn-${idx}`} className="text-[10px] text-orange-600 bg-orange-50 p-2 rounded flex items-start gap-1.5 border border-orange-100">
-                        <Info className="w-3 h-3 flex-shrink-0 mt-0.5" />
-                        <span>{warn}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <div id="content_validation" className={validationErrors.length > 0 || validationWarnings.length > 0 ? "space-y-2 mt-1" : ""}>
+                  {validationErrors.map((err, idx) => (
+                    <div key={`err-${idx}`} className="text-[10px] text-red-600 bg-red-50 p-2 rounded flex items-start gap-1.5 border border-red-100">
+                      <AlertCircle className="w-3 h-3 flex-shrink-0 mt-0.5" />
+                      <span>{err}</span>
+                    </div>
+                  ))}
+                  {validationWarnings.map((warn, idx) => (
+                    <div key={`warn-${idx}`} className="text-[10px] text-orange-600 bg-orange-50 p-2 rounded flex items-start gap-1.5 border border-orange-100">
+                      <Info className="w-3 h-3 flex-shrink-0 mt-0.5" />
+                      <span>{warn}</span>
+                    </div>
+                  ))}
+                </div>
 
                 {formData.generated_by_ai && (
                   <p className="text-[10px] text-purple-600 flex items-center gap-1 mt-1">
@@ -956,7 +967,7 @@ export function TemplatesView() {
                     Generated by AI ({formData.ai_tone})
                   </p>
                 )}
-                <div className="bg-blue-50 text-blue-800 p-2 rounded text-[10px] border border-blue-100 flex items-start gap-2 mt-1">
+                <div id="content_help" className="bg-blue-50 text-blue-800 p-2 rounded text-[10px] border border-blue-100 flex items-start gap-2 mt-1">
                   <AlertCircle className="w-3 h-3 mt-0.5 flex-shrink-0" />
                   <p>Editing this text does NOT update WhatsApp. You must update the template in Meta Business Manager to match. Validation helps ensure approval.</p>
                 </div>
@@ -970,9 +981,15 @@ export function TemplatesView() {
                 disabled={submitting || validationErrors.length > 0}
                 aria-keyshortcuts={`${modifierKey}+Enter`}
                 title={`Save Template (${modifierKey}+Enter)`}
+                className="flex items-center gap-2"
               >
-                {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                 Save Template
+                {!submitting && (
+                  <kbd className="hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border border-white/20 bg-white/10 px-1.5 font-mono text-[10px] font-medium text-white opacity-60">
+                    <span className="text-xs">{modifierKey}</span> ⏎
+                  </kbd>
+                )}
               </Button>
             </DialogFooter>
         </DialogContent>
