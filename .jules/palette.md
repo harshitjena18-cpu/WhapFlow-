@@ -41,3 +41,7 @@
 ## 2026-03-20 - [Standardizing Settings UI and Tactile Feedback]
 **Learning:** Native HTML elements (like <select>) often look out of place in a highly-themed Radix-based UI and lack consistent focus/hover states. Standardizing on project-specific themed components automatically brings in accessibility features (like proper keyboard navigation) and visual cohesion. Additionally, unifying tactile feedback (e.g., active:scale-95) across the app prevents a "jittery" or inconsistent feel for users navigating different sections.
 **Action:** Always audit for native HTML form elements and replace them with project-standard themed components. Ensure tactile micro-animations use a single, consistent scale factor across all interactive elements.
+
+## 2024-03-24 - [Avoid Chatty ARIA Live Regions and Prevent Layout Shift]
+**Learning:** Adding `aria-live="polite"` to a character counter that updates on every keystroke is extremely disruptive for screen reader users as it announces every change. Additionally, message containers (like validation errors) should use conditional spacing (e.g., `className={hasErrors ? "mt-1" : ""}`) to prevent Cumulative Layout Shift (CLS) when they are rendered but empty.
+**Action:** Do not use `aria-live` on frequently updating counters. Use conditional margin classes for dynamic message containers to maintain layout stability while ensuring the container remains in the DOM as a valid ARIA target.
