@@ -9,9 +9,9 @@ const app = new Hono();
 
 /**
  * WhatsApp Sender
- * Path: /api/whatsapp/send
+ * Path: /api/whatsapp/whatsapp/send
  */
-app.post("/send", async (c) => {
+app.post("/whatsapp/send", async (c) => {
   try {
     const authHeader = c.req.header("Authorization");
     // SECURITY: Protect endpoint from unauthorized use
@@ -49,10 +49,10 @@ app.post("/send", async (c) => {
 
 /**
  * WhatsApp Webhook Receiver
- * Path: /api/whatsapp/webhooks
+ * Path: /api/whatsapp/webhooks/whatsapp
  */
 // GET: Verification Challenge
-app.get("/webhooks", (c) => {
+app.get("/webhooks/whatsapp", (c) => {
   const mode = c.req.query("hub.mode");
   const token = c.req.query("hub.verify_token");
   const challenge = c.req.query("hub.challenge");
@@ -70,7 +70,7 @@ app.get("/webhooks", (c) => {
 });
 
 // POST: Status Updates & Messages
-app.post("/webhooks", async (c) => {
+app.post("/webhooks/whatsapp", async (c) => {
   try {
     const signature = c.req.header("X-Hub-Signature-256");
     const rawBody = await c.req.text();
