@@ -41,3 +41,7 @@
 ## 2026-03-20 - [Standardizing Settings UI and Tactile Feedback]
 **Learning:** Native HTML elements (like <select>) often look out of place in a highly-themed Radix-based UI and lack consistent focus/hover states. Standardizing on project-specific themed components automatically brings in accessibility features (like proper keyboard navigation) and visual cohesion. Additionally, unifying tactile feedback (e.g., active:scale-95) across the app prevents a "jittery" or inconsistent feel for users navigating different sections.
 **Action:** Always audit for native HTML form elements and replace them with project-standard themed components. Ensure tactile micro-animations use a single, consistent scale factor across all interactive elements.
+
+## 2026-06-17 - [Persistent Validation Regions and Tooltip Accessibility]
+**Learning:** To prevent Cumulative Layout Shift (CLS) and ensure reliable screen reader announcements, validation message containers should remain persistently in the DOM. This keeps `aria-describedby` associations stable. Furthermore, Radix/Shadcn tooltips require a wrapper element (like a `div`) for disabled buttons because browsers suppress pointer events on disabled form controls, which would otherwise prevent the tooltip from appearing.
+**Action:** Always render validation message containers even when empty to maintain stable ARIA links. For tooltips on disabled buttons, wrap the button in a `div` and use that as the `TooltipTrigger` to ensure the tooltip remains functional.
