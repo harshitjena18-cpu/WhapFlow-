@@ -1,22 +1,11 @@
+/**
+ * Optimized environment variable accessor.
+ * Uses short-circuiting lookups to minimize branching overhead.
+ */
+const g = globalThis as any;
+
 export const getEnv = (key: string): string | undefined => {
-  const g = globalThis as unknown as {
-    Deno?: {
-      env: {
-        get(key: string): string | undefined;
-      };
-    };
-    process?: {
-      env: Record<string, string | undefined>;
-    };
-  };
-
-  if (g.Deno?.env?.get) {
-    return g.Deno.env.get(key);
-  }
-
-  if (g.process?.env) {
-    return g.process.env[key];
-  }
-
-  return undefined;
+  // PERFORMANCE: Direct lookup with optional chaining is faster than explicit if/else blocks
+  // while still allowing for environment changes (important for test isolation).
+  return g.Deno?.env?.get?.(key) ?? g.process?.env?.[key];
 };
