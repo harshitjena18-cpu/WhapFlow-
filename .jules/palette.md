@@ -22,6 +22,10 @@
 **Learning:** For inputs with strict technical constraints (like WhatsApp's 1024-character limit), a simple text counter is often overlooked. Combining it with a visual `Progress` bar provides immediate, peripheral awareness of remaining space. Additionally, modal dialogs for content creation should support `Cmd/Ctrl + Enter` shortcuts to streamline the "Compose-to-Save" flow for power users.
 **Action:** Implement tri-state feedback for character limits (standard, warning at 90%, error at 100%) and supplement with a `Progress` bar. Always provide platform-aware keyboard shortcuts in primary creation modals and communicate them via `aria-keyshortcuts` and native tooltips or titles.
 
+## 2026-06-17 - [Persistent Validation Regions and Tooltip Accessibility]
+**Learning:** To prevent Cumulative Layout Shift (CLS) and ensure reliable screen reader announcements, validation message containers should remain persistently in the DOM. This keeps `aria-describedby` associations stable. Furthermore, Radix/Shadcn tooltips require a wrapper element (like a `div`) for disabled buttons because browsers suppress pointer events on disabled form controls, which would otherwise prevent the tooltip from appearing.
+**Action:** Always render validation message containers even when empty to maintain stable ARIA links. For tooltips on disabled buttons, wrap the button in a `div` and use that as the `TooltipTrigger` to ensure the tooltip remains functional.
+
 ## 2025-05-15 - [Consistency via Standard Components]
 **Learning:** In an established codebase, look for manual implementations of common UI patterns (like toggles) that bypass the design system. Replacing these with standard components (e.g., Radix-based `Switch`) automatically brings in accessibility features and visual consistency. Avoid wrapping interactive elements in extra `div`s inside `TooltipTrigger` to ensure tooltips appear on keyboard focus.
 **Action:** Always check `src/components/ui/` for existing components before modifying. Prioritize replacing "bespoke" controls. When using `TooltipTrigger asChild`, pass the interactive component directly.
