@@ -9,7 +9,7 @@ const app = new Hono();
 
 /**
  * WhatsApp Sender
- * Path: /api/whatsapp/send
+ * Path: /api/whatsapp/whatsapp/send
  */
 app.post("/whatsapp/send", async (c) => {
   try {
@@ -49,7 +49,7 @@ app.post("/whatsapp/send", async (c) => {
 
 /**
  * WhatsApp Webhook Receiver
- * Path: /api/webhooks/whatsapp
+ * Path: /api/whatsapp/webhooks/whatsapp
  */
 // GET: Verification Challenge
 app.get("/webhooks/whatsapp", (c) => {
@@ -60,7 +60,7 @@ app.get("/webhooks/whatsapp", (c) => {
   const verifyToken = getEnv("WHATSAPP_VERIFY_TOKEN");
 
   // SECURITY: Ensure verifyToken is configured and matches the request token
-  if (mode === "subscribe" && verifyToken && token === verifyToken) {
+  if (mode === "subscribe" && verifyToken && secureCompare(token, verifyToken)) {
     console.log("[WhatsApp Webhook] Webhook verified.");
     return c.text(challenge || "");
   }
