@@ -8,7 +8,6 @@ import { getEnv } from "../../../lib/env.ts";
 import { getErrorMessage } from "../../../lib/error.ts";
 import { secureCompare } from "./crypto.ts";
 import { sendWhatsAppTemplate, verifyWhatsAppSignature } from "./whatsapp.ts";
-import { secureCompare } from "./crypto.ts";
 
 import authApp from "./auth.tsx";
 import dashboardApp from "./dashboard.tsx";
@@ -98,7 +97,7 @@ Deno.cron("Process Queue", "* * * * *", async () => {
 
 /**
  * WhatsApp Sender
- * Path: /app/api/whatsapp/send/route.ts (Simulated)
+ * Path: /api/whatsapp/send
  */
 app.post(`${SERVER_BASE_PATH}/api/whatsapp/send`, async (c) => {
   try {
@@ -106,7 +105,6 @@ app.post(`${SERVER_BASE_PATH}/api/whatsapp/send`, async (c) => {
     const shop = c.req.query("shop") || "global";
 
     // SECURITY: Protect demo endpoint from unauthorized use
-    // Verify against API key for internal/admin access or legacy service role key
     const whatsappApiKey = getEnv("WHATSAPP_API_KEY");
     const serviceRoleKey = getEnv("SUPABASE_SERVICE_ROLE_KEY");
 
@@ -116,7 +114,6 @@ app.post(`${SERVER_BASE_PATH}/api/whatsapp/send`, async (c) => {
     if (!isWhatsappAuth && !isServiceAuth) {
       return c.json({ error: "Unauthorized: Invalid or missing token" }, 401);
     }
-
 
     // SECURITY: Validate shop domain
     if (shop !== "global" && !SHOPIFY_DOMAIN_REGEX.test(shop)) {
@@ -147,9 +144,8 @@ app.post(`${SERVER_BASE_PATH}/api/whatsapp/send`, async (c) => {
 
 /**
  * WhatsApp Webhook Receiver
- * Path: /app/api/webhooks/whatsapp/route.ts
+ * GET: Verification Challenge
  */
-// GET: Verification Challenge
 app.get(`${SERVER_BASE_PATH}/api/webhooks/whatsapp`, (c) => {
   const mode = c.req.query("hub.mode");
   const token = c.req.query("hub.verify_token");
@@ -157,7 +153,7 @@ app.get(`${SERVER_BASE_PATH}/api/webhooks/whatsapp`, (c) => {
 
   const verifyToken = getEnv("WHATSAPP_VERIFY_TOKEN");
 
-  // SECURITY: Ensure verifyToken is configured and matches the request token
+  // SECURITY: Use secureCompare to prevent timing attacks on the verify token
   if (mode === "subscribe" && verifyToken && secureCompare(token, verifyToken)) {
     console.log("[WhatsApp Webhook] Webhook verified.");
     return c.text(challenge || "");
@@ -168,7 +164,6 @@ app.get(`${SERVER_BASE_PATH}/api/webhooks/whatsapp`, (c) => {
 });
 
 // POST: Status Updates & Messages
-// SECURITY: Secured with HMAC signature verification
 app.post(`${SERVER_BASE_PATH}/api/webhooks/whatsapp`, async (c) => {
   try {
     const signature = c.req.header("X-Hub-Signature-256");
@@ -186,7 +181,6 @@ app.post(`${SERVER_BASE_PATH}/api/webhooks/whatsapp`, async (c) => {
     // Check if it's a status update
     if (body.entry && body.entry[0]?.changes && body.entry[0]?.changes[0]?.value?.statuses) {
       const statuses = body.entry[0].changes[0].value.statuses;
-      // PERFORMANCE: Process all status updates in a single optimized batch
       await processWhatsAppStatuses(statuses);
     }
 
