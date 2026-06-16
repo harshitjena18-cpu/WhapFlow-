@@ -37,28 +37,6 @@ export const set = async <T = any>(key: string, value: T): Promise<void> => {
   }
 };
 
-/**
- * Atomic batch claim (Claim multiple keys by deleting them and returning which ones existed).
- * PERFORMANCE: Reduces N database round-trips to 1 for job queue claiming.
- */
-export const claimBatch = async (keys: string[]): Promise<string[]> => {
-  if (keys.length === 0) return [];
-  const supabase = client();
-
-  // PERFORMANCE: Delete multiple keys and return only 'key' to confirm which were actually deleted.
-  // This ensures atomicity: if multiple workers call this, each key is only "claimed" by one.
-  const { data, error } = await supabase
-    .from("kv_store_c8eef56a")
-    .delete()
-    .in("key", keys)
-    .select("key");
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return data?.map(d => d.key) ?? [];
-};
 
 // Get retrieves a key-value pair from the database.
 export const get = async <T = any>(key: string): Promise<T | null> => {
