@@ -116,7 +116,7 @@ export function secureCompare(a: string | null | undefined, b: string | null | u
   const hashA = createHash("sha256").update(a).digest();
   const hashB = createHash("sha256").update(b).digest();
 
-  return timingSafeEqual(hashA, hashB);
+  return timingSafeEqual(hashA, hashB) && a.length === b.length;
 }
 
 const b64 = (u: Uint8Array) => Buffer.from(u).toString("base64");
