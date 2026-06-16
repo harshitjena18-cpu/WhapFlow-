@@ -41,3 +41,7 @@
 ## 2026-03-20 - [Standardizing Settings UI and Tactile Feedback]
 **Learning:** Native HTML elements (like <select>) often look out of place in a highly-themed Radix-based UI and lack consistent focus/hover states. Standardizing on project-specific themed components automatically brings in accessibility features (like proper keyboard navigation) and visual cohesion. Additionally, unifying tactile feedback (e.g., active:scale-95) across the app prevents a "jittery" or inconsistent feel for users navigating different sections.
 **Action:** Always audit for native HTML form elements and replace them with project-standard themed components. Ensure tactile micro-animations use a single, consistent scale factor across all interactive elements.
+
+## 2024-05-25 - [Form Accessibility and CLS Prevention]
+**Learning:** Dynamic validation messages can cause jarring Cumulative Layout Shift (CLS). Wrapping these messages in a persistent container (rendered even when empty) prevents layout jumps. Additionally, linking inputs to validation messages and counters via `aria-describedby` and using `aria-live="polite"` for character limits ensures a synchronized and accessible experience for screen reader users.
+**Action:** Always use `aria-describedby` to associate helper text, counters, and errors with their respective inputs. Use persistent containers for dynamic form feedback to maintain layout stability. Include `aria-current` for active selection states in lists.

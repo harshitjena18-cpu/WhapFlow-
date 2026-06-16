@@ -466,7 +466,8 @@ export function TemplatesView() {
                     <button
                       key={template.id}
                       onClick={() => setSelectedTemplate(template)}
-                      className={`w-full px-4 py-4 text-left transition-all hover:bg-gray-50 flex items-start gap-3 group ${
+                      aria-current={selectedTemplate?.id === template.id ? 'true' : 'false'}
+                      className={`w-full px-4 py-4 text-left transition-all hover:bg-gray-50 flex items-start gap-3 group active:scale-[0.98] ${
                         selectedTemplate?.id === template.id ? 'bg-[#25D366]/5 border-l-4 border-l-[#25D366]' : 'border-l-4 border-l-transparent'
                       }`}
                     >
@@ -852,9 +853,10 @@ export function TemplatesView() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="display_name">Display Name</Label>
+                <Label htmlFor="display_name">Display Name <span className="text-red-500" aria-hidden="true">*</span></Label>
                 <Input 
                   id="display_name" 
+                  required
                   placeholder="e.g. Standard Recovery 30m" 
                   value={formData.display_name}
                   onChange={e => setFormData({...formData, display_name: e.target.value})}
@@ -863,9 +865,10 @@ export function TemplatesView() {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="template_name">WhatsApp Template Name (ID)</Label>
+                <Label htmlFor="template_name">WhatsApp Template Name (ID) <span className="text-red-500" aria-hidden="true">*</span></Label>
                 <Input 
                   id="template_name" 
+                  required
                   placeholder="e.g. abandoned_cart_recovery_v1" 
                   value={formData.template_name}
                   onChange={e => setFormData({...formData, template_name: e.target.value})}
@@ -895,7 +898,10 @@ export function TemplatesView() {
                       : (formData.content?.length || 0) > 921
                         ? 'text-orange-500 font-semibold'
                         : 'text-gray-500'
-                  }`}>
+                  }`}
+                  id="char-count"
+                  aria-live="polite"
+                >
                     {formData.content?.length || 0} / 1024 chars
                   </span>
                 </div>
@@ -926,6 +932,7 @@ export function TemplatesView() {
                 <Textarea 
                   id="content"
                   ref={contentRef}
+                  aria-describedby="char-count validation-messages"
                   placeholder="Paste your template content here... e.g. Hi {{customer_name}}, you left {{product_name}} in your cart. Check out here: {{checkout_link}}" 
                   className={`flex-1 min-h-[150px] font-mono text-sm resize-none bg-gray-50 ${validationErrors.length > 0 ? 'border-red-300 focus:ring-red-200' : ''}`}
                   value={formData.content}
@@ -933,22 +940,24 @@ export function TemplatesView() {
                 />
                 
                 {/* Validation Messages */}
-                {(validationErrors.length > 0 || validationWarnings.length > 0) && (
-                  <div className="space-y-2 mt-1">
-                    {validationErrors.map((err, idx) => (
-                      <div key={`err-${idx}`} className="text-[10px] text-red-600 bg-red-50 p-2 rounded flex items-start gap-1.5 border border-red-100">
-                        <AlertCircle className="w-3 h-3 flex-shrink-0 mt-0.5" />
-                        <span>{err}</span>
-                      </div>
-                    ))}
-                    {validationWarnings.map((warn, idx) => (
-                      <div key={`warn-${idx}`} className="text-[10px] text-orange-600 bg-orange-50 p-2 rounded flex items-start gap-1.5 border border-orange-100">
-                        <Info className="w-3 h-3 flex-shrink-0 mt-0.5" />
-                        <span>{warn}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <div id="validation-messages">
+                  {(validationErrors.length > 0 || validationWarnings.length > 0) && (
+                    <div className="space-y-2 mt-1">
+                      {validationErrors.map((err, idx) => (
+                        <div key={`err-${idx}`} className="text-[10px] text-red-600 bg-red-50 p-2 rounded flex items-start gap-1.5 border border-red-100">
+                          <AlertCircle className="w-3 h-3 flex-shrink-0 mt-0.5" />
+                          <span>{err}</span>
+                        </div>
+                      ))}
+                      {validationWarnings.map((warn, idx) => (
+                        <div key={`warn-${idx}`} className="text-[10px] text-orange-600 bg-orange-50 p-2 rounded flex items-start gap-1.5 border border-orange-100">
+                          <Info className="w-3 h-3 flex-shrink-0 mt-0.5" />
+                          <span>{warn}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
                 {formData.generated_by_ai && (
                   <p className="text-[10px] text-purple-600 flex items-center gap-1 mt-1">
