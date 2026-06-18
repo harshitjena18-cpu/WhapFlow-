@@ -41,3 +41,7 @@
 ## 2026-03-20 - [Standardizing Settings UI and Tactile Feedback]
 **Learning:** Native HTML elements (like <select>) often look out of place in a highly-themed Radix-based UI and lack consistent focus/hover states. Standardizing on project-specific themed components automatically brings in accessibility features (like proper keyboard navigation) and visual cohesion. Additionally, unifying tactile feedback (e.g., active:scale-95) across the app prevents a "jittery" or inconsistent feel for users navigating different sections.
 **Action:** Always audit for native HTML form elements and replace them with project-standard themed components. Ensure tactile micro-animations use a single, consistent scale factor across all interactive elements.
+
+## 2024-05-18 - [Dynamic Feedback for Character Constraints]
+**Learning:** For inputs with strict technical constraints (like WhatsApp's 1024-character limit), visual feedback should be multi-modal. Combining an `aria-live` character counter with a color-coded `Progress` bar (Green -> Orange -> Red) ensures both accessibility and immediate visual urgency. Linking these to the input via `aria-describedby` maintains context for screen-reader users.
+**Action:** Implement tri-state feedback for character limits (standard, warning at 90%, error at 100%) using both text and `Progress` components. Use `aria-describedby` to associate counters and validation regions with their respective inputs. Target `data-slot="progress-indicator"` for dynamic bar styling.
