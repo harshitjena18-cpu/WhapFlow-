@@ -10,13 +10,6 @@ export const getEnv = (key: string): string | undefined => {
     };
   };
 
-  if (g.Deno?.env?.get) {
-    return g.Deno.env.get(key);
-  }
-
-  if (g.process?.env) {
-    return g.process.env[key];
-  }
-
-  return undefined;
+  // PERFORMANCE: Optimized lookup to reduce branch overhead while maintaining environment priority.
+  return g.Deno?.env?.get ? g.Deno.env.get(key) : g.process?.env?.[key];
 };
