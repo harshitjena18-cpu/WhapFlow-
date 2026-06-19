@@ -41,3 +41,7 @@
 ## 2026-03-20 - [Standardizing Settings UI and Tactile Feedback]
 **Learning:** Native HTML elements (like <select>) often look out of place in a highly-themed Radix-based UI and lack consistent focus/hover states. Standardizing on project-specific themed components automatically brings in accessibility features (like proper keyboard navigation) and visual cohesion. Additionally, unifying tactile feedback (e.g., active:scale-95) across the app prevents a "jittery" or inconsistent feel for users navigating different sections.
 **Action:** Always audit for native HTML form elements and replace them with project-standard themed components. Ensure tactile micro-animations use a single, consistent scale factor across all interactive elements.
+
+## 2025-05-15 - [Persistent ARIA Associations and Dynamic State Indicators]
+**Learning:** Conditional rendering of validation message containers can break `aria-describedby` associations and cause Cumulative Layout Shift (CLS). Persistently rendering these containers ensures that assistive technologies can always find the referenced IDs. Additionally, using Tailwind's arbitrary variants to target component internal slots (like `data-slot="progress-indicator"`) allows for dynamic, state-based visual feedback without modifying shared component logic.
+**Action:** Always persistently render validation message containers and character counters in the DOM to maintain ARIA links and prevent layout shift. Use targeted slot selectors for dynamic styling of complex UI components.
