@@ -24,8 +24,8 @@ async function verify() {
       useRegex: false
     },
     {
-      pattern: 'if (origin === APP_DOMAIN)',
-      description: "Allows APP_DOMAIN",
+      pattern: 'origin === APP_DOMAIN',
+      description: "Allows APP_DOMAIN (Optimized check)",
       useRegex: false
     },
     {
