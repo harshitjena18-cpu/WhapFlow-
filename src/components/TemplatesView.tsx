@@ -702,9 +702,9 @@ export function TemplatesView() {
                 )}
 
                 <div className="space-y-3">
-                  <Label htmlFor="ai-tone">Message Tone</Label>
+                  <Label>Message Tone</Label>
                   <Select value={aiTone} onValueChange={setAiTone}>
-                    <SelectTrigger id="ai-tone">
+                    <SelectTrigger>
                       <SelectValue placeholder="Select tone" />
                     </SelectTrigger>
                     <SelectContent>
@@ -717,9 +717,8 @@ export function TemplatesView() {
                 </div>
 
                 <div className="space-y-3">
-                  <Label htmlFor="ai-brand">Brand Name (Optional)</Label>
+                  <Label>Brand Name (Optional)</Label>
                   <Input
-                    id="ai-brand"
                     placeholder="e.g. Whapflow Store"
                     value={aiBrand}
                     onChange={(e) => setAiBrand(e.target.value)}
@@ -727,9 +726,8 @@ export function TemplatesView() {
                 </div>
 
                 <div className="space-y-3">
-                  <Label htmlFor="ai-discount">Discount Offer (Optional)</Label>
+                  <Label>Discount Offer (Optional)</Label>
                   <Input
-                    id="ai-discount"
                     placeholder="e.g. 10% OFF, Free Shipping"
                     value={aiDiscount}
                     onChange={(e) => setAiDiscount(e.target.value)}
@@ -893,29 +891,15 @@ export function TemplatesView() {
               <div className="space-y-2 h-full flex flex-col">
                 <div className="flex justify-between items-center">
                   <Label htmlFor="content">Template Content (Reference Only)</Label>
-                  <span
-                    id="char-count"
-                    aria-live="polite"
-                    className={`text-[10px] ${
-                    (formData.content?.length || 0) > 1024
-                      ? 'text-red-500 font-bold'
-                      : (formData.content?.length || 0) > 921
-                        ? 'text-orange-500 font-semibold'
-                        : 'text-gray-500'
+                  <span id="char-count" aria-live="polite" className={`text-[10px] ${
+                    (formData.content?.length || 0) > 1024 ? 'text-red-500 font-bold' : (formData.content?.length || 0) > 921 ? 'text-orange-500 font-semibold' : 'text-gray-500'
                   }`}>
                     {formData.content?.length || 0} / 1024 chars
                   </span>
                 </div>
                 <Progress
                   value={Math.min(((formData.content?.length || 0) / 1024) * 100, 100)}
-                  className={cn(
-                    "h-1.5 mb-1",
-                    (formData.content?.length || 0) > 1024
-                      ? "[&_[data-slot=progress-indicator]]:bg-red-500"
-                      : (formData.content?.length || 0) > 921
-                        ? "[&_[data-slot=progress-indicator]]:bg-orange-500"
-                        : "[&_[data-slot=progress-indicator]]:bg-green-500"
-                  )}
+                  className={cn("h-1.5 mb-1", (formData.content?.length || 0) > 1024 ? "[&_[data-slot=progress-indicator]]:bg-red-500" : (formData.content?.length || 0) > 921 ? "[&_[data-slot=progress-indicator]]:bg-orange-500" : "[&_[data-slot=progress-indicator]]:bg-green-500")}
                 />
                 <div className="flex flex-wrap gap-2 mt-1 mb-2">
                   {[
@@ -949,22 +933,14 @@ export function TemplatesView() {
                   value={formData.content}
                   onChange={e => setFormData({...formData, content: e.target.value})}
                 />
-
-                {/* Validation Messages */}
                 <div id="validation-messages" className="min-h-[20px] mt-1 space-y-2">
                   {(validationErrors.length > 0 || validationWarnings.length > 0) && (
                     <>
                       {validationErrors.map((err, idx) => (
-                        <div key={`err-${idx}`} className="text-[10px] text-red-600 bg-red-50 p-2 rounded flex items-start gap-1.5 border border-red-100">
-                          <AlertCircle className="w-3 h-3 flex-shrink-0 mt-0.5" />
-                          <span>{err}</span>
-                        </div>
+                        <div key={`err-${idx}`} className="text-[10px] text-red-600 bg-red-50 p-2 rounded flex items-start gap-1.5 border border-red-100"><AlertCircle className="w-3 h-3 flex-shrink-0 mt-0.5" /><span>{err}</span></div>
                       ))}
                       {validationWarnings.map((warn, idx) => (
-                        <div key={`warn-${idx}`} className="text-[10px] text-orange-600 bg-orange-50 p-2 rounded flex items-start gap-1.5 border border-orange-100">
-                          <Info className="w-3 h-3 flex-shrink-0 mt-0.5" />
-                          <span>{warn}</span>
-                        </div>
+                        <div key={`warn-${idx}`} className="text-[10px] text-orange-600 bg-orange-50 p-2 rounded flex items-start gap-1.5 border border-orange-100"><Info className="w-3 h-3 flex-shrink-0 mt-0.5" /><span>{warn}</span></div>
                       ))}
                     </>
                   )}
