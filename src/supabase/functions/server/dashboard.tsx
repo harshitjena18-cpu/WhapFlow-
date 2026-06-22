@@ -168,7 +168,7 @@ dashboardApp.get("/data", async (c) => {
   if (!shop) return c.json({ error: "Unauthorized: Missing verified shop" }, 401);
 
   // SECURITY: Extra validation for shop domain
-  if (shop !== "global" && !SHOPIFY_DOMAIN_REGEX.test(shop)) {
+  if (!SHOPIFY_DOMAIN_REGEX.test(shop)) {
     return c.json({ error: "Invalid shop domain" }, 400);
   }
 
@@ -226,7 +226,7 @@ dashboardApp.get("/automations", async (c) => {
   if (!shop) return c.json({ error: "Unauthorized: Missing verified shop" }, 401);
 
   // SECURITY: Validate shop domain to prevent multi-tenancy leaks
-  if (shop !== "global" && !SHOPIFY_DOMAIN_REGEX.test(shop)) {
+  if (!SHOPIFY_DOMAIN_REGEX.test(shop)) {
     return c.json({ error: "Invalid shop domain" }, 400);
   }
 
@@ -260,7 +260,7 @@ dashboardApp.post("/automations/:id/toggle", async (c) => {
   if (!shop) return c.json({ error: "Unauthorized: Missing verified shop" }, 401);
 
   // SECURITY: Validate shop domain to prevent multi-tenancy leaks
-  if (shop !== "global" && !SHOPIFY_DOMAIN_REGEX.test(shop)) {
+  if (!SHOPIFY_DOMAIN_REGEX.test(shop)) {
     return c.json({ error: "Invalid shop domain" }, 400);
   }
 

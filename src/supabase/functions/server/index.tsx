@@ -8,7 +8,6 @@ import { getEnv } from "../../../lib/env.ts";
 import { getErrorMessage } from "../../../lib/error.ts";
 import { secureCompare } from "./crypto.ts";
 import { sendWhatsAppTemplate, verifyWhatsAppSignature } from "./whatsapp.ts";
-import { secureCompare } from "./crypto.ts";
 
 import authApp from "./auth.tsx";
 import dashboardApp from "./dashboard.tsx";
@@ -103,7 +102,11 @@ Deno.cron("Process Queue", "* * * * *", async () => {
 app.post(`${SERVER_BASE_PATH}/api/whatsapp/send`, async (c) => {
   try {
     const authHeader = c.req.header("Authorization");
-    const shop = c.req.query("shop") || "global";
+    const shop = c.req.query("shop");
+
+    if (!shop) {
+      return c.json({ error: "Missing shop domain" }, 400);
+    }
 
     // SECURITY: Protect demo endpoint from unauthorized use
     // Verify against API key for internal/admin access or legacy service role key
@@ -119,7 +122,7 @@ app.post(`${SERVER_BASE_PATH}/api/whatsapp/send`, async (c) => {
 
 
     // SECURITY: Validate shop domain
-    if (shop !== "global" && !SHOPIFY_DOMAIN_REGEX.test(shop)) {
+    if (!SHOPIFY_DOMAIN_REGEX.test(shop)) {
       return c.json({ error: "Invalid shop domain" }, 400);
     }
 
