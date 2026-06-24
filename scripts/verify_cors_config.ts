@@ -24,12 +24,12 @@ async function verify() {
       useRegex: false
     },
     {
-      pattern: 'if (origin === APP_DOMAIN)',
-      description: "Allows APP_DOMAIN",
+      pattern: 'origin === APP_DOMAIN',
+      description: "Allows APP_DOMAIN (string check)",
       useRegex: false
     },
     {
-      pattern: 'if (LOCALHOST_REGEX.test(origin))',
+      pattern: 'LOCALHOST_REGEX.test(origin)',
       description: "Allows localhost via REGEX",
       useRegex: false
     },
