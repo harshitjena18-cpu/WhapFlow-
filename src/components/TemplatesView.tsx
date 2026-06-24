@@ -466,7 +466,8 @@ export function TemplatesView() {
                     <button
                       key={template.id}
                       onClick={() => setSelectedTemplate(template)}
-                      className={`w-full px-4 py-4 text-left transition-all hover:bg-gray-50 flex items-start gap-3 group ${
+                      aria-current={selectedTemplate?.id === template.id ? "true" : undefined}
+                      className={`w-full px-4 py-4 text-left transition-all hover:bg-gray-50 active:scale-[0.98] flex items-start gap-3 group ${
                         selectedTemplate?.id === template.id ? 'bg-[#25D366]/5 border-l-4 border-l-[#25D366]' : 'border-l-4 border-l-transparent'
                       }`}
                     >
@@ -700,9 +701,9 @@ export function TemplatesView() {
                 )}
 
                 <div className="space-y-3">
-                  <Label>Message Tone</Label>
+                  <Label htmlFor="ai-tone">Message Tone</Label>
                   <Select value={aiTone} onValueChange={setAiTone}>
-                    <SelectTrigger>
+                    <SelectTrigger id="ai-tone">
                       <SelectValue placeholder="Select tone" />
                     </SelectTrigger>
                     <SelectContent>
@@ -715,8 +716,9 @@ export function TemplatesView() {
                 </div>
 
                 <div className="space-y-3">
-                  <Label>Brand Name (Optional)</Label>
+                  <Label htmlFor="ai-brand">Brand Name (Optional)</Label>
                   <Input 
+                    id="ai-brand"
                     placeholder="e.g. Whapflow Store" 
                     value={aiBrand}
                     onChange={(e) => setAiBrand(e.target.value)}
@@ -724,8 +726,9 @@ export function TemplatesView() {
                 </div>
 
                 <div className="space-y-3">
-                  <Label>Discount Offer (Optional)</Label>
+                  <Label htmlFor="ai-discount">Discount Offer (Optional)</Label>
                   <Input 
+                    id="ai-discount"
                     placeholder="e.g. 10% OFF, Free Shipping" 
                     value={aiDiscount}
                     onChange={(e) => setAiDiscount(e.target.value)}
@@ -889,17 +892,29 @@ export function TemplatesView() {
               <div className="space-y-2 h-full flex flex-col">
                 <div className="flex justify-between items-center">
                   <Label htmlFor="content">Template Content (Reference Only)</Label>
-                  <span className={`text-[10px] ${
-                    (formData.content?.length || 0) > 1024
-                      ? 'text-red-500 font-bold'
-                      : (formData.content?.length || 0) > 921
-                        ? 'text-orange-500 font-semibold'
-                        : 'text-gray-500'
-                  }`}>
+                  <span
+                    className={`text-[10px] ${
+                      (formData.content?.length || 0) > 1024
+                        ? 'text-red-500 font-bold'
+                        : (formData.content?.length || 0) > 921
+                          ? 'text-orange-500 font-semibold'
+                          : 'text-gray-500'
+                    }`}
+                    aria-live="polite"
+                  >
                     {formData.content?.length || 0} / 1024 chars
                   </span>
                 </div>
-                <Progress value={Math.min(((formData.content?.length || 0) / 1024) * 100, 100)} className="h-1.5 mb-1" />
+                <Progress
+                  value={Math.min(((formData.content?.length || 0) / 1024) * 100, 100)}
+                  className={`h-1.5 mb-1 ${
+                    (formData.content?.length || 0) > 1024
+                      ? "[&_[data-slot=progress-indicator]]:bg-red-500"
+                      : (formData.content?.length || 0) > 921
+                        ? "[&_[data-slot=progress-indicator]]:bg-orange-500"
+                        : "[&_[data-slot=progress-indicator]]:bg-green-500"
+                  }`}
+                />
                 <div className="flex flex-wrap gap-2 mt-1 mb-2">
                   {[
                     { tag: '{{customer_name}}', desc: 'Insert customer full name' },
