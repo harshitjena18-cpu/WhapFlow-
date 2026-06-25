@@ -693,6 +693,7 @@ export function TemplatesView() {
                     </div>
                     <Progress
                       value={usagePercentage}
+                      aria-describedby="ai-usage-text"
                       className={cn(
                         "h-1.5",
                         usagePercentage >= 100
