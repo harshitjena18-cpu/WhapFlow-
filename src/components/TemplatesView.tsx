@@ -10,6 +10,7 @@ import { Textarea } from "./ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Progress } from "./ui/progress";
+import { cn } from "./ui/utils";
 import {
   Tooltip,
   TooltipContent,
@@ -427,7 +428,7 @@ export function TemplatesView() {
       <Tabs defaultValue="manage" className="w-full">
         <TabsList className="mb-6">
           <TabsTrigger value="manage" className="px-4">Manage Templates</TabsTrigger>
-          <TabsTrigger value="ai-generator" className="px-4 flex items-center gap-2">
+          <TabsTrigger value="ai-generator" className="px-4 flex items-center gap-2" id="ai-generator-tab">
             <Sparkles className="w-3.5 h-3.5 text-purple-500" />
             AI Template Generator
           </TabsTrigger>
@@ -686,11 +687,22 @@ export function TemplatesView() {
                        <span className="font-medium text-gray-600 flex items-center gap-1">
                          <Zap className="w-3 h-3 text-orange-400" /> Monthly Credits
                        </span>
-                       <span className="text-gray-900 font-mono">
+                       <span className="text-gray-900 font-mono" id="ai-usage-text">
                          {aiUsage.ai_generations_used} / {aiUsage.ai_generations_limit}
                        </span>
                     </div>
-                    <Progress value={usagePercentage} className="h-1.5" />
+                    <Progress
+                      value={usagePercentage}
+                      aria-describedby="ai-usage-text"
+                      className={cn(
+                        "h-1.5",
+                        usagePercentage >= 100
+                          ? "[&_[data-slot=progress-indicator]]:bg-red-500"
+                          : usagePercentage >= 90
+                            ? "[&_[data-slot=progress-indicator]]:bg-orange-500"
+                            : "[&_[data-slot=progress-indicator]]:bg-green-500"
+                      )}
+                    />
                     {isLimitReached && (
                       <p className="text-[10px] text-red-500 font-medium">
                         Monthly limit reached. Resets {new Date(aiUsage.ai_usage_reset_at).toLocaleDateString()}.
