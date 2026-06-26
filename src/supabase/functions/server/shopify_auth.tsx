@@ -138,10 +138,12 @@ app.get("/callback", async (c) => {
     // Update global config for MVP (Dashboard compatibility)
     // In a real multi-tenant app, this would be scoped to the user session.
     
-    // PERFORMANCE: Parallelize configuration fetch and token encryption
+    // PERFORMANCE: Parallelize configuration, merchant record fetch and token encryption
     const shopifyKey = `shop:${shop}:config:shopify`;
-    const [existingConfig, encryptedToken] = await Promise.all([
+    const merchantKey = `merchant:${shop}`;
+    const [existingConfig, existingMerchant, encryptedToken] = await Promise.all([
       kv.get(shopifyKey),
+      kv.get(merchantKey),
       encrypt(accessToken)
     ]);
 
@@ -152,20 +154,21 @@ app.get("/callback", async (c) => {
     shopifyConfig.shop_domain = shop; // Metadata
 
     // 2. Securely Store Credentials (keyed by shop)
-
+    // SECURITY: Preserve existing merchant plan and creation date during re-authentication
     const merchantRecord = {
+      ...existingMerchant,
       shop: shop,
       access_token: encryptedToken,
       scopes: tokenData.scope,
-      plan: "free",
+      plan: existingMerchant?.plan || "free",
       shopify_connected: true,
-      created_at: new Date().toISOString(),
+      created_at: existingMerchant?.created_at || new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
 
     // PERFORMANCE: Batch persist both configuration and merchant record in a single request
     await kv.mset(
-      [shopifyKey, `merchant:${shop}`],
+      [shopifyKey, merchantKey],
       [shopifyConfig, merchantRecord]
     );
     
