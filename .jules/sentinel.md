@@ -37,3 +37,8 @@
 **Vulnerability:** Internal API endpoints and webhook verification used standard string equality (===) for sensitive tokens like SUPABASE_SERVICE_ROLE_KEY and WHATSAPP_VERIFY_TOKEN.
 **Learning:** Standard string comparison can leak information about the secret through timing differences, and Node's timingSafeEqual requires equal-length inputs. Hashing both inputs with SHA-256 before constant-time comparison allows for secure verification of variable-length secrets.
 **Prevention:** Always use a timing-safe comparison utility (like secureCompare) that hashes inputs before invoking timingSafeEqual for any sensitive token or API key validation.
+
+## 2025-05-25 - [Shopify Plan Reset on Re-authentication]
+**Vulnerability:** The OAuth callback handler was creating a fresh merchant record on every successful authentication, which reset existing merchants to the "free" plan and overwrote their original installation date.
+**Learning:** Authenticated sessions (especially OAuth) often trigger "upsert" logic. If not carefully implemented, these upserts can act as a "destructive reset" for fields that are not part of the identity/token data itself.
+**Prevention:** Always perform a pre-fetch of the existing entity before updating during authentication flows. Preserve sensitive operational state (plans, tiers, billing IDs, original timestamps) by explicitly merging the new data onto the existing record.
