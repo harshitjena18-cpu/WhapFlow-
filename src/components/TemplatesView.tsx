@@ -427,7 +427,7 @@ export function TemplatesView() {
       <Tabs defaultValue="manage" className="w-full">
         <TabsList className="mb-6">
           <TabsTrigger value="manage" className="px-4">Manage Templates</TabsTrigger>
-          <TabsTrigger value="ai-generator" className="px-4 flex items-center gap-2">
+          <TabsTrigger id="ai-generator-tab" value="ai-generator" className="px-4 flex items-center gap-2">
             <Sparkles className="w-3.5 h-3.5 text-purple-500" />
             AI Template Generator
           </TabsTrigger>
@@ -466,7 +466,8 @@ export function TemplatesView() {
                     <button
                       key={template.id}
                       onClick={() => setSelectedTemplate(template)}
-                      className={`w-full px-4 py-4 text-left transition-all hover:bg-gray-50 flex items-start gap-3 group ${
+                      aria-current={selectedTemplate?.id === template.id ? 'true' : undefined}
+                      className={`w-full px-4 py-4 text-left transition-all hover:bg-gray-50 active:scale-[0.98] flex items-start gap-3 group ${
                         selectedTemplate?.id === template.id ? 'bg-[#25D366]/5 border-l-4 border-l-[#25D366]' : 'border-l-4 border-l-transparent'
                       }`}
                     >
@@ -686,7 +687,7 @@ export function TemplatesView() {
                        <span className="font-medium text-gray-600 flex items-center gap-1">
                          <Zap className="w-3 h-3 text-orange-400" /> Monthly Credits
                        </span>
-                       <span className="text-gray-900 font-mono">
+                       <span id="ai-usage-text" className="text-gray-900 font-mono">
                          {aiUsage.ai_generations_used} / {aiUsage.ai_generations_limit}
                        </span>
                     </div>
@@ -889,7 +890,7 @@ export function TemplatesView() {
               <div className="space-y-2 h-full flex flex-col">
                 <div className="flex justify-between items-center">
                   <Label htmlFor="content">Template Content (Reference Only)</Label>
-                  <span className={`text-[10px] ${
+                  <span id="char-counter" aria-live="polite" className={`text-[10px] ${
                     (formData.content?.length || 0) > 1024
                       ? 'text-red-500 font-bold'
                       : (formData.content?.length || 0) > 921
@@ -930,25 +931,24 @@ export function TemplatesView() {
                   className={`flex-1 min-h-[150px] font-mono text-sm resize-none bg-gray-50 ${validationErrors.length > 0 ? 'border-red-300 focus:ring-red-200' : ''}`}
                   value={formData.content}
                   onChange={e => setFormData({...formData, content: e.target.value})}
+                  aria-describedby="char-counter validation-messages"
                 />
                 
                 {/* Validation Messages */}
-                {(validationErrors.length > 0 || validationWarnings.length > 0) && (
-                  <div className="space-y-2 mt-1">
-                    {validationErrors.map((err, idx) => (
-                      <div key={`err-${idx}`} className="text-[10px] text-red-600 bg-red-50 p-2 rounded flex items-start gap-1.5 border border-red-100">
-                        <AlertCircle className="w-3 h-3 flex-shrink-0 mt-0.5" />
-                        <span>{err}</span>
-                      </div>
-                    ))}
-                    {validationWarnings.map((warn, idx) => (
-                      <div key={`warn-${idx}`} className="text-[10px] text-orange-600 bg-orange-50 p-2 rounded flex items-start gap-1.5 border border-orange-100">
-                        <Info className="w-3 h-3 flex-shrink-0 mt-0.5" />
-                        <span>{warn}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <div id="validation-messages" className="space-y-2 mt-1">
+                  {validationErrors.map((err, idx) => (
+                    <div key={`err-${idx}`} className="text-[10px] text-red-600 bg-red-50 p-2 rounded flex items-start gap-1.5 border border-red-100">
+                      <AlertCircle className="w-3 h-3 flex-shrink-0 mt-0.5" />
+                      <span>{err}</span>
+                    </div>
+                  ))}
+                  {validationWarnings.map((warn, idx) => (
+                    <div key={`warn-${idx}`} className="text-[10px] text-orange-600 bg-orange-50 p-2 rounded flex items-start gap-1.5 border border-orange-100">
+                      <Info className="w-3 h-3 flex-shrink-0 mt-0.5" />
+                      <span>{warn}</span>
+                    </div>
+                  ))}
+                </div>
 
                 {formData.generated_by_ai && (
                   <p className="text-[10px] text-purple-600 flex items-center gap-1 mt-1">
