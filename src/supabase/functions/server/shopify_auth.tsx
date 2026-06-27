@@ -140,9 +140,11 @@ app.get("/callback", async (c) => {
     
     // PERFORMANCE: Parallelize configuration fetch and token encryption
     const shopifyKey = `shop:${shop}:config:shopify`;
-    const [existingConfig, encryptedToken] = await Promise.all([
+    const merchantKey = `merchant:${shop}`;
+    const [existingConfig, encryptedToken, existingMerchant] = await Promise.all([
       kv.get(shopifyKey),
-      encrypt(accessToken)
+      encrypt(accessToken),
+      kv.get(merchantKey)
     ]);
 
     // 1. Update Scoped Config (Scoping by shop to prevent multi-tenancy leaks)
@@ -152,14 +154,15 @@ app.get("/callback", async (c) => {
     shopifyConfig.shop_domain = shop; // Metadata
 
     // 2. Securely Store Credentials (keyed by shop)
-
+    // SECURITY: Preserve existing plan and created_at to prevent accidental downgrades and data loss during re-auth
     const merchantRecord = {
+      ...existingMerchant,
       shop: shop,
       access_token: encryptedToken,
       scopes: tokenData.scope,
-      plan: "free",
+      plan: existingMerchant?.plan || "free",
       shopify_connected: true,
-      created_at: new Date().toISOString(),
+      created_at: existingMerchant?.created_at || new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
 
