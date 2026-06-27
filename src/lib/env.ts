@@ -1,22 +1,24 @@
-export const getEnv = (key: string): string | undefined => {
-  const g = globalThis as unknown as {
-    Deno?: {
-      env: {
-        get(key: string): string | undefined;
-      };
-    };
-    process?: {
-      env: Record<string, string | undefined>;
+const g = globalThis as unknown as {
+  Deno?: {
+    env: {
+      get(key: string): string | undefined;
     };
   };
+  process?: {
+    env: Record<string, string | undefined>;
+  };
+};
 
-  if (g.Deno?.env?.get) {
-    return g.Deno.env.get(key);
-  }
+/**
+ * PERFORMANCE: Use a pre-determined environment getter to avoid redundant
+ * runtime checks (Deno vs Node) on every getEnv call.
+ */
+const envGetter = g.Deno?.env?.get
+  ? (key: string) => g.Deno!.env.get(key)
+  : g.process?.env
+    ? (key: string) => g.process!.env[key]
+    : (_key: string) => undefined;
 
-  if (g.process?.env) {
-    return g.process.env[key];
-  }
-
-  return undefined;
+export const getEnv = (key: string): string | undefined => {
+  return envGetter(key);
 };
