@@ -427,7 +427,7 @@ export function TemplatesView() {
       <Tabs defaultValue="manage" className="w-full">
         <TabsList className="mb-6">
           <TabsTrigger value="manage" className="px-4">Manage Templates</TabsTrigger>
-          <TabsTrigger id="ai-generator-tab" value="ai-generator" className="px-4 flex items-center gap-2">
+          <TabsTrigger value="ai-generator" className="px-4 flex items-center gap-2">
             <Sparkles className="w-3.5 h-3.5 text-purple-500" />
             AI Template Generator
           </TabsTrigger>
@@ -687,7 +687,7 @@ export function TemplatesView() {
                        <span className="font-medium text-gray-600 flex items-center gap-1">
                          <Zap className="w-3 h-3 text-orange-400" /> Monthly Credits
                        </span>
-                       <span id="ai-usage-text" className="text-gray-900 font-mono">
+                       <span className="text-gray-900 font-mono">
                          {aiUsage.ai_generations_used} / {aiUsage.ai_generations_limit}
                        </span>
                     </div>
@@ -935,7 +935,7 @@ export function TemplatesView() {
                 />
                 
                 {/* Validation Messages */}
-                <div id="validation-messages" className="space-y-2 mt-1">
+                <div id="validation-messages" className={(validationErrors.length > 0 || validationWarnings.length > 0) ? "space-y-2 mt-1" : ""}>
                   {validationErrors.map((err, idx) => (
                     <div key={`err-${idx}`} className="text-[10px] text-red-600 bg-red-50 p-2 rounded flex items-start gap-1.5 border border-red-100">
                       <AlertCircle className="w-3 h-3 flex-shrink-0 mt-0.5" />
