@@ -41,3 +41,7 @@
 ## 2026-03-20 - [Standardizing Settings UI and Tactile Feedback]
 **Learning:** Native HTML elements (like <select>) often look out of place in a highly-themed Radix-based UI and lack consistent focus/hover states. Standardizing on project-specific themed components automatically brings in accessibility features (like proper keyboard navigation) and visual cohesion. Additionally, unifying tactile feedback (e.g., active:scale-95) across the app prevents a "jittery" or inconsistent feel for users navigating different sections.
 **Action:** Always audit for native HTML form elements and replace them with project-standard themed components. Ensure tactile micro-animations use a single, consistent scale factor across all interactive elements.
+
+## 2026-03-25 - [Accessible Character Counters and Validation Associations]
+**Learning:** Character counters and validation messages are often visually present but programmatically disconnected from the inputs they describe. Using `aria-live="polite"` on counters ensures real-time updates are announced to screen readers. Furthermore, using `aria-describedby` for validation requires the target container ID to be persistent in the DOM, even when empty, to maintain a valid ARIA reference.
+**Action:** Always use `aria-live="polite"` for dynamic character counters. Ensure validation message containers are always present in the DOM with a stable ID to satisfy `aria-describedby` associations on the primary input.
