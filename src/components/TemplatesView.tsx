@@ -889,13 +889,16 @@ export function TemplatesView() {
               <div className="space-y-2 h-full flex flex-col">
                 <div className="flex justify-between items-center">
                   <Label htmlFor="content">Template Content (Reference Only)</Label>
-                  <span className={`text-[10px] ${
-                    (formData.content?.length || 0) > 1024
-                      ? 'text-red-500 font-bold'
-                      : (formData.content?.length || 0) > 921
-                        ? 'text-orange-500 font-semibold'
-                        : 'text-gray-500'
-                  }`}>
+                  <span
+                    className={`text-[10px] ${
+                      (formData.content?.length || 0) > 1024
+                        ? 'text-red-500 font-bold'
+                        : (formData.content?.length || 0) > 921
+                          ? 'text-orange-500 font-semibold'
+                          : 'text-gray-500'
+                    }`}
+                    aria-live="polite"
+                  >
                     {formData.content?.length || 0} / 1024 chars
                   </span>
                 </div>
@@ -930,25 +933,29 @@ export function TemplatesView() {
                   className={`flex-1 min-h-[150px] font-mono text-sm resize-none bg-gray-50 ${validationErrors.length > 0 ? 'border-red-300 focus:ring-red-200' : ''}`}
                   value={formData.content}
                   onChange={e => setFormData({...formData, content: e.target.value})}
+                  aria-describedby="template-content-validation"
+                  aria-invalid={validationErrors.length > 0}
                 />
                 
                 {/* Validation Messages */}
-                {(validationErrors.length > 0 || validationWarnings.length > 0) && (
-                  <div className="space-y-2 mt-1">
-                    {validationErrors.map((err, idx) => (
-                      <div key={`err-${idx}`} className="text-[10px] text-red-600 bg-red-50 p-2 rounded flex items-start gap-1.5 border border-red-100">
-                        <AlertCircle className="w-3 h-3 flex-shrink-0 mt-0.5" />
-                        <span>{err}</span>
-                      </div>
-                    ))}
-                    {validationWarnings.map((warn, idx) => (
-                      <div key={`warn-${idx}`} className="text-[10px] text-orange-600 bg-orange-50 p-2 rounded flex items-start gap-1.5 border border-orange-100">
-                        <Info className="w-3 h-3 flex-shrink-0 mt-0.5" />
-                        <span>{warn}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <div id="template-content-validation">
+                  {(validationErrors.length > 0 || validationWarnings.length > 0) && (
+                    <div className="space-y-2 mt-1">
+                      {validationErrors.map((err, idx) => (
+                        <div key={`err-${idx}`} className="text-[10px] text-red-600 bg-red-50 p-2 rounded flex items-start gap-1.5 border border-red-100">
+                          <AlertCircle className="w-3 h-3 flex-shrink-0 mt-0.5" />
+                          <span>{err}</span>
+                        </div>
+                      ))}
+                      {validationWarnings.map((warn, idx) => (
+                        <div key={`warn-${idx}`} className="text-[10px] text-orange-600 bg-orange-50 p-2 rounded flex items-start gap-1.5 border border-orange-100">
+                          <Info className="w-3 h-3 flex-shrink-0 mt-0.5" />
+                          <span>{warn}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
                 {formData.generated_by_ai && (
                   <p className="text-[10px] text-purple-600 flex items-center gap-1 mt-1">
