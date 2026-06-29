@@ -690,7 +690,17 @@ export function TemplatesView() {
                          {aiUsage.ai_generations_used} / {aiUsage.ai_generations_limit}
                        </span>
                     </div>
-                    <Progress value={usagePercentage} className="h-1.5" />
+                    <Progress
+                      value={usagePercentage}
+                      className={`h-1.5 ${
+                        usagePercentage >= 100
+                          ? '[&_[data-slot=progress-indicator]]:bg-red-500'
+                          : usagePercentage >= 90
+                            ? '[&_[data-slot=progress-indicator]]:bg-orange-500'
+                            : '[&_[data-slot=progress-indicator]]:bg-purple-500'
+                      }`}
+                      aria-label="AI usage credits progress"
+                    />
                     {isLimitReached && (
                       <p className="text-[10px] text-red-500 font-medium">
                         Monthly limit reached. Resets {new Date(aiUsage.ai_usage_reset_at).toLocaleDateString()}.
@@ -889,17 +899,31 @@ export function TemplatesView() {
               <div className="space-y-2 h-full flex flex-col">
                 <div className="flex justify-between items-center">
                   <Label htmlFor="content">Template Content (Reference Only)</Label>
-                  <span className={`text-[10px] ${
-                    (formData.content?.length || 0) > 1024
-                      ? 'text-red-500 font-bold'
-                      : (formData.content?.length || 0) > 921
-                        ? 'text-orange-500 font-semibold'
-                        : 'text-gray-500'
-                  }`}>
+                  <span
+                    id="content-char-count"
+                    aria-live="polite"
+                    className={`text-[10px] ${
+                      (formData.content?.length || 0) > 1024
+                        ? 'text-red-500 font-bold'
+                        : (formData.content?.length || 0) > 921
+                          ? 'text-orange-500 font-semibold'
+                          : 'text-gray-500'
+                    }`}
+                  >
                     {formData.content?.length || 0} / 1024 chars
                   </span>
                 </div>
-                <Progress value={Math.min(((formData.content?.length || 0) / 1024) * 100, 100)} className="h-1.5 mb-1" />
+                <Progress
+                  value={Math.min(((formData.content?.length || 0) / 1024) * 100, 100)}
+                  className={`h-1.5 mb-1 ${
+                    (formData.content?.length || 0) > 1024
+                      ? '[&_[data-slot=progress-indicator]]:bg-red-500'
+                      : (formData.content?.length || 0) > 921
+                        ? '[&_[data-slot=progress-indicator]]:bg-orange-500'
+                        : '[&_[data-slot=progress-indicator]]:bg-green-500'
+                  }`}
+                  aria-label="Character limit progress"
+                />
                 <div className="flex flex-wrap gap-2 mt-1 mb-2">
                   {[
                     { tag: '{{customer_name}}', desc: 'Insert customer full name' },
@@ -930,6 +954,7 @@ export function TemplatesView() {
                   className={`flex-1 min-h-[150px] font-mono text-sm resize-none bg-gray-50 ${validationErrors.length > 0 ? 'border-red-300 focus:ring-red-200' : ''}`}
                   value={formData.content}
                   onChange={e => setFormData({...formData, content: e.target.value})}
+                  aria-describedby="content-char-count"
                 />
                 
                 {/* Validation Messages */}
