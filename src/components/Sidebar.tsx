@@ -9,11 +9,14 @@ import {
   MessageCircle,
   Menu,
   X,
-  ChevronRight
+  ChevronRight,
+  LogOut
 } from 'lucide-react';
 import { useState } from 'react';
 import { WhapflowLogo } from './WhapflowLogo';
 import { useAuth } from '../hooks/useAuth';
+import { Button } from './ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
 const navItems = [
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
@@ -26,7 +29,7 @@ const navItems = [
 
 export function Sidebar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { user, loading } = useAuth();
+  const { user, loading, signOut } = useAuth();
 
   const getInitials = (email?: string, name?: string) => {
     if (name) {
@@ -114,9 +117,9 @@ export function Sidebar() {
         </nav>
 
         {/* User Profile */}
-        <div className="px-4 py-6 border-t border-gray-100">
+        <div className="px-4 py-6 border-t border-gray-100 flex items-center gap-2">
           {loading ? (
-             <div className="flex items-center gap-3 px-3 py-2 rounded-lg">
+             <div className="flex items-center gap-3 px-3 py-2 rounded-lg flex-1">
                 <div className="w-9 h-9 bg-gray-200 rounded-full animate-pulse" />
                 <div className="flex-1 space-y-2">
                   <div className="h-4 bg-gray-200 rounded w-24 animate-pulse" />
@@ -124,20 +127,38 @@ export function Sidebar() {
                 </div>
              </div>
           ) : (
-            <Link
-              to="/settings"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 transition-all active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-[#25D366]/20"
-              aria-label="User Profile and Settings"
-            >
-              <div className="w-9 h-9 bg-[#25D366] rounded-full flex items-center justify-center flex-shrink-0">
-                <span className="text-white font-semibold text-xs">{initials}</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate group-hover:text-[#25D366] transition-colors">{displayName}</p>
-                <p className="text-xs text-gray-500 truncate">{displayEmail}</p>
-              </div>
-            </Link>
+            <>
+              <Link
+                to="/settings"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 transition-all active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-[#25D366]/20 flex-1 min-w-0"
+                aria-label="User Profile and Settings"
+              >
+                <div className="w-9 h-9 bg-[#25D366] rounded-full flex items-center justify-center flex-shrink-0">
+                  <span className="text-white font-semibold text-xs">{initials}</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate transition-colors">{displayName}</p>
+                  <p className="text-xs text-gray-500 truncate">{displayEmail}</p>
+                </div>
+              </Link>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => signOut()}
+                    className="h-9 w-9 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all active:scale-95 flex-shrink-0"
+                    aria-label="Sign out"
+                  >
+                    <LogOut className="w-5 h-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Sign out</p>
+                </TooltipContent>
+              </Tooltip>
+            </>
           )}
         </div>
       </aside>
