@@ -1,36 +1,37 @@
-import { NavLink, Link } from 'react-router';
-import { 
-  LayoutDashboard, 
-  Zap, 
-  FileText, 
-  BarChart3, 
-  CreditCard, 
+import { NavLink, Link } from "react-router";
+import {
+  LayoutDashboard,
+  Zap,
+  FileText,
+  BarChart3,
+  CreditCard,
   Settings,
-  MessageCircle,
   Menu,
   X,
-  ChevronRight
-} from 'lucide-react';
-import { useState } from 'react';
-import { WhapflowLogo } from './WhapflowLogo';
-import { useAuth } from '../hooks/useAuth';
+  LogOut,
+} from "lucide-react";
+import { useState } from "react";
+import { WhapflowLogo } from "./WhapflowLogo";
+import { useAuth } from "../hooks/useAuth";
+import { Button } from "./ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 
 const navItems = [
-  { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-  { name: 'Automations', path: '/automations', icon: Zap },
-  { name: 'Templates', path: '/templates', icon: FileText },
-  { name: 'Analytics', path: '/analytics', icon: BarChart3 },
-  { name: 'Billing', path: '/billing', icon: CreditCard },
-  { name: 'Settings', path: '/settings', icon: Settings },
+  { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
+  { name: "Automations", path: "/automations", icon: Zap },
+  { name: "Templates", path: "/templates", icon: FileText },
+  { name: "Analytics", path: "/analytics", icon: BarChart3 },
+  { name: "Billing", path: "/billing", icon: CreditCard },
+  { name: "Settings", path: "/settings", icon: Settings },
 ];
 
 export function Sidebar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { user, loading } = useAuth();
+  const { user, loading, signOut } = useAuth();
 
   const getInitials = (email?: string, name?: string) => {
     if (name) {
-      const parts = name.split(' ');
+      const parts = name.split(" ");
       if (parts.length >= 2) {
         return (parts[0][0] + parts[1][0]).toUpperCase();
       }
@@ -39,11 +40,12 @@ export function Sidebar() {
     if (email) {
       return email.slice(0, 2).toUpperCase();
     }
-    return 'US';
+    return "US";
   };
 
-  const displayName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
-  const displayEmail = user?.email || '';
+  const displayName =
+    user?.user_metadata?.full_name || user?.email?.split("@")[0] || "User";
+  const displayEmail = user?.email || "";
   const initials = getInitials(user?.email, user?.user_metadata?.full_name);
 
   return (
@@ -75,13 +77,17 @@ export function Sidebar() {
           fixed top-0 left-0 h-full bg-white border-r border-gray-100 z-40
           transition-transform duration-300 ease-in-out
           w-72
-          ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+          ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
         `}
       >
         {/* Logo */}
         <div className="px-8 py-8 border-b border-gray-100">
           <Link to="/" className="group">
-            <WhapflowLogo size="md" variant="full" className="hover:opacity-80 transition-opacity" />
+            <WhapflowLogo
+              size="md"
+              variant="full"
+              className="hover:opacity-80 transition-opacity"
+            />
           </Link>
         </div>
 
@@ -96,8 +102,8 @@ export function Sidebar() {
                   className={({ isActive }) =>
                     `flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 active:scale-[0.98] ${
                       isActive
-                        ? 'bg-[#25D366] text-white'
-                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                        ? "bg-[#25D366] text-white"
+                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                     }`
                   }
                 >
@@ -113,31 +119,62 @@ export function Sidebar() {
           </ul>
         </nav>
 
-        {/* User Profile */}
+        {/* User Profile & Sign Out */}
         <div className="px-4 py-6 border-t border-gray-100">
           {loading ? (
-             <div className="flex items-center gap-3 px-3 py-2 rounded-lg">
-                <div className="w-9 h-9 bg-gray-200 rounded-full animate-pulse" />
-                <div className="flex-1 space-y-2">
-                  <div className="h-4 bg-gray-200 rounded w-24 animate-pulse" />
-                  <div className="h-3 bg-gray-200 rounded w-32 animate-pulse" />
-                </div>
-             </div>
+            <div className="flex items-center gap-3 px-3 py-2 rounded-lg">
+              <div className="w-9 h-9 bg-gray-200 rounded-full animate-pulse" />
+              <div className="flex-1 space-y-2">
+                <div className="h-4 bg-gray-200 rounded w-24 animate-pulse" />
+                <div className="h-3 bg-gray-200 rounded w-32 animate-pulse" />
+              </div>
+            </div>
           ) : (
-            <Link
-              to="/settings"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 transition-all active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-[#25D366]/20"
-              aria-label="User Profile and Settings"
-            >
-              <div className="w-9 h-9 bg-[#25D366] rounded-full flex items-center justify-center flex-shrink-0">
-                <span className="text-white font-semibold text-xs">{initials}</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate group-hover:text-[#25D366] transition-colors">{displayName}</p>
-                <p className="text-xs text-gray-500 truncate">{displayEmail}</p>
-              </div>
-            </Link>
+            <div className="flex items-center justify-between gap-2">
+              <Link
+                to="/settings"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="flex flex-1 items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 transition-all active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-[#25D366]/20 min-w-0 group"
+                aria-label="User Profile and Settings"
+              >
+                <div className="w-9 h-9 bg-[#25D366] rounded-full flex items-center justify-center flex-shrink-0">
+                  <span className="text-white font-semibold text-xs">
+                    {initials}
+                  </span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate group-hover:text-[#25D366] transition-colors">
+                    {displayName}
+                  </p>
+                  <p className="text-xs text-gray-500 truncate">
+                    {displayEmail}
+                  </p>
+                </div>
+              </Link>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      const confirmed = window.confirm(
+                        "Are you sure you want to sign out?",
+                      );
+                      if (confirmed) {
+                        signOut();
+                      }
+                    }}
+                    className="text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0 active:scale-95"
+                    aria-label="Sign out"
+                  >
+                    <LogOut className="w-5 h-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Sign out</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
           )}
         </div>
       </aside>
