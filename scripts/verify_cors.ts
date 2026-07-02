@@ -1,20 +1,39 @@
 import { assert } from "https://deno.land/std@0.192.0/testing/asserts.ts";
+import app from "../src/supabase/functions/server/index.tsx";
 
-// Simple fetch wrapper to test CORS
-async function testCors(origin: string | undefined) {
-  const headers = origin ? { "Origin": origin } : {};
-  // We need to target the running server.
-  // Since we can't easily start the server and keep it running in this script without complex setup,
-  // we will rely on static analysis or unit testing the middleware configuration if possible.
-  // BUT, we can try to import the app and run a request against it using app.request().
+Deno.test("CORS Middleware - Production Domain", async () => {
+  const res = await app.request("/make-server-c8eef56a/health", {
+    headers: { "Origin": "https://app.whapflow.com" }
+  });
 
-  // Dynamic import of the app
-  // Note: We need to handle the Deno/Node environment differences.
-  // The app uses 'npm:hono', which works in Deno.
-  // This script is running in Deno (via the agent environment).
+  assert(res.headers.get("access-control-allow-origin") === "https://app.whapflow.com", "Should allow APP_DOMAIN");
+});
 
-  // However, the app imports other files that might use 'npm:' imports or other Deno specifics.
-  // Let's try to import the app handler.
-}
+Deno.test("CORS Middleware - API Domain", async () => {
+  const res = await app.request("/make-server-c8eef56a/health", {
+    headers: { "Origin": "https://api.whapflow.com" }
+  });
 
-console.log("To verify this, we will use a unit test approach importing the Hono app.");
+  assert(res.headers.get("access-control-allow-origin") === "https://api.whapflow.com", "Should allow API_DOMAIN");
+});
+
+Deno.test("CORS Middleware - Localhost", async () => {
+  const res = await app.request("/make-server-c8eef56a/health", {
+    headers: { "Origin": "http://localhost:3000" }
+  });
+
+  assert(res.headers.get("access-control-allow-origin") === "http://localhost:3000", "Should allow localhost");
+});
+
+Deno.test("CORS Middleware - Unauthorized Domain", async () => {
+  const res = await app.request("/make-server-c8eef56a/health", {
+    headers: { "Origin": "https://evil.com" }
+  });
+
+  assert(res.headers.get("access-control-allow-origin") === null, "Should block evil.com");
+});
+
+Deno.test("CORS Middleware - No Origin", async () => {
+  const res = await app.request("/make-server-c8eef56a/health");
+  assert(res.headers.get("access-control-allow-origin") === null, "Should not return CORS headers for no-origin requests");
+});
