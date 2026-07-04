@@ -90,3 +90,7 @@
 ## 2024-05-20 - [Atomic Batch Claiming in Job Queue]
 **Learning:** Sequential claiming of jobs in a distributed worker environment using individual `kv.del` calls creates a significant bottleneck (O(N) network round-trips) and increases the race condition window. Implementing an atomic `claimBatch` utility using Postgres `DELETE ... RETURNING` reduces this to O(1) round-trips, yielding a ~100x speedup in claim latency.
 **Action:** Always prefer atomic batch operations (like `DELETE ... RETURNING` or `INSERT ... ON CONFLICT`) for coordination primitives in high-throughput queues. Use `kv.claimBatch` to drastically reduce the latency floor for job processing.
+
+## 2024-05-21 - [CORS & Env Hot-path Optimizations]
+**Learning:** Middleware and utility functions called on every request (like CORS validation and `getEnv`) are highly sensitive to micro-latencies. Reordering checks to prioritize static string comparisons over regex in CORS, and using module-level constants for environment detection in `getEnv`, reduces the per-request latency floor.
+**Action:** Always prioritize static string checks over regex in hot-paths. Cache environment detection results at the module level to avoid redundant property lookups on `globalThis`.
