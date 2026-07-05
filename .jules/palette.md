@@ -41,3 +41,7 @@
 ## 2026-03-20 - [Standardizing Settings UI and Tactile Feedback]
 **Learning:** Native HTML elements (like <select>) often look out of place in a highly-themed Radix-based UI and lack consistent focus/hover states. Standardizing on project-specific themed components automatically brings in accessibility features (like proper keyboard navigation) and visual cohesion. Additionally, unifying tactile feedback (e.g., active:scale-95) across the app prevents a "jittery" or inconsistent feel for users navigating different sections.
 **Action:** Always audit for native HTML form elements and replace them with project-standard themed components. Ensure tactile micro-animations use a single, consistent scale factor across all interactive elements.
+
+## 2025-05-15 - [Accessible Sidebar Logout and Layout Integrity]
+**Learning:** Adding secondary actions (like logout) to a sidebar footer requires careful layout management to prevent text overflow. Wrapping the primary navigation link and the secondary action in a flex container with `min-w-0` on the link and `truncate` on the text ensures that long user identifiers don't break the layout. Using `TooltipTrigger asChild` with `aria-label` ensures the action is accessible to all users.
+**Action:** When adding side-by-side actions in constrained layouts like sidebars, use flexbox with `min-w-0` and `truncate`. Always provide accessible tactile feedback and tooltips for icon-only actions.
