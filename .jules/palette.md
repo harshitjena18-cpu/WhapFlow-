@@ -41,3 +41,7 @@
 ## 2026-03-20 - [Standardizing Settings UI and Tactile Feedback]
 **Learning:** Native HTML elements (like <select>) often look out of place in a highly-themed Radix-based UI and lack consistent focus/hover states. Standardizing on project-specific themed components automatically brings in accessibility features (like proper keyboard navigation) and visual cohesion. Additionally, unifying tactile feedback (e.g., active:scale-95) across the app prevents a "jittery" or inconsistent feel for users navigating different sections.
 **Action:** Always audit for native HTML form elements and replace them with project-standard themed components. Ensure tactile micro-animations use a single, consistent scale factor across all interactive elements.
+
+## 2025-06-20 - [Semantic Iconography for Faster Scanning]
+**Learning:** Visual scanning in complex forms and navigation is significantly improved by adding semantic iconography. It helps users identify sections and options peripherally before reading the text. In the "Templates" view, adding a list icon to the management tab and specific tone icons (e.g., Smile for Friendly, Zap for Urgent) makes the interface feel more intuitive and "premium."
+**Action:** Supplement text-only navigation and selection inputs with contextual icons to improve cognitive scanning and interface delight. Ensure icons use appropriate brand colors to further differentiate options without compromising legibility.
