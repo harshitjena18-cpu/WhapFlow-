@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
-import { MessageCircle, Plus, Trash2, Check, Loader2, Sparkles, Copy, AlertCircle, Bot, Zap, Info } from 'lucide-react';
+import { MessageCircle, Plus, Trash2, Check, Loader2, Sparkles, Copy, AlertCircle, Bot, Zap, Info, List, Smile } from 'lucide-react';
 import { toast } from "sonner";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -426,7 +426,10 @@ export function TemplatesView() {
 
       <Tabs defaultValue="manage" className="w-full">
         <TabsList className="mb-6">
-          <TabsTrigger value="manage" className="px-4">Manage Templates</TabsTrigger>
+          <TabsTrigger value="manage" className="px-4 flex items-center gap-2">
+            <List className="w-3.5 h-3.5 text-gray-500" />
+            Manage Templates
+          </TabsTrigger>
           <TabsTrigger value="ai-generator" className="px-4 flex items-center gap-2">
             <Sparkles className="w-3.5 h-3.5 text-purple-500" />
             AI Template Generator
@@ -706,10 +709,22 @@ export function TemplatesView() {
                       <SelectValue placeholder="Select tone" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Friendly">Friendly</SelectItem>
-                      <SelectItem value="Urgent">Urgent</SelectItem>
-                      <SelectItem value="Premium">Premium</SelectItem>
-                      <SelectItem value="Casual">Casual</SelectItem>
+                      <SelectItem value="Friendly">
+                        <Smile className="w-3.5 h-3.5 text-green-500" />
+                        <span>Friendly</span>
+                      </SelectItem>
+                      <SelectItem value="Urgent">
+                        <Zap className="w-3.5 h-3.5 text-orange-500" />
+                        <span>Urgent</span>
+                      </SelectItem>
+                      <SelectItem value="Premium">
+                        <Sparkles className="w-3.5 h-3.5 text-purple-500" />
+                        <span>Premium</span>
+                      </SelectItem>
+                      <SelectItem value="Casual">
+                        <MessageCircle className="w-3.5 h-3.5 text-blue-500" />
+                        <span>Casual</span>
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
