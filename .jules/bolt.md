@@ -3,7 +3,7 @@
 ## Optimizations
 
 ### Parallel WhatsApp Status Processing
-**Date:** [Current Date]
+**Date:** 2026-07-07
 **Component:** `src/supabase/functions/server/index.tsx`
 **Change:** Refactored sequential `for` loop to `Promise.all` for processing WhatsApp status updates.
 **Impact:**
@@ -91,6 +91,6 @@
 **Learning:** Sequential claiming of jobs in a distributed worker environment using individual `kv.del` calls creates a significant bottleneck (O(N) network round-trips) and increases the race condition window. Implementing an atomic `claimBatch` utility using Postgres `DELETE ... RETURNING` reduces this to O(1) round-trips, yielding a ~100x speedup in claim latency.
 **Action:** Always prefer atomic batch operations (like `DELETE ... RETURNING` or `INSERT ... ON CONFLICT`) for coordination primitives in high-throughput queues. Use `kv.claimBatch` to drastically reduce the latency floor for job processing.
 
-## 2026-04-05 - [Memoized Validation & Constant Hoisting]
+## 2026-07-07 - [Memoized Validation & Constant Hoisting]
 **Learning:** Refactoring input validation from a `useEffect` + `useState` pattern to a `useMemo` (derived state) pattern in React components eliminates redundant re-render cycles per keystroke, significantly improving responsiveness in high-interaction views like `TemplatesView.tsx`. Hoisting static configuration objects (e.g., `TEMPLATE_VARIABLES`) outside of component functions prevents redundant object allocations and reduces GC pressure on every render pass.
 **Action:** Always derive validation state or simple transformations directly in the render phase using `useMemo` instead of triggering secondary effects. Hoist any objects or arrays that don't depend on props/state outside the component.
