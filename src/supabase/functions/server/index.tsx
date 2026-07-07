@@ -8,7 +8,6 @@ import { getEnv } from "../../../lib/env.ts";
 import { getErrorMessage } from "../../../lib/error.ts";
 import { secureCompare } from "./crypto.ts";
 import { sendWhatsAppTemplate, verifyWhatsAppSignature } from "./whatsapp.ts";
-import { secureCompare } from "./crypto.ts";
 
 import authApp from "./auth.tsx";
 import dashboardApp from "./dashboard.tsx";
@@ -94,108 +93,6 @@ app.get(`${SERVER_BASE_PATH}/health`, (c) => {
 // Process Queue periodically
 Deno.cron("Process Queue", "* * * * *", async () => {
     await processPendingJobs(executeAutomation);
-});
-
-/**
- * WhatsApp Sender
- * Path: /app/api/whatsapp/send/route.ts (Simulated)
- */
-app.post(`${SERVER_BASE_PATH}/api/whatsapp/send`, async (c) => {
-  try {
-    const authHeader = c.req.header("Authorization");
-    const shop = c.req.query("shop") || "global";
-
-    // SECURITY: Protect demo endpoint from unauthorized use
-    // Verify against API key for internal/admin access or legacy service role key
-    const whatsappApiKey = getEnv("WHATSAPP_API_KEY");
-    const serviceRoleKey = getEnv("SUPABASE_SERVICE_ROLE_KEY");
-
-    const isWhatsappAuth = whatsappApiKey && secureCompare(authHeader, `Bearer ${whatsappApiKey}`);
-    const isServiceAuth = serviceRoleKey && secureCompare(authHeader, `Bearer ${serviceRoleKey}`);
-
-    if (!isWhatsappAuth && !isServiceAuth) {
-      return c.json({ error: "Unauthorized: Invalid or missing token" }, 401);
-    }
-
-
-    // SECURITY: Validate shop domain
-    if (shop !== "global" && !SHOPIFY_DOMAIN_REGEX.test(shop)) {
-      return c.json({ error: "Invalid shop domain" }, 400);
-    }
-
-    const { phoneNumber, templateId } = await c.req.json();
-    // SECURITY: Redact phoneNumber from logs
-    console.log(`[WhatsApp] Intent to send template "${templateId}" to [REDACTED]`);
-    
-    // Call the shared helper
-    const result = await sendWhatsAppTemplate({
-      to: phoneNumber,
-      templateName: templateId || "abandoned_cart_test",
-      languageCode: "en_US"
-    });
-    
-    if (result.success) {
-      return c.json({ success: true, message: 'Message sent', data: result.data }, 200);
-    } else {
-      return c.json({ error: 'WhatsApp API Error', details: result.error }, 500);
-    }
-
-  } catch (_error) {
-    return c.json({ error: 'Invalid request' }, 400);
-  }
-});
-
-/**
- * WhatsApp Webhook Receiver
- * Path: /app/api/webhooks/whatsapp/route.ts
- */
-// GET: Verification Challenge
-app.get(`${SERVER_BASE_PATH}/api/webhooks/whatsapp`, (c) => {
-  const mode = c.req.query("hub.mode");
-  const token = c.req.query("hub.verify_token");
-  const challenge = c.req.query("hub.challenge");
-
-  const verifyToken = getEnv("WHATSAPP_VERIFY_TOKEN");
-
-  // SECURITY: Ensure verifyToken is configured and matches the request token
-  if (mode === "subscribe" && verifyToken && secureCompare(token, verifyToken)) {
-    console.log("[WhatsApp Webhook] Webhook verified.");
-    return c.text(challenge || "");
-  }
-
-  console.error("[WhatsApp Webhook] Verification failed.");
-  return c.json({ error: "Forbidden" }, 403);
-});
-
-// POST: Status Updates & Messages
-// SECURITY: Secured with HMAC signature verification
-app.post(`${SERVER_BASE_PATH}/api/webhooks/whatsapp`, async (c) => {
-  try {
-    const signature = c.req.header("X-Hub-Signature-256");
-    const rawBody = await c.req.text();
-
-    // SECURITY: Verify HMAC signature from WhatsApp/Meta
-    const isValid = await verifyWhatsAppSignature(rawBody, signature || null);
-    if (!isValid) {
-      console.error("[WhatsApp Webhook] HMAC verification failed");
-      return c.json({ error: "Unauthorized" }, 401);
-    }
-
-    const body = JSON.parse(rawBody);
-
-    // Check if it's a status update
-    if (body.entry && body.entry[0]?.changes && body.entry[0]?.changes[0]?.value?.statuses) {
-      const statuses = body.entry[0].changes[0].value.statuses;
-      // PERFORMANCE: Process all status updates in a single optimized batch
-      await processWhatsAppStatuses(statuses);
-    }
-
-    return c.json({ status: 'ok' });
-  } catch (error) {
-    // SECURITY: Use getErrorMessage to redact PII from the error before logging
-    console.error("[WhatsApp Webhook] Error processing POST:", getErrorMessage(error));
-    return c.json({ error: "Internal Error" }, 500);
-  }
 });
 
 if (import.meta.main) {

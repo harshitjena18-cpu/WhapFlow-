@@ -127,6 +127,7 @@ build/
 # Editor directories and files
 .idea
 .DS_Store
+deno.lock
 *.suo
 *.ntvs
 *.njsproj
