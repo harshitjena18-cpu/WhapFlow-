@@ -41,3 +41,7 @@
 ## 2026-03-20 - [Standardizing Settings UI and Tactile Feedback]
 **Learning:** Native HTML elements (like <select>) often look out of place in a highly-themed Radix-based UI and lack consistent focus/hover states. Standardizing on project-specific themed components automatically brings in accessibility features (like proper keyboard navigation) and visual cohesion. Additionally, unifying tactile feedback (e.g., active:scale-95) across the app prevents a "jittery" or inconsistent feel for users navigating different sections.
 **Action:** Always audit for native HTML form elements and replace them with project-standard themed components. Ensure tactile micro-animations use a single, consistent scale factor across all interactive elements.
+
+## 2026-07-08 - [Sidebar Action Separation and Primitive Tactile Feedback]
+**Learning:** Combining multiple actions (like profile settings and sign-out) into a single navigational block can be confusing. Separating them into distinct, icon-only actions with clear tooltips improves usability. Furthermore, applying tactile feedback (`active:scale-95`) at the component primitive level (e.g., in `switch.tsx`) is a highly efficient way to improve the "feel" of the entire app globally.
+**Action:** In sidebars, provide dedicated buttons for primary actions like Sign Out rather than burying them in profile links. Apply micro-animations to core UI primitives to ensure consistent responsiveness across all features.
