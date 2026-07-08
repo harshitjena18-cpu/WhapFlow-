@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
 import { MessageCircle, Plus, Trash2, Check, Loader2, Sparkles, Copy, AlertCircle, Bot, Zap, Info } from 'lucide-react';
 import { toast } from "sonner";
@@ -53,6 +53,13 @@ interface AIUsage {
   ai_generations_limit: number;
   ai_usage_reset_at: string;
 }
+
+// PERFORMANCE: Hoist static configuration outside component to prevent redundant object creation on every render pass.
+const TEMPLATE_VARIABLES = [
+  { tag: '{{customer_name}}', desc: 'Insert customer full name' },
+  { tag: '{{product_name}}', desc: 'Insert name of abandoned products' },
+  { tag: '{{checkout_link}}', desc: 'Insert unique recovery link (Required)' }
+];
 
 const SERVER_URL = `https://${projectId}.supabase.co/functions/v1/make-server-c8eef56a`;
 
@@ -122,10 +129,6 @@ export function TemplatesView() {
     }, 0);
   };
 
-  // Validation State
-  const [validationErrors, setValidationErrors] = useState<string[]>([]);
-  const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
-
   // Fetch Templates
   const fetchTemplates = async () => {
     try {
@@ -185,10 +188,16 @@ export function TemplatesView() {
     setModifierKey(isMac ? '⌘' : 'Ctrl');
   }, []);
 
-  // Validation Logic
-  const validateContent = (content: string = "") => {
+  // PERFORMANCE: Refactor validation from useEffect + useState to useMemo (derived state).
+  // This eliminates a redundant re-render cycle per keystroke in the textarea,
+  // as validation results are now calculated synchronously during the render phase.
+  const { validationErrors, validationWarnings } = useMemo(() => {
     const errors: string[] = [];
     const warnings: string[] = [];
+
+    if (!isDialogOpen) return { validationErrors: errors, validationWarnings: warnings };
+
+    const content = formData.content || "";
 
     // Blocking Rules
     if (!content.trim()) {
@@ -212,14 +221,7 @@ export function TemplatesView() {
       warnings.push("Missing {{product_name}} - reminding customers what they left helps.");
     }
 
-    setValidationErrors(errors);
-    setValidationWarnings(warnings);
-  };
-
-  useEffect(() => {
-    if (isDialogOpen) {
-      validateContent(formData.content);
-    }
+    return { validationErrors: errors, validationWarnings: warnings };
   }, [formData.content, isDialogOpen]);
 
   // Handlers
@@ -901,11 +903,7 @@ export function TemplatesView() {
                 </div>
                 <Progress value={Math.min(((formData.content?.length || 0) / 1024) * 100, 100)} className="h-1.5 mb-1" />
                 <div className="flex flex-wrap gap-2 mt-1 mb-2">
-                  {[
-                    { tag: '{{customer_name}}', desc: 'Insert customer full name' },
-                    { tag: '{{product_name}}', desc: 'Insert name of abandoned products' },
-                    { tag: '{{checkout_link}}', desc: 'Insert unique recovery link (Required)' }
-                  ].map(variable => (
+                  {TEMPLATE_VARIABLES.map(variable => (
                     <Tooltip key={variable.tag}>
                       <TooltipTrigger asChild>
                         <button
