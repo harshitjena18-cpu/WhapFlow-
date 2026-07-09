@@ -34,6 +34,13 @@ import {
   Area,
   AreaChart
 } from 'recharts';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/select';
 
 // Animation variants
 const cardVariants = {
@@ -187,19 +194,25 @@ export function DashboardViewModern() {
         </div>
         
         <div className="flex flex-wrap items-center gap-3">
-          <motion.button 
-            className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all flex items-center gap-2 shadow-sm"
-            whileHover={{ scale: 1.03, y: -1 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <Calendar className="w-4 h-4" />
-            {dateRange}
-          </motion.button>
+          <Select defaultValue="weekly">
+            <SelectTrigger
+              className="w-[140px] h-10 border-slate-200 text-slate-600 font-medium"
+              aria-label="Select report period"
+            >
+              <Calendar className="w-4 h-4 mr-2" />
+              <SelectValue placeholder="Select period" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="monthly">Monthly</SelectItem>
+              <SelectItem value="weekly">Weekly</SelectItem>
+              <SelectItem value="daily">Daily</SelectItem>
+            </SelectContent>
+          </Select>
           
           <motion.button 
             className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all flex items-center gap-2 shadow-sm"
             whileHover={{ scale: 1.03, y: -1 }}
-            whileTap={{ scale: 0.98 }}
+            whileTap={{ scale: 0.95 }}
           >
             <Filter className="w-4 h-4" />
             Filter
@@ -208,7 +221,7 @@ export function DashboardViewModern() {
           <motion.button 
             className="px-4 py-2 bg-gradient-to-r from-teal-500 to-emerald-500 text-white rounded-lg text-sm font-semibold hover:shadow-lg hover:shadow-teal-500/30 transition-all flex items-center gap-2"
             whileHover={{ scale: 1.03, y: -2 }}
-            whileTap={{ scale: 0.98 }}
+            whileTap={{ scale: 0.95 }}
           >
             <Download className="w-4 h-4" />
             Export
@@ -446,11 +459,19 @@ export function DashboardViewModern() {
               <h3 className="text-base font-semibold text-gray-900">Cart Distribution</h3>
               <p className="text-sm text-gray-500 mt-1">Recovery status breakdown</p>
             </div>
-            <select className="text-xs border border-gray-200 rounded-lg px-2 py-1 text-gray-600 focus:outline-none focus:ring-2 focus:ring-teal-500">
-              <option>Monthly</option>
-              <option>Weekly</option>
-              <option>Daily</option>
-            </select>
+            <Select defaultValue="Monthly">
+              <SelectTrigger
+                className="w-24 h-8 text-xs border border-gray-200 rounded-lg px-2 py-1 text-gray-600 focus:ring-2 focus:ring-teal-500 bg-white"
+                aria-label="Select distribution period"
+              >
+                <SelectValue placeholder="Select period" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Monthly">Monthly</SelectItem>
+                <SelectItem value="Weekly">Weekly</SelectItem>
+                <SelectItem value="Daily">Daily</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           
           <div className="flex items-center justify-between gap-8">
