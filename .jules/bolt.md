@@ -90,3 +90,7 @@
 ## 2024-05-20 - [Atomic Batch Claiming in Job Queue]
 **Learning:** Sequential claiming of jobs in a distributed worker environment using individual `kv.del` calls creates a significant bottleneck (O(N) network round-trips) and increases the race condition window. Implementing an atomic `claimBatch` utility using Postgres `DELETE ... RETURNING` reduces this to O(1) round-trips, yielding a ~100x speedup in claim latency.
 **Action:** Always prefer atomic batch operations (like `DELETE ... RETURNING` or `INSERT ... ON CONFLICT`) for coordination primitives in high-throughput queues. Use `kv.claimBatch` to drastically reduce the latency floor for job processing.
+
+## 2026-07-09 - [Derived State vs Effects for Validation]
+**Learning:** Using `useEffect` and `useState` for validation in form-heavy components (like `TemplatesView.tsx`) triggers a redundant re-render cycle on every keystroke. Calculating validation errors directly in the render phase using `useMemo` (derived state) eliminates this cycle and improves UI responsiveness.
+**Action:** Prefer derived state via `useMemo` over `useEffect` for synchronous logic that depends on other state values. Always audit high-interaction views (inputs/textareas) for "double-render" patterns.
