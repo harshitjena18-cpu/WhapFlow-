@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
 import { MessageCircle, Plus, Trash2, Check, Loader2, Sparkles, Copy, AlertCircle, Bot, Zap, Info } from 'lucide-react';
 import { toast } from "sonner";
@@ -57,8 +57,8 @@ interface AIUsage {
 const SERVER_URL = `https://${projectId}.supabase.co/functions/v1/make-server-c8eef56a`;
 
 export function TemplatesView() {
-  // SECURITY: Extract shop from URL to support multi-tenancy in API calls
-  const shop = new URLSearchParams(window.location.search).get('shop') || 'global';
+  // PERFORMANCE: Memoize shop extraction to avoid redundant URLSearchParams object creation on every render.
+  const shop = useMemo(() => new URLSearchParams(window.location.search).get('shop') || 'global', []);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
@@ -91,7 +91,11 @@ export function TemplatesView() {
 
   // Copy State
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [modifierKey, setModifierKey] = useState('⌘');
+  // PERFORMANCE: Use useMemo for static environmental detection to avoid state update cycles.
+  const modifierKey = useMemo(() => {
+    const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.userAgent);
+    return isMac ? '⌘' : 'Ctrl';
+  }, []);
   const contentRef = useRef<HTMLTextAreaElement>(null);
 
   const handleCopy = async (text: string, id: string) => {
@@ -122,9 +126,40 @@ export function TemplatesView() {
     }, 0);
   };
 
-  // Validation State
-  const [validationErrors, setValidationErrors] = useState<string[]>([]);
-  const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
+  // PERFORMANCE: Derive validation state using useMemo instead of useEffect + useState.
+  // This eliminates a redundant re-render cycle on every keystroke in the template editor.
+  const { validationErrors, validationWarnings } = useMemo(() => {
+    const content = formData.content || "";
+    const errors: string[] = [];
+    const warnings: string[] = [];
+
+    // Only validate if dialog is open (mirrors original logic)
+    if (!isDialogOpen) return { validationErrors: [], validationWarnings: [] };
+
+    // Blocking Rules
+    if (!content.trim()) {
+      errors.push("Template content cannot be empty.");
+    }
+    if (content.length > 1024) {
+      errors.push(`Content exceeds 1024 characters (Current: ${content.length}).`);
+    }
+    if (!content.includes("{{checkout_link}}")) {
+      errors.push("Template MUST include {{checkout_link}}.");
+    }
+
+    // Warnings
+    if (content.length > 0 && content.length < 50) {
+      warnings.push("Content seems very short. Consider adding more context.");
+    }
+    if (!content.includes("{{customer_name}}")) {
+      warnings.push("Missing {{customer_name}} - personalization increases conversion.");
+    }
+    if (!content.includes("{{product_name}}")) {
+      warnings.push("Missing {{product_name}} - reminding customers what they left helps.");
+    }
+
+    return { validationErrors: errors, validationWarnings: warnings };
+  }, [formData.content, isDialogOpen]);
 
   // Fetch Templates
   const fetchTemplates = async () => {
@@ -181,46 +216,7 @@ export function TemplatesView() {
     fetchTemplates();
     fetchAIUsage();
     fetchIntegrations();
-    const isMac = /Mac|iPod|iPhone|iPad/.test(navigator.userAgent || '');
-    setModifierKey(isMac ? '⌘' : 'Ctrl');
   }, []);
-
-  // Validation Logic
-  const validateContent = (content: string = "") => {
-    const errors: string[] = [];
-    const warnings: string[] = [];
-
-    // Blocking Rules
-    if (!content.trim()) {
-      errors.push("Template content cannot be empty.");
-    }
-    if (content.length > 1024) {
-      errors.push(`Content exceeds 1024 characters (Current: ${content.length}).`);
-    }
-    if (!content.includes("{{checkout_link}}")) {
-      errors.push("Template MUST include {{checkout_link}}.");
-    }
-
-    // Warnings
-    if (content.length > 0 && content.length < 50) {
-      warnings.push("Content seems very short. Consider adding more context.");
-    }
-    if (!content.includes("{{customer_name}}")) {
-      warnings.push("Missing {{customer_name}} - personalization increases conversion.");
-    }
-    if (!content.includes("{{product_name}}")) {
-      warnings.push("Missing {{product_name}} - reminding customers what they left helps.");
-    }
-
-    setValidationErrors(errors);
-    setValidationWarnings(warnings);
-  };
-
-  useEffect(() => {
-    if (isDialogOpen) {
-      validateContent(formData.content);
-    }
-  }, [formData.content, isDialogOpen]);
 
   // Handlers
   const handleOpenCreate = (prefillContent = "") => {
