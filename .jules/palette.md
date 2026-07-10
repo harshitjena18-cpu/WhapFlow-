@@ -41,3 +41,7 @@
 ## 2026-03-20 - [Standardizing Settings UI and Tactile Feedback]
 **Learning:** Native HTML elements (like <select>) often look out of place in a highly-themed Radix-based UI and lack consistent focus/hover states. Standardizing on project-specific themed components automatically brings in accessibility features (like proper keyboard navigation) and visual cohesion. Additionally, unifying tactile feedback (e.g., active:scale-95) across the app prevents a "jittery" or inconsistent feel for users navigating different sections.
 **Action:** Always audit for native HTML form elements and replace them with project-standard themed components. Ensure tactile micro-animations use a single, consistent scale factor across all interactive elements.
+
+## 2025-05-24 - [Accessible Tooltips and Component Naming Conflicts]
+**Learning:** When using data visualization libraries like `recharts` that export a `Tooltip` component, developers often skip adding accessible tooltips to surrounding UI elements to avoid naming collisions. Standardizing on an aliased import (e.g., `import { Tooltip as ShadcnTooltip }`) allows both components to coexist, ensuring that even data-heavy dashboards maintain high accessibility standards for icon-only actions.
+**Action:** Never compromise on accessibility due to library naming conflicts. Use aliased imports for UI components when third-party libraries occupy the primary namespace.
