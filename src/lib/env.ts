@@ -1,21 +1,14 @@
-export const getEnv = (key: string): string | undefined => {
-  const g = globalThis as unknown as {
-    Deno?: {
-      env: {
-        get(key: string): string | undefined;
-      };
-    };
-    process?: {
-      env: Record<string, string | undefined>;
-    };
-  };
+// PERFORMANCE: Pre-detect environment to avoid redundant property lookups on globalThis.
+const isDeno = typeof (globalThis as any).Deno !== "undefined";
+const isNode = typeof (globalThis as any).process !== "undefined";
 
-  if (g.Deno?.env?.get) {
-    return g.Deno.env.get(key);
+export const getEnv = (key: string): string | undefined => {
+  if (isDeno) {
+    return (globalThis as any).Deno.env.get(key);
   }
 
-  if (g.process?.env) {
-    return g.process.env[key];
+  if (isNode) {
+    return (globalThis as any).process.env[key];
   }
 
   return undefined;
