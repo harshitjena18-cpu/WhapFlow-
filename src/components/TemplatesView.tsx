@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
 import { MessageCircle, Plus, Trash2, Check, Loader2, Sparkles, Copy, AlertCircle, Bot, Zap, Info } from 'lucide-react';
 import { toast } from "sonner";
@@ -56,9 +56,19 @@ interface AIUsage {
 
 const SERVER_URL = `https://${projectId}.supabase.co/functions/v1/make-server-c8eef56a`;
 
+// PERFORMANCE: Hoist static data outside the component to prevent redundant object allocations on every render pass.
+const TEMPLATE_VARIABLES = [
+  { tag: '{{customer_name}}', desc: 'Insert customer full name' },
+  { tag: '{{product_name}}', desc: 'Insert name of abandoned products' },
+  { tag: '{{checkout_link}}', desc: 'Insert unique recovery link (Required)' }
+];
+
+const AI_TONES = ["Friendly", "Urgent", "Premium", "Casual"];
+
 export function TemplatesView() {
   // SECURITY: Extract shop from URL to support multi-tenancy in API calls
-  const shop = new URLSearchParams(window.location.search).get('shop') || 'global';
+  // PERFORMANCE: Memoize shop extraction to ensure a stable value across renders.
+  const shop = useMemo(() => new URLSearchParams(window.location.search).get('shop') || 'global', []);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
@@ -91,7 +101,11 @@ export function TemplatesView() {
 
   // Copy State
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [modifierKey, setModifierKey] = useState('⌘');
+  // PERFORMANCE: Memoize modifierKey detection to eliminate the mount-time re-render caused by useState + useEffect.
+  const modifierKey = useMemo(() => {
+    const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.userAgent || '');
+    return isMac ? '⌘' : 'Ctrl';
+  }, []);
   const contentRef = useRef<HTMLTextAreaElement>(null);
 
   const handleCopy = async (text: string, id: string) => {
@@ -121,10 +135,6 @@ export function TemplatesView() {
       textarea.setSelectionRange(start + variable.length, start + variable.length);
     }, 0);
   };
-
-  // Validation State
-  const [validationErrors, setValidationErrors] = useState<string[]>([]);
-  const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
 
   // Fetch Templates
   const fetchTemplates = async () => {
@@ -181,12 +191,14 @@ export function TemplatesView() {
     fetchTemplates();
     fetchAIUsage();
     fetchIntegrations();
-    const isMac = /Mac|iPod|iPhone|iPad/.test(navigator.userAgent || '');
-    setModifierKey(isMac ? '⌘' : 'Ctrl');
   }, []);
 
-  // Validation Logic
-  const validateContent = (content: string = "") => {
+  // PERFORMANCE: Refactor validation from useEffect + useState to useMemo (derived state).
+  // This eliminates one redundant re-render cycle per keystroke, significantly improving responsiveness.
+  const { validationErrors, validationWarnings } = useMemo(() => {
+    if (!isDialogOpen) return { validationErrors: [], validationWarnings: [] };
+
+    const content = formData.content || "";
     const errors: string[] = [];
     const warnings: string[] = [];
 
@@ -212,14 +224,7 @@ export function TemplatesView() {
       warnings.push("Missing {{product_name}} - reminding customers what they left helps.");
     }
 
-    setValidationErrors(errors);
-    setValidationWarnings(warnings);
-  };
-
-  useEffect(() => {
-    if (isDialogOpen) {
-      validateContent(formData.content);
-    }
+    return { validationErrors: errors, validationWarnings: warnings };
   }, [formData.content, isDialogOpen]);
 
   // Handlers
@@ -706,10 +711,9 @@ export function TemplatesView() {
                       <SelectValue placeholder="Select tone" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Friendly">Friendly</SelectItem>
-                      <SelectItem value="Urgent">Urgent</SelectItem>
-                      <SelectItem value="Premium">Premium</SelectItem>
-                      <SelectItem value="Casual">Casual</SelectItem>
+                      {AI_TONES.map(tone => (
+                        <SelectItem key={tone} value={tone}>{tone}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -901,11 +905,7 @@ export function TemplatesView() {
                 </div>
                 <Progress value={Math.min(((formData.content?.length || 0) / 1024) * 100, 100)} className="h-1.5 mb-1" />
                 <div className="flex flex-wrap gap-2 mt-1 mb-2">
-                  {[
-                    { tag: '{{customer_name}}', desc: 'Insert customer full name' },
-                    { tag: '{{product_name}}', desc: 'Insert name of abandoned products' },
-                    { tag: '{{checkout_link}}', desc: 'Insert unique recovery link (Required)' }
-                  ].map(variable => (
+                  {TEMPLATE_VARIABLES.map(variable => (
                     <Tooltip key={variable.tag}>
                       <TooltipTrigger asChild>
                         <button
