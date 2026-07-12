@@ -41,3 +41,7 @@
 ## 2026-03-20 - [Standardizing Settings UI and Tactile Feedback]
 **Learning:** Native HTML elements (like <select>) often look out of place in a highly-themed Radix-based UI and lack consistent focus/hover states. Standardizing on project-specific themed components automatically brings in accessibility features (like proper keyboard navigation) and visual cohesion. Additionally, unifying tactile feedback (e.g., active:scale-95) across the app prevents a "jittery" or inconsistent feel for users navigating different sections.
 **Action:** Always audit for native HTML form elements and replace them with project-standard themed components. Ensure tactile micro-animations use a single, consistent scale factor across all interactive elements.
+
+## 2024-05-24 - [Functional Parity for Icon-Only Buttons]
+**Learning:** Icon-only buttons (like notification bells or sidebar toggles) require both an `aria-label` for screen readers and a visual `Tooltip` for sighted users to ensure functional discoverability and accessibility parity. Relying on just one or the other creates a "barrier to entry" for different user groups.
+**Action:** Always pair icon-only interactive elements with both a descriptive `aria-label` and a Radix-based `Tooltip`. Ensure `TooltipTrigger` uses `asChild` to maintain valid DOM structure.
