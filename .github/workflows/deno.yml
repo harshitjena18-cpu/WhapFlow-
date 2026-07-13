@@ -14,12 +14,17 @@ on:
   pull_request:
     branches: ["main"]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Setup repo
@@ -29,6 +34,7 @@ jobs:
         uses: denoland/setup-deno@v2
         with:
           deno-version: v1.x
+          cache: true
 
       # Uncomment this step to verify the use of 'deno fmt' on each commit.
       # - name: Verify formatting
