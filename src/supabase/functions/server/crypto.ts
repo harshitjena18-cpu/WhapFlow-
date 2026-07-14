@@ -106,9 +106,9 @@ export async function decrypt(enc: string | null | undefined): Promise<string | 
 }
 
 /**
- * Constant-time string comparison to prevent timing attacks.
- * Hashes inputs with SHA-256 before comparison to safely handle different lengths.
- * Includes a length check as defense-in-depth, although SHA-256 hashing already handles length leakage.
+ * timing-safe string comparison to prevent timing attacks.
+ * Hashes inputs with SHA-256 first to handle variable lengths and prevent length leakage.
+ * Uses timingSafeEqual on the resulting digests to ensure constant-time comparison.
  */
 export function secureCompare(a: string | null | undefined, b: string | null | undefined): boolean {
   if (typeof a !== "string" || typeof b !== "string") return false;
@@ -118,7 +118,7 @@ export function secureCompare(a: string | null | undefined, b: string | null | u
 
   // timingSafeEqual requires buffers of the same length, which SHA-256 digests are (32 bytes).
   // This allows comparing strings of different lengths without leaking which one is longer.
-  return timingSafeEqual(hashA, hashB) && a.length === b.length;
+  return timingSafeEqual(hashA, hashB);
 }
 
 const b64 = (u: Uint8Array) => Buffer.from(u).toString("base64");
