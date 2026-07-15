@@ -41,3 +41,7 @@
 ## 2026-03-20 - [Standardizing Settings UI and Tactile Feedback]
 **Learning:** Native HTML elements (like <select>) often look out of place in a highly-themed Radix-based UI and lack consistent focus/hover states. Standardizing on project-specific themed components automatically brings in accessibility features (like proper keyboard navigation) and visual cohesion. Additionally, unifying tactile feedback (e.g., active:scale-95) across the app prevents a "jittery" or inconsistent feel for users navigating different sections.
 **Action:** Always audit for native HTML form elements and replace them with project-standard themed components. Ensure tactile micro-animations use a single, consistent scale factor across all interactive elements.
+
+## 2025-03-24 - [Tactile Consistency Across Styling Libraries]
+**Learning:** In a codebase using both Tailwind CSS and Framer Motion, micro-interactions like "press/tap" feedback can easily drift. Standardizing on a single scale factor (e.g., `0.95`) across both `active:scale-95` (Tailwind) and `whileTap={{ scale: 0.95 }}` (Motion) creates a unified, high-quality tactile feel. Additionally, ensure icon-only buttons in the global header feature both tooltips and clear focus-visible states to maintain accessibility and discoverability.
+**Action:** Unify tactile feedback to `0.95` across all interactive elements regardless of the styling library used. Always wrap global header icon-buttons in `Tooltip` components and ensure they have prominent focus indicators.
