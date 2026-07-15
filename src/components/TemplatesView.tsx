@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
 import { MessageCircle, Plus, Trash2, Check, Loader2, Sparkles, Copy, AlertCircle, Bot, Zap, Info } from 'lucide-react';
 import { toast } from "sonner";
@@ -56,9 +56,20 @@ interface AIUsage {
 
 const SERVER_URL = `https://${projectId}.supabase.co/functions/v1/make-server-c8eef56a`;
 
+// PERFORMANCE: Hoist OS constants to module level to avoid redundant useState/useEffect hooks.
+const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.userAgent || '');
+const MODIFIER_KEY = IS_MAC ? '⌘' : 'Ctrl';
+
+// PERFORMANCE: Hoist static configuration outside component to prevent re-allocation on every render.
+const TEMPLATE_VARIABLES = [
+  { tag: '{{customer_name}}', desc: 'Insert customer full name' },
+  { tag: '{{product_name}}', desc: 'Insert name of abandoned products' },
+  { tag: '{{checkout_link}}', desc: 'Insert unique recovery link (Required)' }
+];
+
 export function TemplatesView() {
   // SECURITY: Extract shop from URL to support multi-tenancy in API calls
-  const shop = new URLSearchParams(window.location.search).get('shop') || 'global';
+  const shop = useMemo(() => new URLSearchParams(window.location.search).get('shop') || 'global', []);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
@@ -91,7 +102,6 @@ export function TemplatesView() {
 
   // Copy State
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [modifierKey, setModifierKey] = useState('⌘');
   const contentRef = useRef<HTMLTextAreaElement>(null);
 
   const handleCopy = async (text: string, id: string) => {
@@ -121,10 +131,6 @@ export function TemplatesView() {
       textarea.setSelectionRange(start + variable.length, start + variable.length);
     }, 0);
   };
-
-  // Validation State
-  const [validationErrors, setValidationErrors] = useState<string[]>([]);
-  const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
 
   // Fetch Templates
   const fetchTemplates = async () => {
@@ -181,14 +187,16 @@ export function TemplatesView() {
     fetchTemplates();
     fetchAIUsage();
     fetchIntegrations();
-    const isMac = /Mac|iPod|iPhone|iPad/.test(navigator.userAgent || '');
-    setModifierKey(isMac ? '⌘' : 'Ctrl');
   }, []);
 
-  // Validation Logic
-  const validateContent = (content: string = "") => {
+  // PERFORMANCE: Use useMemo (derived state) instead of useEffect + useState for validation.
+  // This eliminates one redundant re-render cycle per keystroke in the template editor.
+  const { validationErrors, validationWarnings } = useMemo(() => {
     const errors: string[] = [];
     const warnings: string[] = [];
+    const content = formData.content || "";
+
+    if (!isDialogOpen) return { validationErrors: errors, validationWarnings: warnings };
 
     // Blocking Rules
     if (!content.trim()) {
@@ -212,14 +220,7 @@ export function TemplatesView() {
       warnings.push("Missing {{product_name}} - reminding customers what they left helps.");
     }
 
-    setValidationErrors(errors);
-    setValidationWarnings(warnings);
-  };
-
-  useEffect(() => {
-    if (isDialogOpen) {
-      validateContent(formData.content);
-    }
+    return { validationErrors: errors, validationWarnings: warnings };
   }, [formData.content, isDialogOpen]);
 
   // Handlers
@@ -901,11 +902,7 @@ export function TemplatesView() {
                 </div>
                 <Progress value={Math.min(((formData.content?.length || 0) / 1024) * 100, 100)} className="h-1.5 mb-1" />
                 <div className="flex flex-wrap gap-2 mt-1 mb-2">
-                  {[
-                    { tag: '{{customer_name}}', desc: 'Insert customer full name' },
-                    { tag: '{{product_name}}', desc: 'Insert name of abandoned products' },
-                    { tag: '{{checkout_link}}', desc: 'Insert unique recovery link (Required)' }
-                  ].map(variable => (
+                  {TEMPLATE_VARIABLES.map(variable => (
                     <Tooltip key={variable.tag}>
                       <TooltipTrigger asChild>
                         <button
@@ -968,8 +965,8 @@ export function TemplatesView() {
               <Button
                 onClick={handleSave}
                 disabled={submitting || validationErrors.length > 0}
-                aria-keyshortcuts={`${modifierKey}+Enter`}
-                title={`Save Template (${modifierKey}+Enter)`}
+                aria-keyshortcuts={`${MODIFIER_KEY}+Enter`}
+                title={`Save Template (${MODIFIER_KEY}+Enter)`}
               >
                 {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                 Save Template
