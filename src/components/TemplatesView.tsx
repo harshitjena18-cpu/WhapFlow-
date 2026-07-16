@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
 import { MessageCircle, Plus, Trash2, Check, Loader2, Sparkles, Copy, AlertCircle, Bot, Zap, Info } from 'lucide-react';
 import { toast } from "sonner";
@@ -56,6 +56,16 @@ interface AIUsage {
 
 const SERVER_URL = `https://${projectId}.supabase.co/functions/v1/make-server-c8eef56a`;
 
+// PERFORMANCE: Hoist OS detection and static data outside the component to prevent redundant computations/allocations
+const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.userAgent || '');
+const MODIFIER_KEY = IS_MAC ? '⌘' : 'Ctrl';
+
+const TEMPLATE_VARIABLES = [
+  { tag: '{{customer_name}}', desc: 'Insert customer full name' },
+  { tag: '{{product_name}}', desc: 'Insert name of abandoned products' },
+  { tag: '{{checkout_link}}', desc: 'Insert unique recovery link (Required)' }
+];
+
 export function TemplatesView() {
   // SECURITY: Extract shop from URL to support multi-tenancy in API calls
   const shop = new URLSearchParams(window.location.search).get('shop') || 'global';
@@ -91,7 +101,6 @@ export function TemplatesView() {
 
   // Copy State
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [modifierKey, setModifierKey] = useState('⌘');
   const contentRef = useRef<HTMLTextAreaElement>(null);
 
   const handleCopy = async (text: string, id: string) => {
@@ -122,9 +131,39 @@ export function TemplatesView() {
     }, 0);
   };
 
-  // Validation State
-  const [validationErrors, setValidationErrors] = useState<string[]>([]);
-  const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
+  // PERFORMANCE: Use useMemo for validation instead of useEffect + useState.
+  // This eliminates a redundant re-render cycle per keystroke in the template editor.
+  const { validationErrors, validationWarnings } = useMemo(() => {
+    const errors: string[] = [];
+    const warnings: string[] = [];
+    const content = formData.content || "";
+
+    if (!isDialogOpen) return { validationErrors: errors, validationWarnings: warnings };
+
+    // Blocking Rules
+    if (!content.trim()) {
+      errors.push("Template content cannot be empty.");
+    }
+    if (content.length > 1024) {
+      errors.push(`Content exceeds 1024 characters (Current: ${content.length}).`);
+    }
+    if (!content.includes("{{checkout_link}}")) {
+      errors.push("Template MUST include {{checkout_link}}.");
+    }
+
+    // Warnings
+    if (content.length > 0 && content.length < 50) {
+      warnings.push("Content seems very short. Consider adding more context.");
+    }
+    if (!content.includes("{{customer_name}}")) {
+      warnings.push("Missing {{customer_name}} - personalization increases conversion.");
+    }
+    if (!content.includes("{{product_name}}")) {
+      warnings.push("Missing {{product_name}} - reminding customers what they left helps.");
+    }
+
+    return { validationErrors: errors, validationWarnings: warnings };
+  }, [formData.content, isDialogOpen]);
 
   // Fetch Templates
   const fetchTemplates = async () => {
@@ -181,46 +220,8 @@ export function TemplatesView() {
     fetchTemplates();
     fetchAIUsage();
     fetchIntegrations();
-    const isMac = /Mac|iPod|iPhone|iPad/.test(navigator.userAgent || '');
-    setModifierKey(isMac ? '⌘' : 'Ctrl');
   }, []);
 
-  // Validation Logic
-  const validateContent = (content: string = "") => {
-    const errors: string[] = [];
-    const warnings: string[] = [];
-
-    // Blocking Rules
-    if (!content.trim()) {
-      errors.push("Template content cannot be empty.");
-    }
-    if (content.length > 1024) {
-      errors.push(`Content exceeds 1024 characters (Current: ${content.length}).`);
-    }
-    if (!content.includes("{{checkout_link}}")) {
-      errors.push("Template MUST include {{checkout_link}}.");
-    }
-
-    // Warnings
-    if (content.length > 0 && content.length < 50) {
-      warnings.push("Content seems very short. Consider adding more context.");
-    }
-    if (!content.includes("{{customer_name}}")) {
-      warnings.push("Missing {{customer_name}} - personalization increases conversion.");
-    }
-    if (!content.includes("{{product_name}}")) {
-      warnings.push("Missing {{product_name}} - reminding customers what they left helps.");
-    }
-
-    setValidationErrors(errors);
-    setValidationWarnings(warnings);
-  };
-
-  useEffect(() => {
-    if (isDialogOpen) {
-      validateContent(formData.content);
-    }
-  }, [formData.content, isDialogOpen]);
 
   // Handlers
   const handleOpenCreate = (prefillContent = "") => {
@@ -901,11 +902,7 @@ export function TemplatesView() {
                 </div>
                 <Progress value={Math.min(((formData.content?.length || 0) / 1024) * 100, 100)} className="h-1.5 mb-1" />
                 <div className="flex flex-wrap gap-2 mt-1 mb-2">
-                  {[
-                    { tag: '{{customer_name}}', desc: 'Insert customer full name' },
-                    { tag: '{{product_name}}', desc: 'Insert name of abandoned products' },
-                    { tag: '{{checkout_link}}', desc: 'Insert unique recovery link (Required)' }
-                  ].map(variable => (
+                  {TEMPLATE_VARIABLES.map(variable => (
                     <Tooltip key={variable.tag}>
                       <TooltipTrigger asChild>
                         <button
@@ -968,8 +965,8 @@ export function TemplatesView() {
               <Button
                 onClick={handleSave}
                 disabled={submitting || validationErrors.length > 0}
-                aria-keyshortcuts={`${modifierKey}+Enter`}
-                title={`Save Template (${modifierKey}+Enter)`}
+                aria-keyshortcuts={`${MODIFIER_KEY}+Enter`}
+                title={`Save Template (${MODIFIER_KEY}+Enter)`}
               >
                 {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                 Save Template
