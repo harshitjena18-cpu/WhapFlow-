@@ -41,3 +41,7 @@
 ## 2026-03-20 - [Standardizing Settings UI and Tactile Feedback]
 **Learning:** Native HTML elements (like <select>) often look out of place in a highly-themed Radix-based UI and lack consistent focus/hover states. Standardizing on project-specific themed components automatically brings in accessibility features (like proper keyboard navigation) and visual cohesion. Additionally, unifying tactile feedback (e.g., active:scale-95) across the app prevents a "jittery" or inconsistent feel for users navigating different sections.
 **Action:** Always audit for native HTML form elements and replace them with project-standard themed components. Ensure tactile micro-animations use a single, consistent scale factor across all interactive elements.
+
+## 2026-03-22 - [Replacing Native Select Elements with Accessible Custom Components]
+**Learning:** Native `<select>` components look jarring in a highly polished, Radix-based UI and lack unified focus/active visual styling. Replacing them with the design system's customized Radix UI `Select` ensures proper keyboard navigation (arrow keys/space/enter) and visually consistent hover/active states.
+**Action:** Replace remaining native `<select>` form elements with project-standard `<Select>` components. Always supplement custom SelectTrigger buttons with an explicit `aria-label` attribute (e.g., `aria-label="Select cart distribution timeframe"`) to provide necessary context to screen-reader users.
