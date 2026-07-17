@@ -14,6 +14,8 @@
       "src/components",
       "src/lib",
       "src/utils",
+      "src/supabase/functions/server/crypto.ts",
+      "src/supabase/functions/server/kv_store.tsx",
       "scripts",
       "build",
       "node_modules"
