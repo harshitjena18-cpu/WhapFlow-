@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
 import { MessageCircle, Plus, Trash2, Check, Loader2, Sparkles, Copy, AlertCircle, Bot, Zap, Info } from 'lucide-react';
 import { toast } from "sonner";
@@ -56,6 +56,10 @@ interface AIUsage {
 
 const SERVER_URL = `https://${projectId}.supabase.co/functions/v1/make-server-c8eef56a`;
 
+// PERFORMANCE: Compute OS-dependent modifier key statically outside the component to avoid redundant runtime checks
+const IS_MAC = typeof window !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.userAgent || '');
+const MODIFIER_KEY = IS_MAC ? '⌘' : 'Ctrl';
+
 export function TemplatesView() {
   // SECURITY: Extract shop from URL to support multi-tenancy in API calls
   const shop = new URLSearchParams(window.location.search).get('shop') || 'global';
@@ -91,7 +95,6 @@ export function TemplatesView() {
 
   // Copy State
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [modifierKey, setModifierKey] = useState('⌘');
   const contentRef = useRef<HTMLTextAreaElement>(null);
 
   const handleCopy = async (text: string, id: string) => {
@@ -121,10 +124,6 @@ export function TemplatesView() {
       textarea.setSelectionRange(start + variable.length, start + variable.length);
     }, 0);
   };
-
-  // Validation State
-  const [validationErrors, setValidationErrors] = useState<string[]>([]);
-  const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
 
   // Fetch Templates
   const fetchTemplates = async () => {
@@ -181,14 +180,17 @@ export function TemplatesView() {
     fetchTemplates();
     fetchAIUsage();
     fetchIntegrations();
-    const isMac = /Mac|iPod|iPhone|iPad/.test(navigator.userAgent || '');
-    setModifierKey(isMac ? '⌘' : 'Ctrl');
   }, []);
 
-  // Validation Logic
-  const validateContent = (content: string = "") => {
+  // PERFORMANCE: Derive validation errors and warnings using useMemo to eliminate redundant re-render cycles per keystroke
+  const { validationErrors, validationWarnings } = useMemo(() => {
     const errors: string[] = [];
     const warnings: string[] = [];
+    const content = formData.content || "";
+
+    if (!isDialogOpen) {
+      return { validationErrors: errors, validationWarnings: warnings };
+    }
 
     // Blocking Rules
     if (!content.trim()) {
@@ -212,14 +214,7 @@ export function TemplatesView() {
       warnings.push("Missing {{product_name}} - reminding customers what they left helps.");
     }
 
-    setValidationErrors(errors);
-    setValidationWarnings(warnings);
-  };
-
-  useEffect(() => {
-    if (isDialogOpen) {
-      validateContent(formData.content);
-    }
+    return { validationErrors: errors, validationWarnings: warnings };
   }, [formData.content, isDialogOpen]);
 
   // Handlers
@@ -968,8 +963,8 @@ export function TemplatesView() {
               <Button
                 onClick={handleSave}
                 disabled={submitting || validationErrors.length > 0}
-                aria-keyshortcuts={`${modifierKey}+Enter`}
-                title={`Save Template (${modifierKey}+Enter)`}
+                aria-keyshortcuts={`${MODIFIER_KEY}+Enter`}
+                title={`Save Template (${MODIFIER_KEY}+Enter)`}
               >
                 {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                 Save Template
