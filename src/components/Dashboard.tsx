@@ -151,7 +151,7 @@ export function Dashboard() {
           <Link
             to="/settings"
             aria-label="User Profile and Settings"
-            className="flex items-center gap-4 p-3 rounded-xl hover:bg-gray-50 transition-all duration-200 overflow-hidden active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-[#25D366]/20"
+            className="flex items-center gap-4 p-3 rounded-xl hover:bg-gray-50 transition-all overflow-hidden active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-[#25D366]/20"
           >
             <div className="w-10 h-10 bg-gradient-to-br from-[#25D366] to-[#20BD5A] rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
               <span className="text-white font-semibold text-sm">JD</span>
