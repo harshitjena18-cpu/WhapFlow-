@@ -90,3 +90,7 @@
 ## 2024-05-20 - [Atomic Batch Claiming in Job Queue]
 **Learning:** Sequential claiming of jobs in a distributed worker environment using individual `kv.del` calls creates a significant bottleneck (O(N) network round-trips) and increases the race condition window. Implementing an atomic `claimBatch` utility using Postgres `DELETE ... RETURNING` reduces this to O(1) round-trips, yielding a ~100x speedup in claim latency.
 **Action:** Always prefer atomic batch operations (like `DELETE ... RETURNING` or `INSERT ... ON CONFLICT`) for coordination primitives in high-throughput queues. Use `kv.claimBatch` to drastically reduce the latency floor for job processing.
+
+## 2026-04-10 - [Keystroke Input Validation Lag Reduction]
+**Learning:** Refactoring real-time text input validation from a `useEffect` + `useState` pattern to a synchronous `useMemo` pattern eliminates redundant React render cycles (50% reduction in render passes per keystroke). In components like `TemplatesView.tsx` where users type long messages, this dramatically reduces input lag and prevents frame drops during rapid typing. Additionally, static platform-dependent configuration values (such as `MODIFIER_KEY`) should be hoisted outside of components rather than stored in state to avoid unnecessary component mount rendering and state-allocation cost.
+**Action:** Avoid state/effects for purely derived computations or platform-dependent UI states. Instead, compute static settings globally and use `useMemo` for any validation or transformation derived from user input.
