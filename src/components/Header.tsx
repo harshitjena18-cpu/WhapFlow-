@@ -1,6 +1,7 @@
 import { Bell, Search } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router';
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
 export function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -53,18 +54,25 @@ export function Header() {
         </div>
       </div>
       <div className="flex items-center gap-4">
-        <button
-          className="relative p-2 text-gray-400 hover:text-gray-600 hover:bg-white/50 rounded-full transition-colors"
-          aria-label="Notifications"
-        >
-          <Bell className="w-5 h-5" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              className="relative p-2 text-gray-400 hover:text-gray-600 hover:bg-white/50 rounded-full transition-all active:scale-95"
+              aria-label="Notifications"
+            >
+              <Bell className="w-5 h-5" />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Notifications</p>
+          </TooltipContent>
+        </Tooltip>
         <div className="h-8 w-px bg-gray-200/50 mx-1 hidden md:block"></div>
         <Link
           to="/settings"
           aria-label="User Profile and Settings"
-          className="hidden md:flex items-center gap-3 px-3 py-1.5 rounded-xl hover:bg-white/50 transition-all duration-200 active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-purple-500/20"
+          className="hidden md:flex items-center gap-3 px-3 py-1.5 rounded-xl hover:bg-white/50 transition-all duration-200 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-purple-500/20"
         >
           <div className="text-right">
             <p className="text-sm font-medium text-gray-900">Whapflow Store</p>

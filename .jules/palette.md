@@ -41,3 +41,7 @@
 ## 2026-03-20 - [Standardizing Settings UI and Tactile Feedback]
 **Learning:** Native HTML elements (like <select>) often look out of place in a highly-themed Radix-based UI and lack consistent focus/hover states. Standardizing on project-specific themed components automatically brings in accessibility features (like proper keyboard navigation) and visual cohesion. Additionally, unifying tactile feedback (e.g., active:scale-95) across the app prevents a "jittery" or inconsistent feel for users navigating different sections.
 **Action:** Always audit for native HTML form elements and replace them with project-standard themed components. Ensure tactile micro-animations use a single, consistent scale factor across all interactive elements.
+
+## 2026-07-22 - [Keyboard Navigation Focus Styles and Tactile Feedback Refactoring]
+**Learning:** When refactoring bespoke interactive components or links to conform to design system tactile feed back standards (e.g., changing custom `active:scale-[0.98]` to the unified `active:scale-95`), it's vital to preserve existing keyboard focus indicator classes (such as `outline-none focus-visible:ring-2`). Removing focus styles breaks keyboard accessibility and makes interactive elements hard or impossible to navigate for non-pointer users.
+**Action:** Always double check that existing focus rings and outline classes are retained or added back when modifying classes on links or buttons during style refactoring.
