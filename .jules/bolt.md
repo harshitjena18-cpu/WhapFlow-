@@ -90,3 +90,7 @@
 ## 2024-05-20 - [Atomic Batch Claiming in Job Queue]
 **Learning:** Sequential claiming of jobs in a distributed worker environment using individual `kv.del` calls creates a significant bottleneck (O(N) network round-trips) and increases the race condition window. Implementing an atomic `claimBatch` utility using Postgres `DELETE ... RETURNING` reduces this to O(1) round-trips, yielding a ~100x speedup in claim latency.
 **Action:** Always prefer atomic batch operations (like `DELETE ... RETURNING` or `INSERT ... ON CONFLICT`) for coordination primitives in high-throughput queues. Use `kv.claimBatch` to drastically reduce the latency floor for job processing.
+
+## 2026-07-22 - [ISO-8601 String Comparison in Sorting]
+**Learning:** Sorting arrays of objects by ISO-8601 date strings (e.g. `created_at`) with `new Date(b.created_at).getTime() - new Date(a.created_at).getTime()` results in $O(N \log N)$ redundant `Date` allocations and parsing overhead. Using direct string comparison via `(b.created_at || "").localeCompare(a.created_at || "")` completely avoids allocations and dramatically speeds up list sorting in hot endpoints.
+**Action:** Always use direct string comparison (e.g., `localeCompare`) for sorting chronological ISO-8601 strings, rather than parsing them into `Date` objects inside hot sorting comparators.
