@@ -51,8 +51,8 @@ export function Sidebar() {
       {/* Mobile menu button */}
       <button
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        className="lg:hidden fixed top-6 right-6 z-50 p-3 rounded-xl bg-white border border-gray-100 hover:bg-gray-50 transition-all active:scale-95"
-        aria-label="Toggle menu"
+        className="lg:hidden fixed top-6 right-6 z-50 p-3 rounded-xl bg-white border border-gray-100 hover:bg-gray-50 transition-all active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-[#25D366]/20"
+        aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
       >
         {isMobileMenuOpen ? (
           <X className="w-5 h-5 text-gray-600" />
