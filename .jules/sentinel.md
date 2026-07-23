@@ -37,3 +37,8 @@
 **Vulnerability:** Internal API endpoints and webhook verification used standard string equality (===) for sensitive tokens like SUPABASE_SERVICE_ROLE_KEY and WHATSAPP_VERIFY_TOKEN.
 **Learning:** Standard string comparison can leak information about the secret through timing differences, and Node's timingSafeEqual requires equal-length inputs. Hashing both inputs with SHA-256 before constant-time comparison allows for secure verification of variable-length secrets.
 **Prevention:** Always use a timing-safe comparison utility (like secureCompare) that hashes inputs before invoking timingSafeEqual for any sensitive token or API key validation.
+
+## 2025-05-25 - [Overridden SecureCompare and Non-Constant-Time Webhook Verification]
+**Vulnerability:** The WhatsApp webhook challenge verification used standard `===` string equality, which is vulnerable to timing attacks. Meanwhile, `crypto.ts` contained a duplicate `secureCompare` declaration that overrode the robust length-checked definition with a weaker version.
+**Learning:** Duplicate function declarations in typescript can silently override more robust implementations, weakening defense-in-depth measures. Furthermore, router sub-apps must be checked to ensure they consistently utilize timing-safe cryptographic comparisons rather than falling back to standard equality.
+**Prevention:** Eliminate duplicate identifier declarations and ensure that webhook routers explicitly import and consume the verified constant-time comparison helper.
