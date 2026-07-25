@@ -23,8 +23,14 @@ app.get("/", async (c) => {
     }
     // SECURITY: Scoping templates by shop to prevent multi-tenancy leaks
     const templates = await kv.getByPrefix(`shop:${shop}:template:`) as AutomationTemplate[];
-    // Sort by created_at desc
-    templates.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+    // PERFORMANCE: Optimize sorting of ISO-8601 date strings by using direct relational string operators
+    // to avoid expensive and redundant Date object instantiation/parsing during O(N log N) loops.
+    templates.sort((a, b) => {
+      const dateA = a.created_at || "";
+      const dateB = b.created_at || "";
+      return dateB > dateA ? 1 : dateB < dateA ? -1 : 0;
+    });
     return c.json(templates);
   } catch (error) {
     console.error("Error fetching templates:", error);
