@@ -41,3 +41,7 @@
 ## 2026-03-20 - [Standardizing Settings UI and Tactile Feedback]
 **Learning:** Native HTML elements (like <select>) often look out of place in a highly-themed Radix-based UI and lack consistent focus/hover states. Standardizing on project-specific themed components automatically brings in accessibility features (like proper keyboard navigation) and visual cohesion. Additionally, unifying tactile feedback (e.g., active:scale-95) across the app prevents a "jittery" or inconsistent feel for users navigating different sections.
 **Action:** Always audit for native HTML form elements and replace them with project-standard themed components. Ensure tactile micro-animations use a single, consistent scale factor across all interactive elements.
+
+## 2026-03-21 - [Notification Tooltips and Dynamic Mobile Menu Accessibility]
+**Learning:** Icon-only utility buttons like the notification bell require dual accessibility with both screen-reader labels and visible hover/focus tooltips to be completely accessible. Additionally, mobile toggle controls require dynamic `aria-label` values that accurately reflect their toggle state (e.g., "Open menu" vs "Close menu") to satisfy screen readers during menu expansion/collapse.
+**Action:** Always wrap utility icon buttons in accessible Radix Tooltips with corresponding static descriptions. For all dynamic interactive elements like mobile sidebar triggers, ensure their accessibility labels update reactively as their state transitions.
