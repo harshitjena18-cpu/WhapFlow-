@@ -41,3 +41,7 @@
 ## 2026-03-20 - [Standardizing Settings UI and Tactile Feedback]
 **Learning:** Native HTML elements (like <select>) often look out of place in a highly-themed Radix-based UI and lack consistent focus/hover states. Standardizing on project-specific themed components automatically brings in accessibility features (like proper keyboard navigation) and visual cohesion. Additionally, unifying tactile feedback (e.g., active:scale-95) across the app prevents a "jittery" or inconsistent feel for users navigating different sections.
 **Action:** Always audit for native HTML form elements and replace them with project-standard themed components. Ensure tactile micro-animations use a single, consistent scale factor across all interactive elements.
+
+## 2026-06-25 - [Mobile Menu and Icon-only Header Accessibility]
+**Learning:** A mobile menu toggle button requires dynamic ARIA properties like `aria-expanded`, `aria-controls`, and dynamic `aria-label` values to provide meaningful navigation states for screen readers. Similarly, icon-only header elements like notification bells should be wrapped in standard design system `Tooltip`s to balance visual clutter and accessibility/discoverability for sighted keyboard/mouse users.
+**Action:** Always combine dynamic state-driven ARIA properties on collapsible toggle controls with Radix `Tooltip`s on icon-only navigation actions in the header.
