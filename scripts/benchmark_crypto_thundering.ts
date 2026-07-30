@@ -1,15 +1,24 @@
-
 import { encrypt } from "../src/supabase/functions/server/crypto.ts";
 
-// Mock environment
-// @ts-ignore
-globalThis.Deno = {
-  env: {
-    get: (key: string) => process.env[key]
+const secret = "test-secret-for-benchmarking-123456789";
+if (typeof Deno !== "undefined" && Deno.env) {
+  Deno.env.set("ENCRYPTION_SECRET", secret);
+} else {
+  // @ts-ignore
+  globalThis.Deno = {
+    env: {
+      get: (key: string) => {
+        // @ts-ignore
+        return typeof process !== "undefined" ? process.env[key] : secret;
+      }
+    }
+  };
+  // @ts-ignore
+  if (typeof process !== "undefined" && process.env) {
+    // @ts-ignore
+    process.env.ENCRYPTION_SECRET = secret;
   }
-};
-
-process.env.ENCRYPTION_SECRET = "test-secret-for-benchmarking-123456789";
+}
 
 async function runBenchmark() {
   const CONCURRENCY = 100;
