@@ -1,3 +1,7 @@
+## 2026-06-25 - [Visible Keyboard Focus Contrasts in Light Themes]
+**Learning:** Adding keyboard focus indicators (like `focus-visible:ring-2`) is essential for accessibility, but standard Tailwind opacity rings (e.g. `/20`) are virtually invisible on light/white background components like the navigation sidebar and header. Increasing the focus ring opacity to at least `/50` or using solid theme colors is required to pass contrast checks and guarantee readability for keyboard-only and low-vision users.
+**Action:** When adding focus rings, always avoid `/20` or lower opacity levels on light surfaces; use `/50` or solid primary brand colors to ensure proper visibility.
+
 ## 2024-05-24 - [Enhancing Deletion UX and Accessibility]
 **Learning:** Native `window.confirm` breaks the immersion of a modern React app and lacks styling consistency. Replacing it with a themed `AlertDialog` improves the "delight" factor and allows for a state-driven UI. Adding `aria-label` to icon-only buttons is a non-negotiable requirement for accessible interfaces.
 **Action:** Always prefer `AlertDialog` over `window.confirm`. Ensure `AlertDialogAction` supports themed variants (like `destructive`) to maintain visual hierarchy. Always provide descriptive labels for screen readers on icon-only interactive elements.
