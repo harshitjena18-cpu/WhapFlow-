@@ -90,3 +90,7 @@
 ## 2024-05-20 - [Atomic Batch Claiming in Job Queue]
 **Learning:** Sequential claiming of jobs in a distributed worker environment using individual `kv.del` calls creates a significant bottleneck (O(N) network round-trips) and increases the race condition window. Implementing an atomic `claimBatch` utility using Postgres `DELETE ... RETURNING` reduces this to O(1) round-trips, yielding a ~100x speedup in claim latency.
 **Action:** Always prefer atomic batch operations (like `DELETE ... RETURNING` or `INSERT ... ON CONFLICT`) for coordination primitives in high-throughput queues. Use `kv.claimBatch` to drastically reduce the latency floor for job processing.
+
+## 2026-04-05 - [Typo in High Performance Path]
+**Learning:** High performance optimizations (like batching via `kv.mget`) can be completely bypassed or crash the application with `ReferenceError` at runtime if typos or undeclared identifiers (like `_kv` instead of `kv`) are introduced in critical routes.
+**Action:** Always ensure any optimized paths are covered by linting checks and basic runtime smoke tests or benchmarks to prevent silent failures.
