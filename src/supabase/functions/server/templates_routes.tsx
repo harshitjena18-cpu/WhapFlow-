@@ -152,8 +152,10 @@ app.post("/ai-generate", async (c) => {
     }
 
     // SECURITY: Simple Rate Limiting (Prevent OpenAI credit exhaustion)
+    // Utilizes an hourly key suffix to safely limit requests on a sliding hourly window without permanent lockout.
     const ip = c.req.header("x-forwarded-for") || "anonymous";
-    const rateKey = `rate_limit:ai_gen:${shop}:${ip}`;
+    const currentHour = new Date().toISOString().slice(0, 13);
+    const rateKey = `rate_limit:ai_gen:${shop}:${ip}:${currentHour}`;
     const billingKey = `${billing.BILLING_KEY_PREFIX}${shop}`;
 
     // PERFORMANCE: Batch all independent KV lookups into a single mget call.

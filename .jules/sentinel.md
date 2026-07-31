@@ -37,3 +37,8 @@
 **Vulnerability:** Internal API endpoints and webhook verification used standard string equality (===) for sensitive tokens like SUPABASE_SERVICE_ROLE_KEY and WHATSAPP_VERIFY_TOKEN.
 **Learning:** Standard string comparison can leak information about the secret through timing differences, and Node's timingSafeEqual requires equal-length inputs. Hashing both inputs with SHA-256 before constant-time comparison allows for secure verification of variable-length secrets.
 **Prevention:** Always use a timing-safe comparison utility (like secureCompare) that hashes inputs before invoking timingSafeEqual for any sensitive token or API key validation.
+
+## 2025-05-25 - [Permanent Lockout in AI Template Generation Rate Limiting]
+**Vulnerability:** The rate limit key used for OpenAI template generation lacked any time-based window or suffix, resulting in a permanent lockout of a shop or IP address once they exceeded 10 requests in their entire lifetime.
+**Learning:** Rate limiting keys must be scoped to specific, sliding, or fixed time windows (such as hourly or daily suffixes) to avoid turning temporary rate limits into permanent service denials.
+**Prevention:** Always use a time-scoped suffix (e.g., current hour via `new Date().toISOString().slice(0, 13)`) in rate limiting keys to restrict volume while permitting legitimate requests after the limit window expires.
