@@ -23,8 +23,12 @@ app.get("/", async (c) => {
     }
     // SECURITY: Scoping templates by shop to prevent multi-tenancy leaks
     const templates = await kv.getByPrefix(`shop:${shop}:template:`) as AutomationTemplate[];
-    // Sort by created_at desc
-    templates.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    // PERFORMANCE OPTIMIZATION: Sort by created_at desc using direct string comparison to avoid expensive Date allocations
+    templates.sort((a, b) => {
+      const dateA = a.created_at || '';
+      const dateB = b.created_at || '';
+      return dateA < dateB ? 1 : dateA > dateB ? -1 : 0;
+    });
     return c.json(templates);
   } catch (error) {
     console.error("Error fetching templates:", error);
