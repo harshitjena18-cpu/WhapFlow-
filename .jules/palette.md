@@ -41,3 +41,7 @@
 ## 2026-03-20 - [Standardizing Settings UI and Tactile Feedback]
 **Learning:** Native HTML elements (like <select>) often look out of place in a highly-themed Radix-based UI and lack consistent focus/hover states. Standardizing on project-specific themed components automatically brings in accessibility features (like proper keyboard navigation) and visual cohesion. Additionally, unifying tactile feedback (e.g., active:scale-95) across the app prevents a "jittery" or inconsistent feel for users navigating different sections.
 **Action:** Always audit for native HTML form elements and replace them with project-standard themed components. Ensure tactile micro-animations use a single, consistent scale factor across all interactive elements.
+
+## 2026-03-21 - [High-Contrast Focus Indicators for Keyboard Accessibility]
+**Learning:** Default focus outline behavior is often suppressed for aesthetic reasons, but failing to provide a clear, high-contrast replacement leaves keyboard navigators blind. When adding custom rings, low-contrast opacities like `/20` on light or white backgrounds are virtually invisible. Using at least `/50` opacity (or high-contrast solid colors) ensures WCAG AA/AAA compliance while maintaining visual aesthetic.
+**Action:** Never suppress outlines without adding high-contrast custom rings (minimum `/50` opacity or solid brand colors on light backgrounds). Programmatically verify focus states using Playwright tab-simulation scripts to capture visual focus snapshots in CI.
