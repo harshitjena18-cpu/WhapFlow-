@@ -37,3 +37,8 @@
 **Vulnerability:** Internal API endpoints and webhook verification used standard string equality (===) for sensitive tokens like SUPABASE_SERVICE_ROLE_KEY and WHATSAPP_VERIFY_TOKEN.
 **Learning:** Standard string comparison can leak information about the secret through timing differences, and Node's timingSafeEqual requires equal-length inputs. Hashing both inputs with SHA-256 before constant-time comparison allows for secure verification of variable-length secrets.
 **Prevention:** Always use a timing-safe comparison utility (like secureCompare) that hashes inputs before invoking timingSafeEqual for any sensitive token or API key validation.
+
+## 2025-05-25 - [Duplicate Function Declarations and Runtime Crash]
+**Vulnerability:** Duplicate declarations of `secureCompare` (in `crypto.ts`) and `claimBatch` (in `kv_store.tsx`) resulted in runtime `SyntaxError` crashes under Deno, blocking route execution and security checks.
+**Learning:** Standard JavaScript/TypeScript allows block scoping and module-level variables, but duplicate function/constant declarations in the same module scope are strictly forbidden and throw fatal parser errors.
+**Prevention:** Avoid redundant or copy-pasted declarations when adding utilities, and always verify backend routes and utility compilations using `check_routes.ts` or automated Deno runs before deploying.
