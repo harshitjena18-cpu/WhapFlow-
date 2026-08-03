@@ -37,3 +37,8 @@
 **Vulnerability:** Internal API endpoints and webhook verification used standard string equality (===) for sensitive tokens like SUPABASE_SERVICE_ROLE_KEY and WHATSAPP_VERIFY_TOKEN.
 **Learning:** Standard string comparison can leak information about the secret through timing differences, and Node's timingSafeEqual requires equal-length inputs. Hashing both inputs with SHA-256 before constant-time comparison allows for secure verification of variable-length secrets.
 **Prevention:** Always use a timing-safe comparison utility (like secureCompare) that hashes inputs before invoking timingSafeEqual for any sensitive token or API key validation.
+
+## 2025-05-25 - [Timing Attack Risk on WhatsApp Webhook Verification Token]
+**Vulnerability:** Comparing the WhatsApp verify token using standard string equality `===` instead of timing-safe comparison.
+**Learning:** Standard triple-equals comparisons return early upon finding the first mismatched character. While this is efficient, it leaks the matching prefix of the secret verify token via timing differences (timing side-channel), allowing attackers to reconstruct the verify token character by character.
+**Prevention:** Always use timing-safe comparison helpers like `secureCompare` that hash the inputs with SHA-256 before comparison for any security-sensitive string or token comparison.
