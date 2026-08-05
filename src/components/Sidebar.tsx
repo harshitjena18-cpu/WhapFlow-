@@ -14,6 +14,7 @@ import {
 import { useState } from 'react';
 import { WhapflowLogo } from './WhapflowLogo';
 import { useAuth } from '../hooks/useAuth';
+import { Tooltip, TooltipTrigger, TooltipContent } from './ui/tooltip';
 
 const navItems = [
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
@@ -49,17 +50,24 @@ export function Sidebar() {
   return (
     <>
       {/* Mobile menu button */}
-      <button
-        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        className="lg:hidden fixed top-6 right-6 z-50 p-3 rounded-xl bg-white border border-gray-100 hover:bg-gray-50 transition-all active:scale-95"
-        aria-label="Toggle menu"
-      >
-        {isMobileMenuOpen ? (
-          <X className="w-5 h-5 text-gray-600" />
-        ) : (
-          <Menu className="w-5 h-5 text-gray-600" />
-        )}
-      </button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="lg:hidden fixed top-6 right-6 z-50 p-3 rounded-xl bg-white border border-gray-100 hover:bg-gray-50 transition-all active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-[#25D366]"
+            aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
+          >
+            {isMobileMenuOpen ? (
+              <X className="w-5 h-5 text-gray-600" />
+            ) : (
+              <Menu className="w-5 h-5 text-gray-600" />
+            )}
+          </button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{isMobileMenuOpen ? "Close menu" : "Open menu"}</p>
+        </TooltipContent>
+      </Tooltip>
 
       {/* Mobile overlay */}
       {isMobileMenuOpen && (
