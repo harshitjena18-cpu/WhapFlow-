@@ -911,7 +911,7 @@ export function TemplatesView() {
                         <button
                           type="button"
                           onClick={() => insertVariable(variable.tag)}
-                          className="text-[10px] bg-gray-50 hover:bg-[#25D366]/10 hover:text-[#128C7E] hover:border-[#25D366]/30 text-gray-600 px-2.5 py-1.5 rounded-full border border-gray-200 transition-all flex items-center gap-1.5 active:scale-95 focus-visible:ring-2 focus-visible:ring-[#25D366]/20 outline-none"
+                          className="text-[10px] bg-gray-50 hover:bg-[#25D366]/10 hover:text-[#128C7E] hover:border-[#25D366]/30 text-gray-600 px-2.5 py-1.5 rounded-full border border-gray-200 transition-all flex items-center gap-1.5 active:scale-95 focus-visible:ring-2 focus-visible:ring-[#25D366]/50 outline-none"
                           aria-label={variable.desc}
                         >
                           <Plus className="w-3 h-3" /> {variable.tag}
