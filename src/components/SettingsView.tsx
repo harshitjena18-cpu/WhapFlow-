@@ -100,7 +100,7 @@ export function SettingsView() {
                   defaultValue={user?.user_metadata?.full_name || ""}
                   placeholder="John Doe"
                   key={user?.user_metadata?.full_name}
-                  className="px-4 py-6 border-gray-200 rounded-xl focus-visible:ring-[#25D366]/20 focus-visible:border-[#25D366]"
+                  className="px-4 py-6 border-gray-200 rounded-xl focus-visible:ring-[#25D366]/50 focus-visible:border-[#25D366]"
                 />
               </div>
               <div className="space-y-3">
@@ -114,7 +114,7 @@ export function SettingsView() {
                   placeholder="john@whapflow.com"
                   key={user?.email}
                   readOnly
-                  className="px-4 py-6 border-gray-200 rounded-xl focus-visible:ring-[#25D366]/20 focus-visible:border-[#25D366] bg-gray-50"
+                  className="px-4 py-6 border-gray-200 rounded-xl focus-visible:ring-[#25D366]/50 focus-visible:border-[#25D366] bg-gray-50"
                 />
               </div>
             </div>
