@@ -37,3 +37,8 @@
 **Vulnerability:** Internal API endpoints and webhook verification used standard string equality (===) for sensitive tokens like SUPABASE_SERVICE_ROLE_KEY and WHATSAPP_VERIFY_TOKEN.
 **Learning:** Standard string comparison can leak information about the secret through timing differences, and Node's timingSafeEqual requires equal-length inputs. Hashing both inputs with SHA-256 before constant-time comparison allows for secure verification of variable-length secrets.
 **Prevention:** Always use a timing-safe comparison utility (like secureCompare) that hashes inputs before invoking timingSafeEqual for any sensitive token or API key validation.
+
+## 2025-05-25 - [Duplicate Declarations Disabling Security Helpers and Loose Comparisons]
+**Vulnerability:** Duplicate declarations of `secureCompare` in `crypto.ts` and `claimBatch` in `kv_store.tsx` resulted in a Deno/TypeScript SyntaxError, causing the entire backend to fail to compile and execute timing-safe comparisons. In addition, `whatsapp_routes.tsx` relied on a standard non-timing-safe equality operator (`===`) for webhook verify token verification.
+**Learning:** Duplicate function/utility definitions in modular backends can act as an availability vector, preventing critical security helpers from loading or running altogether. Furthermore, standard comparisons in auxiliary route files might be overlooked when central verification logic is updated.
+**Prevention:** Group and consolidate all cryptographic utility functions strictly into single-declaration helper files and enforce timing-safe checks uniformly across all webhook/route files using automated checks.
