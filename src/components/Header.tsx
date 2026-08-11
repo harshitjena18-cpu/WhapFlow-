@@ -1,11 +1,60 @@
 import { Bell, Search } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from './ui/tooltip';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from './ui/dropdown-menu';
 
 export function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [modifierKey, setModifierKey] = useState('⌘');
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const [notifications, setNotifications] = useState([
+    {
+      id: 1,
+      title: '🤖 AI Suggestions Ready',
+      description: 'Crafted friendly recovery templates tailored to your store.',
+      time: '5m ago',
+      unread: true,
+    },
+    {
+      id: 2,
+      title: '✅ Shopify Sync Active',
+      description: 'Real-time cart abandonment triggers are now active.',
+      time: '1h ago',
+      unread: true,
+    },
+    {
+      id: 3,
+      title: '🎉 Performance Milestone!',
+      description: 'Cart recovery rate reached a new peak of 42.5% this week.',
+      time: '1d ago',
+      unread: false,
+    },
+  ]);
+
+  const hasUnread = notifications.some((n) => n.unread);
+
+  const markAsRead = (id: number) => {
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, unread: false } : n))
+    );
+  };
+
+  const markAllAsRead = () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
+  };
 
   useEffect(() => {
     // Detect platform for keyboard shortcut hint
@@ -53,13 +102,63 @@ export function Header() {
         </div>
       </div>
       <div className="flex items-center gap-4">
-        <button
-          className="relative p-2 text-gray-400 hover:text-gray-600 hover:bg-white/50 rounded-full transition-colors"
-          aria-label="Notifications"
-        >
-          <Bell className="w-5 h-5" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-        </button>
+        <DropdownMenu>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className="relative p-2 text-gray-400 hover:text-gray-600 hover:bg-white/50 rounded-full transition-all active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
+                  aria-label="Notifications"
+                >
+                  <Bell className="w-5 h-5" />
+                  {hasUnread && (
+                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>
+                  )}
+                </button>
+              </DropdownMenuTrigger>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" align="center">
+              <p>Notifications</p>
+            </TooltipContent>
+          </Tooltip>
+
+          <DropdownMenuContent align="end" className="w-80 p-2 bg-white border border-gray-100 rounded-xl shadow-lg mt-2">
+            <div className="flex items-center justify-between px-3 py-2">
+              <DropdownMenuLabel className="font-semibold text-sm text-gray-900">
+                Notifications
+              </DropdownMenuLabel>
+              {hasUnread && (
+                <button
+                  onClick={markAllAsRead}
+                  className="text-xs text-purple-600 hover:text-purple-800 font-medium active:scale-95 transition-all focus-visible:underline outline-none"
+                >
+                  Mark all as read
+                </button>
+              )}
+            </div>
+            <DropdownMenuSeparator className="bg-gray-100 my-1" />
+            <div className="max-h-72 overflow-y-auto space-y-1">
+              {notifications.map((notification) => (
+                <DropdownMenuItem
+                  key={notification.id}
+                  onClick={() => markAsRead(notification.id)}
+                  className="flex flex-col items-start gap-1 p-3 rounded-lg hover:bg-gray-50 focus:bg-gray-50 transition-colors cursor-pointer outline-none relative"
+                >
+                  <div className="flex w-full justify-between items-start gap-2">
+                    <span className={`text-xs font-semibold ${notification.unread ? 'text-gray-900' : 'text-gray-600'}`}>
+                      {notification.title}
+                    </span>
+                    <span className="text-[10px] text-gray-400 whitespace-nowrap">{notification.time}</span>
+                  </div>
+                  <p className="text-[11px] text-gray-500 leading-normal">{notification.description}</p>
+                  {notification.unread && (
+                    <span className="absolute top-4 right-3 w-1.5 h-1.5 bg-purple-600 rounded-full" />
+                  )}
+                </DropdownMenuItem>
+              ))}
+            </div>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <div className="h-8 w-px bg-gray-200/50 mx-1 hidden md:block"></div>
         <Link
           to="/settings"

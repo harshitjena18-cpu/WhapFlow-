@@ -41,3 +41,7 @@
 ## 2026-03-20 - [Standardizing Settings UI and Tactile Feedback]
 **Learning:** Native HTML elements (like <select>) often look out of place in a highly-themed Radix-based UI and lack consistent focus/hover states. Standardizing on project-specific themed components automatically brings in accessibility features (like proper keyboard navigation) and visual cohesion. Additionally, unifying tactile feedback (e.g., active:scale-95) across the app prevents a "jittery" or inconsistent feel for users navigating different sections.
 **Action:** Always audit for native HTML form elements and replace them with project-standard themed components. Ensure tactile micro-animations use a single, consistent scale factor across all interactive elements.
+
+## 2026-03-21 - [Interactive Notification Dropdowns and Radix asChild Keyboard Focus]
+**Learning:** Transforming static icon-only buttons (like a notification bell) into interactive widgets (dropdowns) requires both visual and accessibility care. Wrapping a `DropdownMenuTrigger` around a `TooltipTrigger` can break keyboard focus if not composed correctly. Using `asChild` composition on both triggers ensures clean HTML output and preserves native keyboard focus/tab navigation.
+**Action:** When nesting interactive elements under tooltip or dropdown triggers, always use Radix `asChild` to avoid duplicate button wrappers. Ensure the trigger element remains fully keyboard-accessible and has a descriptive tooltip for screen readers and sighted users alike.
