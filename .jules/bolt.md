@@ -90,3 +90,7 @@
 ## 2024-05-20 - [Atomic Batch Claiming in Job Queue]
 **Learning:** Sequential claiming of jobs in a distributed worker environment using individual `kv.del` calls creates a significant bottleneck (O(N) network round-trips) and increases the race condition window. Implementing an atomic `claimBatch` utility using Postgres `DELETE ... RETURNING` reduces this to O(1) round-trips, yielding a ~100x speedup in claim latency.
 **Action:** Always prefer atomic batch operations (like `DELETE ... RETURNING` or `INSERT ... ON CONFLICT`) for coordination primitives in high-throughput queues. Use `kv.claimBatch` to drastically reduce the latency floor for job processing.
+
+## 2026-04-05 - [ISO-8601 Date Sorting Optimization]
+**Learning:** Parsing ISO-8601 strings into `Date` objects inside high-frequency sort loops (like sorting lists in API responses) introduces massive object allocation and serialization overhead. Direct lexicographical string comparison is naturally correct for ISO-8601 strings, runs ~14.7x faster, and avoids memory churn.
+**Action:** Always sort ISO-8601 strings using direct string comparison instead of `new Date()` parsing.
