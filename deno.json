@@ -16,7 +16,9 @@
       "src/utils",
       "scripts",
       "build",
-      "node_modules"
+      "node_modules",
+      "src/supabase/functions/server/crypto.ts",
+      "src/supabase/functions/server/kv_store.tsx"
     ]
   }
 }
