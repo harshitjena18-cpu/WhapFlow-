@@ -27,11 +27,37 @@ export function SettingsView() {
     'Weekly reports': false,
   });
 
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [is2FAEnabled, setIs2FAEnabled] = useState(false);
+  const [isEnabling2FA, setIsEnabling2FA] = useState(false);
+
   const handleSave = () => {
     setIsSaving(true);
     setTimeout(() => {
       setIsSaving(false);
       toast.success("Settings saved successfully!");
+    }, 1000);
+  };
+
+  const handleChangePassword = () => {
+    setIsChangingPassword(true);
+    setTimeout(() => {
+      setIsChangingPassword(false);
+      toast.success(`Password reset instructions have been sent to ${user?.email || "your email"}!`);
+    }, 1200);
+  };
+
+  const handleToggle2FA = () => {
+    setIsEnabling2FA(true);
+    setTimeout(() => {
+      setIsEnabling2FA(false);
+      const nextState = !is2FAEnabled;
+      setIs2FAEnabled(nextState);
+      if (nextState) {
+        toast.success("Two-Factor Authentication (2FA) has been enabled!");
+      } else {
+        toast.info("Two-Factor Authentication (2FA) has been disabled.");
+      }
     }, 1000);
   };
 
@@ -178,17 +204,33 @@ export function SettingsView() {
             </div>
           </div>
           <div className="px-8 py-8 flex flex-wrap gap-3">
-            <Button variant="outline" className="px-6 py-3 h-auto border-gray-200 text-gray-900 rounded-xl hover:bg-gray-50 font-semibold text-sm transition-colors">
-              Change Password
+            <Button
+              variant="outline"
+              onClick={handleChangePassword}
+              disabled={isChangingPassword}
+              className="px-6 py-3 h-auto border-gray-200 text-gray-900 rounded-xl hover:bg-gray-50 font-semibold text-sm transition-colors active:scale-95"
+            >
+              {isChangingPassword ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              {isChangingPassword ? 'Sending instructions...' : 'Change Password'}
             </Button>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="outline" className="px-6 py-3 h-auto border-gray-200 text-gray-900 rounded-xl hover:bg-gray-50 font-semibold text-sm transition-colors">
-                  Enable Two-Factor Auth
+                <Button
+                  variant={is2FAEnabled ? "default" : "outline"}
+                  onClick={handleToggle2FA}
+                  disabled={isEnabling2FA}
+                  className={`px-6 py-3 h-auto rounded-xl font-semibold text-sm transition-colors active:scale-95 ${
+                    is2FAEnabled
+                      ? 'bg-[#25D366] hover:bg-[#20BD5A] text-white border-transparent'
+                      : 'border-gray-200 text-gray-900 hover:bg-gray-50'
+                  }`}
+                >
+                  {isEnabling2FA ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                  {is2FAEnabled ? 'Disable Two-Factor Auth' : 'Enable Two-Factor Auth'}
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Add an extra layer of security to your account</p>
+                <p>{is2FAEnabled ? 'Deactivate 2FA for your account' : 'Add an extra layer of security to your account'}</p>
               </TooltipContent>
             </Tooltip>
           </div>
