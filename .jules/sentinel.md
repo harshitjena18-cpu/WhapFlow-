@@ -37,3 +37,8 @@
 **Vulnerability:** Internal API endpoints and webhook verification used standard string equality (===) for sensitive tokens like SUPABASE_SERVICE_ROLE_KEY and WHATSAPP_VERIFY_TOKEN.
 **Learning:** Standard string comparison can leak information about the secret through timing differences, and Node's timingSafeEqual requires equal-length inputs. Hashing both inputs with SHA-256 before constant-time comparison allows for secure verification of variable-length secrets.
 **Prevention:** Always use a timing-safe comparison utility (like secureCompare) that hashes inputs before invoking timingSafeEqual for any sensitive token or API key validation.
+
+## 2025-05-25 - [Permanent Lockout due to Missing Rate Limit Key Suffix]
+**Vulnerability:** The AI template generator rate-limiting mechanism used a static key (`rate_limit:ai_gen:${shop}:${ip}`) without an expiration or sliding window suffix, permanently locking users out after they performed 10 generations.
+**Learning:** Rate-limiting keys that persist in a key-value store without built-in TTLs must explicitly incorporate time-based suffixes (such as current hour or day) to partition hits into sliding windows.
+**Prevention:** Always append a sliding time window identifier (e.g., `new Date().toISOString().slice(0, 13)` for hours) to rate-limiting keys to ensure limits are naturally reset.

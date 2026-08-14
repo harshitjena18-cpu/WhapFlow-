@@ -153,7 +153,8 @@ app.post("/ai-generate", async (c) => {
 
     // SECURITY: Simple Rate Limiting (Prevent OpenAI credit exhaustion)
     const ip = c.req.header("x-forwarded-for") || "anonymous";
-    const rateKey = `rate_limit:ai_gen:${shop}:${ip}`;
+    const currentHour = new Date().toISOString().slice(0, 13); // e.g. "2023-10-27T15"
+    const rateKey = `rate_limit:ai_gen:${shop}:${ip}:${currentHour}`;
     const billingKey = `${billing.BILLING_KEY_PREFIX}${shop}`;
 
     // PERFORMANCE: Batch all independent KV lookups into a single mget call.
