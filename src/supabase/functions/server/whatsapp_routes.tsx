@@ -1,7 +1,7 @@
 import { Hono } from "npm:hono";
 import { getEnv } from "../../../lib/env.ts";
 import { getErrorMessage } from "../../../lib/error.ts";
-import { secureCompare } from "./crypto.ts";
+import { secureCompare } from "./crypto.ts"; // Timing-safe string comparison
 import { processWhatsAppStatuses } from "./automation.ts";
 import { sendWhatsAppTemplate, verifyWhatsAppSignature } from "./whatsapp.ts";
 
