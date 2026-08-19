@@ -187,8 +187,8 @@ export function AutomationsView() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="text-gray-400 hover:text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
-                        aria-label="Settings"
+                        className="text-gray-400 hover:text-gray-700 hover:bg-gray-50 rounded-lg transition-all active:scale-95"
+                        aria-label="Automation settings"
                       >
                         <Settings className="w-5 h-5" />
                       </Button>
