@@ -59,8 +59,8 @@ app.get("/webhooks/whatsapp", (c) => {
 
   const verifyToken = getEnv("WHATSAPP_VERIFY_TOKEN");
 
-  // SECURITY: Ensure verifyToken is configured and matches the request token
-  if (mode === "subscribe" && verifyToken && token === verifyToken) {
+  // SECURITY: Ensure verifyToken is configured and matches the request token securely using constant-time comparison
+  if (mode === "subscribe" && verifyToken && secureCompare(token, verifyToken)) {
     console.log("[WhatsApp Webhook] Webhook verified.");
     return c.text(challenge || "");
   }
