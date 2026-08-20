@@ -51,8 +51,10 @@ export function Sidebar() {
       {/* Mobile menu button */}
       <button
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        className="lg:hidden fixed top-6 right-6 z-50 p-3 rounded-xl bg-white border border-gray-100 hover:bg-gray-50 transition-all active:scale-95"
-        aria-label="Toggle menu"
+        className="lg:hidden fixed top-6 right-6 z-50 p-3 rounded-xl bg-white border border-gray-100 hover:bg-gray-50 transition-all active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-[#25D366]/50"
+        aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
+        aria-expanded={isMobileMenuOpen}
+        aria-controls="sidebar-navigation"
       >
         {isMobileMenuOpen ? (
           <X className="w-5 h-5 text-gray-600" />
@@ -71,6 +73,7 @@ export function Sidebar() {
 
       {/* Sidebar */}
       <aside
+        id="sidebar-navigation"
         className={`
           fixed top-0 left-0 h-full bg-white border-r border-gray-100 z-40
           transition-transform duration-300 ease-in-out
@@ -80,7 +83,7 @@ export function Sidebar() {
       >
         {/* Logo */}
         <div className="px-8 py-8 border-b border-gray-100">
-          <Link to="/" className="group">
+          <Link to="/" className="group rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-[#25D366]/50 inline-block">
             <WhapflowLogo size="md" variant="full" className="hover:opacity-80 transition-opacity" />
           </Link>
         </div>
@@ -94,7 +97,7 @@ export function Sidebar() {
                   to={item.path}
                   onClick={() => setIsMobileMenuOpen(false)}
                   className={({ isActive }) =>
-                    `flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 active:scale-[0.98] ${
+                    `flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-[#25D366]/50 ${
                       isActive
                         ? 'bg-[#25D366] text-white'
                         : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
