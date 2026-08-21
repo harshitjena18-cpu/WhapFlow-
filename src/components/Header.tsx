@@ -14,9 +14,11 @@ export function Header() {
 
     // PERFORMANCE: Throttle scroll event handler via requestAnimationFrame and use passive listener
     let ticking = false;
+    let rafId: number | null = null;
+
     const handleScroll = () => {
       if (!ticking) {
-        window.requestAnimationFrame(() => {
+        rafId = window.requestAnimationFrame(() => {
           setIsScrolled(window.scrollY > 10);
           ticking = false;
         });
@@ -35,6 +37,9 @@ export function Header() {
     window.addEventListener('keydown', handleKeyDown);
 
     return () => {
+      if (rafId !== null) {
+        window.cancelAnimationFrame(rafId);
+      }
       window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('keydown', handleKeyDown);
     };

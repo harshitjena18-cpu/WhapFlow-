@@ -186,9 +186,11 @@ export function LandingPagePremium() {
   useEffect(() => {
     // PERFORMANCE: Throttle scroll event listener via requestAnimationFrame with passive listener
     let ticking = false;
+    let rafId: number | null = null;
+
     const handleScroll = () => {
       if (!ticking) {
-        globalThis.requestAnimationFrame(() => {
+        rafId = globalThis.requestAnimationFrame(() => {
           setIsScrolled(globalThis.scrollY > 20);
           ticking = false;
         });
@@ -196,7 +198,12 @@ export function LandingPagePremium() {
       }
     };
     globalThis.addEventListener('scroll', handleScroll, { passive: true });
-    return () => globalThis.removeEventListener('scroll', handleScroll);
+    return () => {
+      if (rafId !== null) {
+        globalThis.cancelAnimationFrame(rafId);
+      }
+      globalThis.removeEventListener('scroll', handleScroll);
+    };
   }, []);
 
   const faqs = [

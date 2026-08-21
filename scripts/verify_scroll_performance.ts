@@ -11,7 +11,7 @@ function benchmarkScrollHandlers() {
   let throttledStateCalls = 0;
 
   // 1. Unthrottled handler (simulates original Header.tsx behavior)
-  const unthrottledHandler = (scrollY: number) => {
+  const unthrottledHandler = (_scrollY: number) => {
     unthrottledStateCalls++;
   };
 
@@ -23,7 +23,7 @@ function benchmarkScrollHandlers() {
     pendingFrameCallback = cb;
   };
 
-  const throttledHandler = (scrollY: number) => {
+  const throttledHandler = (_scrollY: number) => {
     if (!ticking) {
       mockRequestAnimationFrame(() => {
         throttledStateCalls++;
