@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { 
   LayoutDashboard, 
   ShoppingCart, 
@@ -46,6 +46,45 @@ type AbandonedCart = {
   time: string;
 };
 
+// PERFORMANCE: Move static abandoned cart dataset outside component to prevent redundant object re-creation on every render pass.
+const ABANDONED_CARTS: AbandonedCart[] = [
+  {
+    id: '1',
+    customer: { name: 'Sarah Johnson', email: 'sarah.j@email.com' },
+    cartValue: 127.50,
+    status: 'sent',
+    time: '15 minutes ago',
+  },
+  {
+    id: '2',
+    customer: { name: 'Michael Chen', email: 'mchen@email.com' },
+    cartValue: 89.99,
+    status: 'pending',
+    time: '32 minutes ago',
+  },
+  {
+    id: '3',
+    customer: { name: 'Emma Williams', email: 'emma.w@email.com' },
+    cartValue: 215.00,
+    status: 'recovered',
+    time: '1 hour ago',
+  },
+  {
+    id: '4',
+    customer: { name: 'David Brown', email: 'd.brown@email.com' },
+    cartValue: 64.50,
+    status: 'sent',
+    time: '2 hours ago',
+  },
+  {
+    id: '5',
+    customer: { name: 'Lisa Anderson', email: 'lisa.a@email.com' },
+    cartValue: 178.25,
+    status: 'pending',
+    time: '3 hours ago',
+  },
+];
+
 export function Dashboard() {
   const [activeNav, setActiveNav] = useState('Overview');
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
@@ -56,44 +95,6 @@ export function Dashboard() {
     { name: 'Campaigns', href: '/dashboard/campaigns', icon: <Send className="w-5 h-5" />, active: activeNav === 'Campaigns' },
     { name: 'Analytics', href: '/dashboard/analytics', icon: <BarChart3 className="w-5 h-5" />, active: activeNav === 'Analytics' },
     { name: 'Settings', href: '/dashboard/settings', icon: <Settings className="w-5 h-5" />, active: activeNav === 'Settings' },
-  ];
-
-  const abandonedCarts: AbandonedCart[] = [
-    {
-      id: '1',
-      customer: { name: 'Sarah Johnson', email: 'sarah.j@email.com' },
-      cartValue: 127.50,
-      status: 'sent',
-      time: '15 minutes ago',
-    },
-    {
-      id: '2',
-      customer: { name: 'Michael Chen', email: 'mchen@email.com' },
-      cartValue: 89.99,
-      status: 'pending',
-      time: '32 minutes ago',
-    },
-    {
-      id: '3',
-      customer: { name: 'Emma Williams', email: 'emma.w@email.com' },
-      cartValue: 215.00,
-      status: 'recovered',
-      time: '1 hour ago',
-    },
-    {
-      id: '4',
-      customer: { name: 'David Brown', email: 'd.brown@email.com' },
-      cartValue: 64.50,
-      status: 'sent',
-      time: '2 hours ago',
-    },
-    {
-      id: '5',
-      customer: { name: 'Lisa Anderson', email: 'lisa.a@email.com' },
-      cartValue: 178.25,
-      status: 'pending',
-      time: '3 hours ago',
-    },
   ];
 
   return (
@@ -195,7 +196,7 @@ export function Dashboard() {
               value="$12,487"
               change="+18.2%"
               trend="up"
-              icon={<DollarSign className="w-6 h-6" />}
+              icon={DollarSign}
               iconBg="bg-gradient-to-br from-green-100 to-emerald-100"
               iconColor="text-green-600"
             />
@@ -204,7 +205,7 @@ export function Dashboard() {
               value="28.4%"
               change="+4.3%"
               trend="up"
-              icon={<TrendingUp className="w-6 h-6" />}
+              icon={TrendingUp}
               iconBg="bg-gradient-to-br from-blue-100 to-sky-100"
               iconColor="text-blue-600"
             />
@@ -213,7 +214,7 @@ export function Dashboard() {
               value="47"
               change="-8"
               trend="down"
-              icon={<Package className="w-6 h-6" />}
+              icon={Package}
               iconBg="bg-gradient-to-br from-purple-100 to-violet-100"
               iconColor="text-purple-600"
             />
@@ -245,7 +246,7 @@ export function Dashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {abandonedCarts.map((cart) => (
+                  {ABANDONED_CARTS.map((cart) => (
                     <TableRow key={cart.id} className="border-gray-100 hover:bg-gray-50/50 transition-colors duration-150">
                       <TableCell className="py-4">
                         <div>
@@ -294,17 +295,18 @@ interface MetricCardProps {
   value: string;
   change: string;
   trend: 'up' | 'down';
-  icon: React.ReactNode;
+  icon: React.ElementType;
   iconBg: string;
   iconColor: string;
 }
 
-function MetricCard({ title, value, change, trend, icon, iconBg, iconColor }: MetricCardProps) {
+// PERFORMANCE: Memoize MetricCard with stable component reference for icon prop to ensure React.memo prevents re-renders on parent state changes (e.g., sidebar hover).
+const MetricCard = memo(function MetricCard({ title, value, change, trend, icon: Icon, iconBg, iconColor }: MetricCardProps) {
   return (
     <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-md transition-all duration-300 group">
       <div className="flex items-start justify-between mb-4">
         <div className={`w-12 h-12 ${iconBg} rounded-2xl flex items-center justify-center ${iconColor} group-hover:scale-110 transition-transform duration-300`}>
-          {icon}
+          <Icon className="w-6 h-6" />
         </div>
         <span className={`text-sm font-semibold px-3 py-1 rounded-lg ${
           trend === 'up' 
@@ -318,4 +320,6 @@ function MetricCard({ title, value, change, trend, icon, iconBg, iconColor }: Me
       <p className="text-3xl font-bold text-gray-900 tracking-tight">{value}</p>
     </div>
   );
-}
+});
+
+MetricCard.displayName = 'MetricCard';

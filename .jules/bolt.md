@@ -90,3 +90,7 @@
 ## 2024-05-20 - [Atomic Batch Claiming in Job Queue]
 **Learning:** Sequential claiming of jobs in a distributed worker environment using individual `kv.del` calls creates a significant bottleneck (O(N) network round-trips) and increases the race condition window. Implementing an atomic `claimBatch` utility using Postgres `DELETE ... RETURNING` reduces this to O(1) round-trips, yielding a ~100x speedup in claim latency.
 **Action:** Always prefer atomic batch operations (like `DELETE ... RETURNING` or `INSERT ... ON CONFLICT`) for coordination primitives in high-throughput queues. Use `kv.claimBatch` to drastically reduce the latency floor for job processing.
+
+## 2026-05-02 - [React Memoization with Component References]
+**Learning:** Wrapping React subcomponents in `React.memo` is ineffective when props (like icons) are passed as inline JSX element instances (`icon={<Icon />}`), because object reference equality (`Object.is`) fails on every parent render pass. Passing stable component references (`icon={Icon}` of type `React.ElementType`) allows `React.memo` shallow prop equality checks to succeed and prevents unnecessary subcomponent re-renders.
+**Action:** When memoizing subcomponents that take icons or render functions, pass component references (`React.ElementType`) instead of inline JSX elements (`React.ReactNode`).
