@@ -51,8 +51,10 @@ export function Sidebar() {
       {/* Mobile menu button */}
       <button
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        className="lg:hidden fixed top-6 right-6 z-50 p-3 rounded-xl bg-white border border-gray-100 hover:bg-gray-50 transition-all active:scale-95"
-        aria-label="Toggle menu"
+        className="lg:hidden fixed top-6 right-6 z-50 p-3 rounded-xl bg-white border border-gray-100 hover:bg-gray-50 transition-all active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-[#25D366] focus-visible:ring-offset-2"
+        aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
+        aria-expanded={isMobileMenuOpen}
+        aria-controls="sidebar-navigation"
       >
         {isMobileMenuOpen ? (
           <X className="w-5 h-5 text-gray-600" />
@@ -86,7 +88,7 @@ export function Sidebar() {
         </div>
 
         {/* Navigation */}
-        <nav className="px-4 py-8 flex-1 overflow-y-auto">
+        <nav id="sidebar-navigation" aria-label="Main navigation" className="px-4 py-8 flex-1 overflow-y-auto">
           <ul className="space-y-1">
             {navItems.map((item) => (
               <li key={item.path}>
@@ -94,7 +96,7 @@ export function Sidebar() {
                   to={item.path}
                   onClick={() => setIsMobileMenuOpen(false)}
                   className={({ isActive }) =>
-                    `flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 active:scale-[0.98] ${
+                    `flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-[#25D366] focus-visible:ring-offset-2 ${
                       isActive
                         ? 'bg-[#25D366] text-white'
                         : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
