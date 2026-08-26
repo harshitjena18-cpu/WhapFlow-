@@ -188,7 +188,7 @@ export function DashboardViewModern() {
         
         <div className="flex flex-wrap items-center gap-3">
           <motion.button 
-            className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all flex items-center gap-2 shadow-sm"
+            className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all flex items-center gap-2 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
             whileHover={{ scale: 1.03, y: -1 }}
             whileTap={{ scale: 0.98 }}
           >
@@ -197,7 +197,7 @@ export function DashboardViewModern() {
           </motion.button>
           
           <motion.button 
-            className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all flex items-center gap-2 shadow-sm"
+            className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all flex items-center gap-2 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
             whileHover={{ scale: 1.03, y: -1 }}
             whileTap={{ scale: 0.98 }}
           >
@@ -206,7 +206,7 @@ export function DashboardViewModern() {
           </motion.button>
           
           <motion.button 
-            className="px-4 py-2 bg-gradient-to-r from-teal-500 to-emerald-500 text-white rounded-lg text-sm font-semibold hover:shadow-lg hover:shadow-teal-500/30 transition-all flex items-center gap-2"
+            className="px-4 py-2 bg-gradient-to-r from-teal-500 to-emerald-500 text-white rounded-lg text-sm font-semibold hover:shadow-lg hover:shadow-teal-500/30 transition-all flex items-center gap-2 outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2"
             whileHover={{ scale: 1.03, y: -2 }}
             whileTap={{ scale: 0.98 }}
           >
@@ -291,7 +291,7 @@ export function DashboardViewModern() {
             
             <div className="flex items-center gap-2">
               <button
-                className="p-2 hover:bg-gray-50 rounded-lg transition-colors"
+                className="p-2 hover:bg-gray-50 rounded-lg transition-colors outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
                 aria-label="More options"
               >
                 <MoreHorizontal className="w-4 h-4 text-gray-400" />
@@ -509,7 +509,7 @@ export function DashboardViewModern() {
               <h3 className="text-base font-semibold text-gray-900">Active Integrations</h3>
               <p className="text-sm text-gray-500 mt-1">Connected services</p>
             </div>
-            <button className="text-xs text-teal-600 hover:text-teal-700 font-medium">
+            <button className="text-xs text-teal-600 hover:text-teal-700 font-medium rounded px-1 py-0.5 outline-none focus-visible:ring-2 focus-visible:ring-teal-500">
               See All
             </button>
           </div>
