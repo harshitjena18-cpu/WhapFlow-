@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
 import { MessageCircle, Plus, Trash2, Check, Loader2, Sparkles, Copy, AlertCircle, Bot, Zap, Info } from 'lucide-react';
 import { toast } from "sonner";
@@ -122,9 +122,39 @@ export function TemplatesView() {
     }, 0);
   };
 
-  // Validation State
-  const [validationErrors, setValidationErrors] = useState<string[]>([]);
-  const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
+  // PERFORMANCE: Compute validation errors/warnings synchronously with useMemo derived from state
+  // to avoid secondary state dispatches and cut React re-renders by 50% on every keystroke.
+  const { validationErrors, validationWarnings } = useMemo(() => {
+    if (!isDialogOpen) return { validationErrors: [], validationWarnings: [] };
+
+    const content = formData.content || '';
+    const errors: string[] = [];
+    const warnings: string[] = [];
+
+    // Blocking Rules
+    if (!content.trim()) {
+      errors.push("Template content cannot be empty.");
+    }
+    if (content.length > 1024) {
+      errors.push(`Content exceeds 1024 characters (Current: ${content.length}).`);
+    }
+    if (!content.includes("{{checkout_link}}")) {
+      errors.push("Template MUST include {{checkout_link}}.");
+    }
+
+    // Warnings
+    if (content.length > 0 && content.length < 50) {
+      warnings.push("Content seems very short. Consider adding more context.");
+    }
+    if (!content.includes("{{customer_name}}")) {
+      warnings.push("Missing {{customer_name}} - personalization increases conversion.");
+    }
+    if (!content.includes("{{product_name}}")) {
+      warnings.push("Missing {{product_name}} - reminding customers what they left helps.");
+    }
+
+    return { validationErrors: errors, validationWarnings: warnings };
+  }, [formData.content, isDialogOpen]);
 
   // Fetch Templates
   const fetchTemplates = async () => {
@@ -185,42 +215,6 @@ export function TemplatesView() {
     setModifierKey(isMac ? '⌘' : 'Ctrl');
   }, []);
 
-  // Validation Logic
-  const validateContent = (content: string = "") => {
-    const errors: string[] = [];
-    const warnings: string[] = [];
-
-    // Blocking Rules
-    if (!content.trim()) {
-      errors.push("Template content cannot be empty.");
-    }
-    if (content.length > 1024) {
-      errors.push(`Content exceeds 1024 characters (Current: ${content.length}).`);
-    }
-    if (!content.includes("{{checkout_link}}")) {
-      errors.push("Template MUST include {{checkout_link}}.");
-    }
-
-    // Warnings
-    if (content.length > 0 && content.length < 50) {
-      warnings.push("Content seems very short. Consider adding more context.");
-    }
-    if (!content.includes("{{customer_name}}")) {
-      warnings.push("Missing {{customer_name}} - personalization increases conversion.");
-    }
-    if (!content.includes("{{product_name}}")) {
-      warnings.push("Missing {{product_name}} - reminding customers what they left helps.");
-    }
-
-    setValidationErrors(errors);
-    setValidationWarnings(warnings);
-  };
-
-  useEffect(() => {
-    if (isDialogOpen) {
-      validateContent(formData.content);
-    }
-  }, [formData.content, isDialogOpen]);
 
   // Handlers
   const handleOpenCreate = (prefillContent = "") => {
