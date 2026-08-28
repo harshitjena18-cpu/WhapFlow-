@@ -34,6 +34,13 @@ import {
   Area,
   AreaChart
 } from 'recharts';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/select';
 
 // Animation variants
 const cardVariants = {
@@ -446,11 +453,20 @@ export function DashboardViewModern() {
               <h3 className="text-base font-semibold text-gray-900">Cart Distribution</h3>
               <p className="text-sm text-gray-500 mt-1">Recovery status breakdown</p>
             </div>
-            <select className="text-xs border border-gray-200 rounded-lg px-2 py-1 text-gray-600 focus:outline-none focus:ring-2 focus:ring-teal-500">
-              <option>Monthly</option>
-              <option>Weekly</option>
-              <option>Daily</option>
-            </select>
+            <Select defaultValue="Monthly">
+              <SelectTrigger
+                size="sm"
+                className="w-[100px] h-8 text-xs border-gray-200 text-gray-600 focus-visible:ring-teal-500"
+                aria-label="Cart distribution timeframe"
+              >
+                <SelectValue placeholder="Timeframe" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Monthly">Monthly</SelectItem>
+                <SelectItem value="Weekly">Weekly</SelectItem>
+                <SelectItem value="Daily">Daily</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           
           <div className="flex items-center justify-between gap-8">
