@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router';
 import { useState } from 'react';
 import { toast } from "sonner";
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
+import { getErrorMessage } from '../../lib/error';
 
 interface ReadinessData {
   templates: {
@@ -74,7 +75,7 @@ export function OnboardingChecklist({ data, onRefresh }: OnboardingChecklistProp
       toast.success(`${type === 'shopify' ? 'Shopify' : 'WhatsApp'} connected successfully`);
       onRefresh(); // Refresh dashboard data
     } catch (error) {
-      console.error(error);
+      console.error(getErrorMessage(error));
       toast.error("Failed to connect integration");
     } finally {
       setConnecting(null);
