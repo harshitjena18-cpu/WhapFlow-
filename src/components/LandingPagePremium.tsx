@@ -184,10 +184,20 @@ export function LandingPagePremium() {
   }, []);
 
   useEffect(() => {
+    let ticking = false;
+
+    // PERFORMANCE: Throttle scroll handler with rAF and passive listener to avoid blocking smooth scroll
     const handleScroll = () => {
-      setIsScrolled(globalThis.scrollY > 20);
+      if (!ticking) {
+        globalThis.requestAnimationFrame(() => {
+          setIsScrolled(globalThis.scrollY > 20);
+          ticking = false;
+        });
+        ticking = true;
+      }
     };
-    globalThis.addEventListener('scroll', handleScroll);
+
+    globalThis.addEventListener('scroll', handleScroll, { passive: true });
     return () => globalThis.removeEventListener('scroll', handleScroll);
   }, []);
 
