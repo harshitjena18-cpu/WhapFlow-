@@ -54,7 +54,7 @@ export function Header() {
       </div>
       <div className="flex items-center gap-4">
         <button
-          className="relative p-2 text-gray-400 hover:text-gray-600 hover:bg-white/50 rounded-full transition-colors"
+          className="relative p-2 text-gray-400 hover:text-gray-600 hover:bg-white/50 rounded-full transition-all active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-purple-500/50"
           aria-label="Notifications"
         >
           <Bell className="w-5 h-5" />
@@ -64,7 +64,7 @@ export function Header() {
         <Link
           to="/settings"
           aria-label="User Profile and Settings"
-          className="hidden md:flex items-center gap-3 px-3 py-1.5 rounded-xl hover:bg-white/50 transition-all duration-200 active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-purple-500/20"
+          className="hidden md:flex items-center gap-3 px-3 py-1.5 rounded-xl hover:bg-white/50 transition-all duration-200 active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-purple-500/50"
         >
           <div className="text-right">
             <p className="text-sm font-medium text-gray-900">Whapflow Store</p>
