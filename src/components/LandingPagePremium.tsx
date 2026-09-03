@@ -184,10 +184,19 @@ export function LandingPagePremium() {
   }, []);
 
   useEffect(() => {
+    // Performance optimization: Throttle scroll listener using requestAnimationFrame
+    // and use passive option to prevent scroll lag on main thread.
+    let ticking = false;
     const handleScroll = () => {
-      setIsScrolled(globalThis.scrollY > 20);
+      if (!ticking) {
+        globalThis.requestAnimationFrame(() => {
+          setIsScrolled(globalThis.scrollY > 20);
+          ticking = false;
+        });
+        ticking = true;
+      }
     };
-    globalThis.addEventListener('scroll', handleScroll);
+    globalThis.addEventListener('scroll', handleScroll, { passive: true });
     return () => globalThis.removeEventListener('scroll', handleScroll);
   }, []);
 
