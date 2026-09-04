@@ -58,7 +58,7 @@ export function Header() {
           <Tooltip>
             <TooltipTrigger asChild>
               <button
-                className="relative p-2 text-gray-400 hover:text-gray-600 hover:bg-white/50 rounded-full transition-all duration-200 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#25D366]/50"
+                className="relative p-2 text-gray-400 hover:text-gray-600 hover:bg-white/50 rounded-full transition-all duration-200 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/20"
                 aria-label="Notifications"
               >
                 <Bell className="w-5 h-5" />
