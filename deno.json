@@ -7,7 +7,9 @@
         "no-window",
         "ban-ts-comment",
         "no-node-globals",
-        "ban-unused-ignore"
+        "ban-unused-ignore",
+        "no-import-prefix",
+        "no-unversioned-import"
       ]
     },
     "exclude": [
