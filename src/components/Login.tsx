@@ -7,6 +7,7 @@ import { Link, useNavigate } from 'react-router';
 import { WhapflowLogo } from './WhapflowLogo';
 import { supabase } from '../utils/supabase/client';
 import { toast } from "sonner";
+import { getErrorMessage } from '../lib/error';
 
 export function Login() {
   const navigate = useNavigate();
@@ -60,9 +61,10 @@ export function Login() {
       toast.success('Successfully logged in!');
       navigate('/dashboard');
     } catch (error: any) {
-      console.error('Login error:', error);
-      toast.error(error.message || 'Failed to login');
-      setErrors(prev => ({ ...prev, form: error.message }));
+      const message = getErrorMessage(error);
+      console.error('Login error:', message);
+      toast.error(message || 'Failed to login');
+      setErrors(prev => ({ ...prev, form: message }));
     } finally {
       setIsLoading(false);
     }
@@ -95,8 +97,9 @@ export function Login() {
       
       // Note: This will redirect the user away from the page
     } catch (error: any) {
-      console.error('Social login error:', error);
-      toast.error(error.message || 'Failed to initiate social login');
+      const message = getErrorMessage(error);
+      console.error('Social login error:', message);
+      toast.error(message || 'Failed to initiate social login');
     }
   };
 
