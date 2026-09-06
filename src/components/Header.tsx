@@ -54,7 +54,7 @@ export function Header() {
       </div>
       <div className="flex items-center gap-4">
         <button
-          className="relative p-2 text-gray-400 hover:text-gray-600 hover:bg-white/50 rounded-full transition-colors"
+          className="relative p-2 text-gray-400 hover:text-gray-600 hover:bg-white/50 rounded-full transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/50 active:scale-95"
           aria-label="Notifications"
         >
           <Bell className="w-5 h-5" />
