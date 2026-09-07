@@ -32,6 +32,26 @@ const fadeInUp = {
   }
 };
 
+// PERFORMANCE: Hoist static FAQ data outside component to avoid re-creating on every render cycle
+const FAQS = [
+  {
+    question: "How does WhatsApp cart recovery work?",
+    answer: "When a customer abandons their cart, Whapflow automatically detects it and sends a personalized WhatsApp message to remind them to complete their purchase. Messages are sent at optimal times based on smart algorithms."
+  },
+  {
+    question: "Is this compliant with WhatsApp policies?",
+    answer: "Yes, Whapflow uses the official WhatsApp Business API and is fully compliant with all WhatsApp policies and data protection regulations."
+  },
+  {
+    question: "Can I customize the messages?",
+    answer: "Absolutely! You can create custom templates or use our AI to generate personalized messages. Each message can include customer name, cart items, and dynamic discount codes."
+  },
+  {
+    question: "What if I exceed my plan limits?",
+    answer: "We'll notify you when you're approaching your limits. You can upgrade your plan at any time, and we'll never send messages that would exceed your quota without permission."
+  }
+];
+
 const staggerContainer = {
   hidden: { opacity: 0 },
   visible: {
@@ -184,31 +204,21 @@ export function LandingPagePremium() {
   }, []);
 
   useEffect(() => {
+    // PERFORMANCE: Throttle scroll handler with requestAnimationFrame and passive listener
+    // to prevent scroll-blocking and cut state update checks during rapid scrolling.
+    let ticking = false;
     const handleScroll = () => {
-      setIsScrolled(globalThis.scrollY > 20);
+      if (!ticking) {
+        requestAnimationFrame(() => {
+          setIsScrolled(globalThis.scrollY > 20);
+          ticking = false;
+        });
+        ticking = true;
+      }
     };
-    globalThis.addEventListener('scroll', handleScroll);
+    globalThis.addEventListener('scroll', handleScroll, { passive: true });
     return () => globalThis.removeEventListener('scroll', handleScroll);
   }, []);
-
-  const faqs = [
-    {
-      question: "How does WhatsApp cart recovery work?",
-      answer: "When a customer abandons their cart, Whapflow automatically detects it and sends a personalized WhatsApp message to remind them to complete their purchase. Messages are sent at optimal times based on smart algorithms."
-    },
-    {
-      question: "Is this compliant with WhatsApp policies?",
-      answer: "Yes, Whapflow uses the official WhatsApp Business API and is fully compliant with all WhatsApp policies and data protection regulations."
-    },
-    {
-      question: "Can I customize the messages?",
-      answer: "Absolutely! You can create custom templates or use our AI to generate personalized messages. Each message can include customer name, cart items, and dynamic discount codes."
-    },
-    {
-      question: "What if I exceed my plan limits?",
-      answer: "We'll notify you when you're approaching your limits. You can upgrade your plan at any time, and we'll never send messages that would exceed your quota without permission."
-    }
-  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-teal-900 to-emerald-900 relative overflow-hidden">
@@ -747,7 +757,7 @@ export function LandingPagePremium() {
           </motion.div>
 
           <div className="space-y-4">
-            {faqs.map((faq, index) => (
+            {FAQS.map((faq, index) => (
               <motion.div
                 key={index}
                 initial={{ opacity: 0, y: 20 }}
