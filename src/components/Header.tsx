@@ -1,10 +1,11 @@
-import { Bell, Search } from 'lucide-react';
+import { Bell, Search, X } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router';
 
 export function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [modifierKey, setModifierKey] = useState('⌘');
+  const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -32,6 +33,21 @@ export function Header() {
     };
   }, []);
 
+  const handleClearSearch = () => {
+    setSearchQuery('');
+    searchInputRef.current?.focus();
+  };
+
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Escape') {
+      if (searchQuery) {
+        setSearchQuery('');
+      } else {
+        searchInputRef.current?.blur();
+      }
+    }
+  };
+
   return (
     <header className={`sticky top-0 z-10 glassmorphism-header px-8 py-4 flex items-center justify-between lg:ml-72 ${isScrolled ? 'scrolled' : ''}`}>
       <div className="flex items-center gap-4 flex-1">
@@ -42,13 +58,29 @@ export function Header() {
             id="global-search"
             ref={searchInputRef}
             type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={handleInputKeyDown}
             placeholder="Search orders, customers, or templates..."
-            className="w-full pl-10 pr-12 py-2 text-sm bg-white/60 border border-gray-200/50 rounded-lg focus:ring-2 focus:ring-purple-500/20 focus:bg-white focus:border-purple-300/50 transition-all backdrop-blur-sm"
+            className="w-full pl-10 pr-10 py-2 text-sm bg-white/60 border border-gray-200/50 rounded-lg focus:ring-2 focus:ring-purple-500/20 focus:bg-white focus:border-purple-300/50 transition-all backdrop-blur-sm"
           />
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none hidden sm:flex items-center gap-1">
-            <kbd className="px-1.5 py-0.5 text-[10px] font-medium text-gray-400 bg-gray-100/50 border border-gray-200/50 rounded flex items-center gap-0.5">
-              <span className={modifierKey === '⌘' ? "text-xs" : "text-[9px]"}>{modifierKey}</span>K
-            </kbd>
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+            {searchQuery ? (
+              <button
+                type="button"
+                onClick={handleClearSearch}
+                className="p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100/80 transition-all active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/20"
+                aria-label="Clear search"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            ) : (
+              <div className="pointer-events-none hidden sm:flex items-center gap-1">
+                <kbd className="px-1.5 py-0.5 text-[10px] font-medium text-gray-400 bg-gray-100/50 border border-gray-200/50 rounded flex items-center gap-0.5">
+                  <span className={modifierKey === '⌘' ? "text-xs" : "text-[9px]"}>{modifierKey}</span>K
+                </kbd>
+              </div>
+            )}
           </div>
         </div>
       </div>

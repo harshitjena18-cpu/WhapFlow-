@@ -41,3 +41,7 @@
 ## 2026-03-20 - [Standardizing Settings UI and Tactile Feedback]
 **Learning:** Native HTML elements (like <select>) often look out of place in a highly-themed Radix-based UI and lack consistent focus/hover states. Standardizing on project-specific themed components automatically brings in accessibility features (like proper keyboard navigation) and visual cohesion. Additionally, unifying tactile feedback (e.g., active:scale-95) across the app prevents a "jittery" or inconsistent feel for users navigating different sections.
 **Action:** Always audit for native HTML form elements and replace them with project-standard themed components. Ensure tactile micro-animations use a single, consistent scale factor across all interactive elements.
+
+## 2026-03-21 - [Search Input Erasing and Keyboard Dismissal Ergonomics]
+**Learning:** Global search inputs that display fixed keyboard shortcuts without dynamic state obscure typing space and force users to manually select and backspace text to clear search queries. Swapping the static shortcut indicator for a clear button (`X` icon with `aria-label="Clear search"`) when text is present, combined with `Escape` key handling to reset/blur input, creates a smooth, highly accessible search experience for both mouse and keyboard users.
+**Action:** Always make search inputs controlled components that toggle an explicit, accessible clear button on input entry and listen for `Escape` key presses to instantly reset active queries.
