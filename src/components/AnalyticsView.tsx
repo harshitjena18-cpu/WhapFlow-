@@ -1,5 +1,6 @@
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { TrendingUp, Clock, MessageSquare } from 'lucide-react';
+import { ChartTooltip, ChartTooltipContent } from './ui/chart';
 import { motion } from 'motion/react';
 
 const conversionData = [
@@ -124,16 +125,7 @@ export function AnalyticsView() {
                   tickLine={false}
                   axisLine={{ stroke: '#f3f4f6' }}
                 />
-                <ChartTooltip
-                  contentStyle={{
-                    backgroundColor: '#ffffff',
-                    border: '1px solid #f3f4f6',
-                    borderRadius: '12px',
-                    padding: '8px 12px',
-                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-                  }}
-                  cursor={{ fill: 'rgba(0, 0, 0, 0.03)' }}
-                />
+                <ChartTooltip content={<ChartTooltipContent />} />
                 <Bar dataKey="conversions" fill="#25D366" radius={[8, 8, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -167,7 +159,7 @@ export function AnalyticsView() {
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <ChartTooltip />
+                <ChartTooltip content={<ChartTooltipContent />} />
               </PieChart>
             </ResponsiveContainer>
           </div>
