@@ -80,7 +80,7 @@ const ABANDONED_CARTS: AbandonedCart[] = [
     customer: { name: 'Lisa Anderson', email: 'lisa.a@email.com' },
     cartValue: 178.25,
     status: 'pending',
-    time: '33 minutes ago',
+    time: '3 hours ago',
   },
 ];
 
