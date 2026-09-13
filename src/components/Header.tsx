@@ -13,12 +13,17 @@ export function Header() {
     setModifierKey(isMac ? '⌘' : 'Ctrl');
 
     // PERFORMANCE: Throttle scroll event handler using requestAnimationFrame and passive listener option
-    // to prevent main-thread scroll blocking and eliminate redundant state re-renders during fast scrolling (~98% state dispatch reduction).
+    // to prevent main-thread scroll blocking during scrolling events.
+    let rafId: number | null = null;
     let ticking = false;
+
     const handleScroll = () => {
       if (!ticking) {
-        window.requestAnimationFrame(() => {
-          setIsScrolled(window.scrollY > 10);
+        rafId = window.requestAnimationFrame(() => {
+          setIsScrolled((prev) => {
+            const next = window.scrollY > 10;
+            return prev !== next ? next : prev;
+          });
           ticking = false;
         });
         ticking = true;
@@ -36,6 +41,7 @@ export function Header() {
     window.addEventListener('keydown', handleKeyDown);
 
     return () => {
+      if (rafId !== null) window.cancelAnimationFrame(rafId);
       window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('keydown', handleKeyDown);
     };
