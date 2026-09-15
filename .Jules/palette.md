@@ -5,3 +5,7 @@
 ## 2025-05-15 - Semantic Inversion of Trend Indicators
 **Learning:** For dashboard metrics where a numerical decrease is desirable (e.g., Recovery Time, Latency, Churn), standard green-up/red-down trend indicators are semantically incorrect and confusing.
 **Action:** Implement an `inverse` or `isGood` property on status/trend components to ensure downward trends are styled as positive (emerald green) when they represent improvement.
+
+## 2026-06-20 - Accessible Labels for Standalone Switch Controls
+**Learning:** `Switch` controls placed inside detail cards or list settings without direct `<Label htmlFor="...">` associations are announced by screen readers without any contextual name. Adding explicit dynamic `aria-label`s containing the item's display name ensures screen reader users understand exactly which resource or setting is being toggled.
+**Action:** Always attach descriptive dynamic `aria-label` attributes to standalone `Switch` components in item detail/settings panes.
