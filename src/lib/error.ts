@@ -26,8 +26,8 @@ export function getErrorMessage(error: unknown): string | undefined {
   let message: string | undefined;
 
   if (error instanceof Error) {
-    // SECURITY: Use stack if available for better observability, but always redact PII
-    message = error.stack || error.message;
+    // SECURITY: Use error.message instead of error.stack to prevent leaking internal stack traces (file paths, line numbers) in UI notifications and logs.
+    message = error.message;
   } else if (typeof error === 'string') {
     message = error;
   } else if (typeof error === 'object' && error !== null && 'message' in error) {
