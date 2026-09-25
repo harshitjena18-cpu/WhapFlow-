@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
 import { MessageCircle, Plus, Trash2, Check, Loader2, Sparkles, Copy, AlertCircle, Bot, Zap, Info } from 'lucide-react';
 import { toast } from "sonner";
@@ -122,9 +122,6 @@ export function TemplatesView() {
     }, 0);
   };
 
-  // Validation State
-  const [validationErrors, setValidationErrors] = useState<string[]>([]);
-  const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
 
   // Fetch Templates
   const fetchTemplates = async () => {
@@ -185,8 +182,12 @@ export function TemplatesView() {
     setModifierKey(isMac ? '⌘' : 'Ctrl');
   }, []);
 
-  // Validation Logic
-  const validateContent = (content: string = "") => {
+  // Validation Logic derived with useMemo
+  // Prevents secondary state updates and reduces React re-renders by 50% on every keystroke in dialog
+  const { validationErrors, validationWarnings } = useMemo(() => {
+    if (!isDialogOpen) return { validationErrors: [], validationWarnings: [] };
+
+    const content = formData.content || "";
     const errors: string[] = [];
     const warnings: string[] = [];
 
@@ -212,14 +213,7 @@ export function TemplatesView() {
       warnings.push("Missing {{product_name}} - reminding customers what they left helps.");
     }
 
-    setValidationErrors(errors);
-    setValidationWarnings(warnings);
-  };
-
-  useEffect(() => {
-    if (isDialogOpen) {
-      validateContent(formData.content);
-    }
+    return { validationErrors: errors, validationWarnings: warnings };
   }, [formData.content, isDialogOpen]);
 
   // Handlers
