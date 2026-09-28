@@ -34,7 +34,6 @@ import {
   Area,
   AreaChart
 } from 'recharts';
-
 // Animation variants
 const cardVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -446,7 +445,10 @@ export function DashboardViewModern() {
               <h3 className="text-base font-semibold text-gray-900">Cart Distribution</h3>
               <p className="text-sm text-gray-500 mt-1">Recovery status breakdown</p>
             </div>
-            <select className="text-xs border border-gray-200 rounded-lg px-2 py-1 text-gray-600 focus:outline-none focus:ring-2 focus:ring-teal-500">
+            <select
+              aria-label="Select cart distribution time period"
+              className="text-xs border border-gray-200 rounded-lg px-2 py-1 text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 cursor-pointer"
+            >
               <option>Monthly</option>
               <option>Weekly</option>
               <option>Daily</option>
