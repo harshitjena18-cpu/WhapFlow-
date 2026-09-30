@@ -17,6 +17,7 @@ import {
 import { Link } from 'react-router';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import {
   Table,
   TableBody,
@@ -127,7 +128,8 @@ export function Dashboard() {
               <li key={item.name}>
                 <button
                   onClick={() => setActiveNav(item.name)}
-                  className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-200 ${
+                  aria-label={item.name}
+                  className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-200 active:scale-[0.98] ${
                     item.active
                       ? 'bg-gradient-to-r from-green-50 to-emerald-50 text-[#25D366] shadow-sm'
                       : 'text-gray-700 hover:bg-gray-50'
@@ -178,10 +180,22 @@ export function Dashboard() {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <Button variant="outline" size="icon" className="relative rounded-xl border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all">
-                <Bell className="w-5 h-5" />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    aria-label="Notifications"
+                    className="relative rounded-xl border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all active:scale-95"
+                  >
+                    <Bell className="w-5 h-5" />
+                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>Notifications</p>
+                </TooltipContent>
+              </Tooltip>
             </div>
           </div>
         </header>
