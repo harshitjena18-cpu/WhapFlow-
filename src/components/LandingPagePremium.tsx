@@ -184,11 +184,27 @@ export function LandingPagePremium() {
   }, []);
 
   useEffect(() => {
+    // PERFORMANCE OPTIMIZATION: Throttle scroll event listener using requestAnimationFrame
+    // and attach with { passive: true } to eliminate main-thread scroll blocking and state dispatch overhead.
+    let ticking = false;
+    let rafId: number | null = null;
     const handleScroll = () => {
-      setIsScrolled(globalThis.scrollY > 20);
+      if (!ticking) {
+        rafId = globalThis.requestAnimationFrame(() => {
+          const scrolled = globalThis.scrollY > 20;
+          setIsScrolled((prev) => (prev !== scrolled ? scrolled : prev));
+          ticking = false;
+        });
+        ticking = true;
+      }
     };
-    globalThis.addEventListener('scroll', handleScroll);
-    return () => globalThis.removeEventListener('scroll', handleScroll);
+    globalThis.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      if (rafId !== null) {
+        globalThis.cancelAnimationFrame(rafId);
+      }
+      globalThis.removeEventListener('scroll', handleScroll);
+    };
   }, []);
 
   const faqs = [
