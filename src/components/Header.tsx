@@ -12,8 +12,18 @@ export function Header() {
     const isMac = /Mac|iPod|iPhone|iPad/.test(navigator.userAgent || '');
     setModifierKey(isMac ? '⌘' : 'Ctrl');
 
+    // PERFORMANCE OPTIMIZATION: Throttle scroll event handler using requestAnimationFrame
+    // and attach with { passive: true } to prevent main-thread scroll blocking and state dispatch overhead.
+    let ticking = false;
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 10);
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const scrolled = window.scrollY > 10;
+          setIsScrolled((prev) => (prev !== scrolled ? scrolled : prev));
+          ticking = false;
+        });
+        ticking = true;
+      }
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -23,7 +33,7 @@ export function Header() {
       }
     };
 
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     window.addEventListener('keydown', handleKeyDown);
 
     return () => {
