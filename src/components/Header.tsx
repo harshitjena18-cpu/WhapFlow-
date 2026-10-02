@@ -15,10 +15,11 @@ export function Header() {
     // PERFORMANCE OPTIMIZATION: Throttle scroll event handler using requestAnimationFrame
     // and attach with { passive: true } to prevent main-thread scroll blocking and state dispatch overhead.
     let ticking = false;
+    let rafId: number | null = null;
     const handleScroll = () => {
       if (!ticking) {
-        window.requestAnimationFrame(() => {
-          const scrolled = window.scrollY > 10;
+        rafId = globalThis.requestAnimationFrame(() => {
+          const scrolled = globalThis.scrollY > 10;
           setIsScrolled((prev) => (prev !== scrolled ? scrolled : prev));
           ticking = false;
         });
@@ -33,12 +34,15 @@ export function Header() {
       }
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    window.addEventListener('keydown', handleKeyDown);
+    globalThis.addEventListener('scroll', handleScroll, { passive: true });
+    globalThis.addEventListener('keydown', handleKeyDown);
 
     return () => {
-      window.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('keydown', handleKeyDown);
+      if (rafId !== null) {
+        globalThis.cancelAnimationFrame(rafId);
+      }
+      globalThis.removeEventListener('scroll', handleScroll);
+      globalThis.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
 
