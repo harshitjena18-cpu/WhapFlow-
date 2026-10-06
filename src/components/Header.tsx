@@ -13,12 +13,13 @@ export function Header() {
     setModifierKey(isMac ? '⌘' : 'Ctrl');
 
     let ticking = false;
+    let animationFrameId: number | null = null;
 
     // Performance optimization: Throttle scroll event handler with requestAnimationFrame
     // to prevent main-thread layout thrashing during continuous scrolling.
     const handleScroll = () => {
       if (!ticking) {
-        window.requestAnimationFrame(() => {
+        animationFrameId = window.requestAnimationFrame(() => {
           setIsScrolled(window.scrollY > 10);
           ticking = false;
         });
@@ -37,6 +38,9 @@ export function Header() {
     window.addEventListener('keydown', handleKeyDown);
 
     return () => {
+      if (animationFrameId !== null) {
+        window.cancelAnimationFrame(animationFrameId);
+      }
       window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('keydown', handleKeyDown);
     };
