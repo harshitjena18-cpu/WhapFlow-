@@ -4,11 +4,6 @@
  * Verifies that StatCard component memoization in AnalyticsView prevents redundant re-renders.
  */
 
-interface ComponentRenderCounter {
-  renderCount: number;
-  render: (props: Record<string, unknown>) => void;
-}
-
 function createMemoizedComponentSimulation() {
   let prevProps: Record<string, unknown> | null = null;
   let renderCount = 0;
