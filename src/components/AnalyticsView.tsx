@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { TrendingUp, Clock, MessageSquare } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -29,7 +30,8 @@ interface StatCardProps {
   inverse?: boolean;
 }
 
-function StatCard({ title, value, trend, trendLabel, icon: Icon, inverse = false }: StatCardProps) {
+// PERFORMANCE: Memoize StatCard component to prevent unnecessary re-renders when parent components re-render with identical props.
+const StatCard = memo(function StatCard({ title, value, trend, trendLabel, icon: Icon, inverse = false }: StatCardProps) {
   const trendIsPositive = trend.startsWith('↑');
   const isEmerald = inverse ? !trendIsPositive : trendIsPositive;
   const displayColor = isEmerald ? 'text-emerald-600' : 'text-red-600';
@@ -55,7 +57,9 @@ function StatCard({ title, value, trend, trendLabel, icon: Icon, inverse = false
       </div>
     </motion.div>
   );
-}
+});
+
+StatCard.displayName = "StatCard";
 
 export function AnalyticsView() {
   return (
