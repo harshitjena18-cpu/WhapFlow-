@@ -178,7 +178,12 @@ export function Dashboard() {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <Button variant="outline" size="icon" className="relative rounded-xl border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all">
+              <Button
+                variant="outline"
+                size="icon"
+                aria-label="Notifications"
+                className="relative rounded-xl border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all active:scale-95 focus-visible:ring-2 focus-visible:ring-[#25D366]/20"
+              >
                 <Bell className="w-5 h-5" />
                 <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
               </Button>
