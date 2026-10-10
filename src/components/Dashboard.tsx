@@ -17,6 +17,7 @@ import {
 import { Link } from 'react-router';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
+import { Tooltip, TooltipTrigger, TooltipContent } from './ui/tooltip';
 import {
   Table,
   TableBody,
@@ -178,10 +179,20 @@ export function Dashboard() {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <Button variant="outline" size="icon" className="relative rounded-xl border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all">
-                <Bell className="w-5 h-5" />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    aria-label="Notifications"
+                    className="relative rounded-xl border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all"
+                  >
+                    <Bell className="w-5 h-5" />
+                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Notifications</TooltipContent>
+              </Tooltip>
             </div>
           </div>
         </header>
