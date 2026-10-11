@@ -67,8 +67,7 @@ function runVerification() {
   if (reduction >= 90) {
     console.log(`\n✅ Verification Passed: Scroll event throttling drastically reduces main-thread dispatch overhead!`);
   } else {
-    console.error(`\n❌ Verification Failed: Expected >= 90% reduction in state updates.`);
-    process.exit(1);
+    throw new Error(`Verification Failed: Expected >= 90% reduction in state updates, got ${reduction.toFixed(1)}%`);
   }
 }
 
