@@ -184,10 +184,18 @@ export function LandingPagePremium() {
   }, []);
 
   useEffect(() => {
+    // PERFORMANCE: Throttle scroll event handler with requestAnimationFrame and passive: true to prevent main-thread blocking and cut state updates
+    let ticking = false;
     const handleScroll = () => {
-      setIsScrolled(globalThis.scrollY > 20);
+      if (!ticking) {
+        requestAnimationFrame(() => {
+          setIsScrolled(globalThis.scrollY > 20);
+          ticking = false;
+        });
+        ticking = true;
+      }
     };
-    globalThis.addEventListener('scroll', handleScroll);
+    globalThis.addEventListener('scroll', handleScroll, { passive: true });
     return () => globalThis.removeEventListener('scroll', handleScroll);
   }, []);
 
