@@ -7,7 +7,8 @@
         "no-window",
         "ban-ts-comment",
         "no-node-globals",
-        "ban-unused-ignore"
+        "ban-unused-ignore",
+        "no-redeclare"
       ]
     },
     "exclude": [
