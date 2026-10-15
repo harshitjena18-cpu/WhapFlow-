@@ -7,7 +7,11 @@
         "no-window",
         "ban-ts-comment",
         "no-node-globals",
-        "ban-unused-ignore"
+        "ban-unused-ignore",
+        "no-redeclare",
+        "adjacent-overload-signatures",
+        "no-import-prefix",
+        "no-unversioned-import"
       ]
     },
     "exclude": [
