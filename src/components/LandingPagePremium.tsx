@@ -184,10 +184,18 @@ export function LandingPagePremium() {
   }, []);
 
   useEffect(() => {
+    let ticking = false;
+    // Throttle scroll listener with requestAnimationFrame to prevent main thread blocking and excessive re-renders
     const handleScroll = () => {
-      setIsScrolled(globalThis.scrollY > 20);
+      if (!ticking) {
+        requestAnimationFrame(() => {
+          setIsScrolled(globalThis.scrollY > 20);
+          ticking = false;
+        });
+        ticking = true;
+      }
     };
-    globalThis.addEventListener('scroll', handleScroll);
+    globalThis.addEventListener('scroll', handleScroll, { passive: true });
     return () => globalThis.removeEventListener('scroll', handleScroll);
   }, []);
 
