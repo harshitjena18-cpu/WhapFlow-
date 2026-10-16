@@ -13,11 +13,14 @@ app.get("/metrics", async (c) => {
       return c.json({ error: "Missing shop parameter" }, 400);
     }
 
-    // 1. PERFORMANCE: Fetch all dependencies including merchant in parallel to minimize round-trip latency
-    const [merchant, shopifyConfig, whatsappConfig, rawTemplates, billingConfig] = await Promise.all([
-      kv.get(`merchant:${shop}`),
-      kv.get(`shop:${shop}:config:shopify`),
-      kv.get(`shop:${shop}:config:whatsapp`),
+    // 1. PERFORMANCE: Consolidate individual kv.get calls into a single kv.mget call
+    // and execute in parallel with prefix scan and billing config lookup.
+    const [[merchant, shopifyConfig, whatsappConfig], rawTemplates, billingConfig] = await Promise.all([
+      kv.mget([
+        `merchant:${shop}`,
+        `shop:${shop}:config:shopify`,
+        `shop:${shop}:config:whatsapp`
+      ]),
       kv.getByPrefix(`shop:${shop}:template:`),
       billing.getBillingConfig(shop)
     ]);
