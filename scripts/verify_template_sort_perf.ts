@@ -57,6 +57,5 @@ for (let i = 0; i < N; i++) {
 if (match) {
   console.log("✅ Verification passed: Direct string comparison produces identical sort results!");
 } else {
-  console.error("❌ Verification failed: Sort results differ!");
-  process.exit(1);
+  throw new Error("Verification failed: Sort results differ!");
 }
