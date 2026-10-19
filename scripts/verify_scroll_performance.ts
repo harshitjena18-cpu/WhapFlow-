@@ -69,8 +69,8 @@ async function benchmarkScrollListeners() {
   const reductionPercentage = (((unthrottledExecutions - throttledExecutions) / unthrottledExecutions) * 100).toFixed(1);
 
   console.log('\n--- Benchmark Results ---');
-  console.log(`Unthrottled Executions: ${unthrottledExecutions}`);
-  console.log(`rAF-Throttled Executions: ${throttledExecutions}`);
+  console.log(`Unthrottled Executions: ${unthrottledExecutions} (state updates: ${unthrottledStateUpdates})`);
+  console.log(`rAF-Throttled Executions: ${throttledExecutions} (state updates: ${throttledStateUpdates})`);
   console.log(`Execution Reduction:      ${reductionPercentage}% fewer invocations`);
   console.log('Passive Listener Flag:    { passive: true } attached (prevents main thread scroll blocking)');
 
@@ -78,7 +78,11 @@ async function benchmarkScrollListeners() {
     console.log('\n✅ Verification PASSED: Scroll listener throttling effectively prevents main-thread bottlenecking.');
   } else {
     console.error('\n❌ Verification FAILED: Throttled execution count was not lower.');
-    process.exit(1);
+    if ('Deno' in globalThis) {
+      (globalThis as any).Deno.exit(1);
+    } else {
+      globalThis.process?.exit(1);
+    }
   }
 }
 
