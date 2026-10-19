@@ -184,11 +184,22 @@ export function LandingPagePremium() {
   }, []);
 
   useEffect(() => {
+    let ticking = false;
+    let rafId: number | null = null;
     const handleScroll = () => {
-      setIsScrolled(globalThis.scrollY > 20);
+      if (!ticking) {
+        rafId = requestAnimationFrame(() => {
+          setIsScrolled(globalThis.scrollY > 20);
+          ticking = false;
+        });
+        ticking = true;
+      }
     };
-    globalThis.addEventListener('scroll', handleScroll);
-    return () => globalThis.removeEventListener('scroll', handleScroll);
+    globalThis.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      globalThis.removeEventListener('scroll', handleScroll);
+    };
   }, []);
 
   const faqs = [
