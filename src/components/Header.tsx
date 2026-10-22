@@ -14,10 +14,12 @@ export function Header() {
 
     // PERFORMANCE: Throttle scroll updates with requestAnimationFrame and passive listener to avoid main-thread blocking during rapid scrolling
     let ticking = false;
+    let rafId: number | null = null;
+
     const handleScroll = () => {
       if (!ticking) {
-        window.requestAnimationFrame(() => {
-          setIsScrolled(window.scrollY > 10);
+        rafId = globalThis.requestAnimationFrame(() => {
+          setIsScrolled(globalThis.scrollY > 10);
           ticking = false;
         });
         ticking = true;
@@ -31,12 +33,15 @@ export function Header() {
       }
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    window.addEventListener('keydown', handleKeyDown);
+    globalThis.addEventListener('scroll', handleScroll, { passive: true });
+    globalThis.addEventListener('keydown', handleKeyDown);
 
     return () => {
-      window.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('keydown', handleKeyDown);
+      if (rafId !== null) {
+        globalThis.cancelAnimationFrame(rafId);
+      }
+      globalThis.removeEventListener('scroll', handleScroll);
+      globalThis.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
 
