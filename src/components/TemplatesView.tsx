@@ -596,6 +596,7 @@ export function TemplatesView() {
                               checked={selectedTemplate.enabled}
                               onCheckedChange={(c) => handleToggleEnabled(selectedTemplate, c)}
                               disabled={!canEnableAutomation}
+                              aria-label={`Enable automation for ${selectedTemplate.display_name}`}
                             />
                           </div>
                         </div>
