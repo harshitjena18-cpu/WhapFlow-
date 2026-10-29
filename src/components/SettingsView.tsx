@@ -153,6 +153,7 @@ export function SettingsView() {
                 </Label>
                 <Switch
                   id={item.toLowerCase().replace(/\s+/g, '-')}
+                  aria-label={item}
                   checked={enabled}
                   onCheckedChange={(checked) =>
                     setNotifications((prev) => ({ ...prev, [item]: checked }))
