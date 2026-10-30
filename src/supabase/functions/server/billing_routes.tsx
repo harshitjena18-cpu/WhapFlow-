@@ -89,7 +89,7 @@ app.post("/create-subscription", async (c) => {
     }
 
     // PERFORMANCE: Batch all independent KV lookups into a single round-trip
-    const [merchantData, preFetchedBilling] = await _kv.mget([
+    const [merchantData, preFetchedBilling] = await kv.mget([
       `merchant:${shop}`,
       `${billing.BILLING_KEY_PREFIX}${shop}`
     ]);
