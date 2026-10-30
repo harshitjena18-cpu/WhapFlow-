@@ -184,11 +184,23 @@ export function LandingPagePremium() {
   }, []);
 
   useEffect(() => {
+    // PERFORMANCE: Throttle scroll updates with requestAnimationFrame and use passive listener
+    // to prevent main-thread scroll blocking during rapid scrolling.
+    let rafId: number | null = null;
     const handleScroll = () => {
-      setIsScrolled(globalThis.scrollY > 20);
+      if (rafId !== null) return;
+      rafId = globalThis.requestAnimationFrame(() => {
+        setIsScrolled(globalThis.scrollY > 20);
+        rafId = null;
+      });
     };
-    globalThis.addEventListener('scroll', handleScroll);
-    return () => globalThis.removeEventListener('scroll', handleScroll);
+    globalThis.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      globalThis.removeEventListener('scroll', handleScroll);
+      if (rafId !== null) {
+        globalThis.cancelAnimationFrame(rafId);
+      }
+    };
   }, []);
 
   const faqs = [
