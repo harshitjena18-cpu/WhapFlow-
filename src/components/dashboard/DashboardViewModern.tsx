@@ -34,6 +34,13 @@ import {
   Area,
   AreaChart
 } from 'recharts';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/select';
 
 // Animation variants
 const cardVariants = {
@@ -128,6 +135,7 @@ export function DashboardViewModern() {
   const [isLoading, setIsLoading] = useState(true);
   // deno-lint-ignore no-unused-vars
   const [dateRange, _setDateRange] = useState('Last 7 days');
+  const [distributionPeriod, setDistributionPeriod] = useState('Monthly');
 
   // Refs for scroll animations
   const metricsRef = useRef(null);
@@ -446,11 +454,20 @@ export function DashboardViewModern() {
               <h3 className="text-base font-semibold text-gray-900">Cart Distribution</h3>
               <p className="text-sm text-gray-500 mt-1">Recovery status breakdown</p>
             </div>
-            <select className="text-xs border border-gray-200 rounded-lg px-2 py-1 text-gray-600 focus:outline-none focus:ring-2 focus:ring-teal-500">
-              <option>Monthly</option>
-              <option>Weekly</option>
-              <option>Daily</option>
-            </select>
+            <Select value={distributionPeriod} onValueChange={setDistributionPeriod}>
+              <SelectTrigger
+                size="sm"
+                aria-label="Filter distribution period"
+                className="w-[105px] h-8 text-xs rounded-lg border-gray-200 bg-white text-gray-600 hover:bg-gray-50 focus-visible:ring-2 focus-visible:ring-teal-500/20 active:scale-95 transition-all"
+              >
+                <SelectValue placeholder="Period" />
+              </SelectTrigger>
+              <SelectContent align="end" className="text-xs">
+                <SelectItem value="Monthly">Monthly</SelectItem>
+                <SelectItem value="Weekly">Weekly</SelectItem>
+                <SelectItem value="Daily">Daily</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           
           <div className="flex items-center justify-between gap-8">
