@@ -1,6 +1,7 @@
 import { Hono } from "npm:hono";
 import { getEnv } from "../../../lib/env.ts";
 import { getErrorMessage } from "../../../lib/error.ts";
+// SECURITY: secureCompare provides constant-time string comparison against timing attacks
 import { secureCompare } from "./crypto.ts";
 import { processWhatsAppStatuses } from "./automation.ts";
 import { sendWhatsAppTemplate, verifyWhatsAppSignature } from "./whatsapp.ts";
@@ -59,8 +60,8 @@ app.get("/webhooks/whatsapp", (c) => {
 
   const verifyToken = getEnv("WHATSAPP_VERIFY_TOKEN");
 
-  // SECURITY: Ensure verifyToken is configured and matches the request token
-  if (mode === "subscribe" && verifyToken && token === verifyToken) {
+  // SECURITY: Use secureCompare to prevent timing attacks on WHATSAPP_VERIFY_TOKEN
+  if (mode === "subscribe" && verifyToken && secureCompare(token, verifyToken)) {
     console.log("[WhatsApp Webhook] Webhook verified.");
     return c.text(challenge || "");
   }
